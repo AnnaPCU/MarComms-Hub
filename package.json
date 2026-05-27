@@ -1,0 +1,31 @@
+{
+  "name": "marcomms-hub",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Plataforma de gestión operativa para Marketing & Comunicaciones — Control Union LATAM",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo 'Lint configurado más adelante. Por ahora, no rompe nada.'"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.400.0",
+    "recharts": "^2.12.7",
+    "papaparse": "^5.4.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0",
+    "tailwindcss": "^3.4.10",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.20"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

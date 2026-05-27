@@ -1,0 +1,1127 @@
+// ════════════════════════════════════════════════════════════════════
+// App — Componente raíz del Marcomms Hub
+// ════════════════════════════════════════════════════════════════════
+// Maneja:
+//   - Login gate (LoginScreen si no hay currentUser)
+//   - Routing por state (currentSection)
+//   - State global compartido (webinars, campaigns, events, standalones, tasks)
+//   - Sync bidireccional Webinar ↔ Campaign via callbacks centralizados
+//   - Sistema de notificaciones (5 tipos)
+//   - Búsqueda global cross-módulo
+//   - Acción rápida (atajos)
+//
+// ⚠️ State NO persiste — refresh borra todo (data demo se reinicializa).
+// Para producción real, integrar Supabase (ver BACKEND_PLAN.md).
+// ════════════════════════════════════════════════════════════════════
+
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2,
+  ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard,
+  LogOut, Mail, MoreVertical, Receipt, Search, Sparkles, User,
+  UserCheck, Video, X, Zap,
+} from 'lucide-react';
+
+// Constants
+import { MARCOMMS, SERVICE_OWNERS } from '@/constants/team';
+import { MARKETS } from '@/constants/markets';
+import { WEBINAR_MAIL_TO_STEP, STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
+import { EVENT_PHASES } from '@/constants/events';
+import { PAISES_DATA } from '@/constants/countries';
+
+// Data demo
+import { DEMO_WEBINARS } from '@/data/demoWebinars';
+import { DEMO_CAMPAIGNS } from '@/data/demoCampaigns';
+import { DEMO_EVENTS } from '@/data/demoEvents';
+import { DEMO_STANDALONES } from '@/data/demoStandalones';
+import { DEMO_ASSIGNED_TASKS } from '@/data/demoAssignedTasks';
+
+// Utils
+import { calcProgress } from '@/utils/progress';
+import { makeCampaignFromWebinar } from '@/utils/webinar';
+
+// Components
+import LoginScreen from '@/components/login/LoginScreen';
+import WebinarApp from '@/components/webinar/WebinarApp';
+import CampaignsApp from '@/components/campaigns/CampaignsApp';
+import EventsApp from '@/components/events/EventsApp';
+import ContentHubApp from '@/components/content/ContentHubApp';
+import FacturacionApp from '@/components/facturacion/FacturacionApp';
+import MyWeekApp from '@/components/myweek/MyWeekApp';
+import ClientReportApp from '@/components/client/ClientReportApp';
+import CountryDetail from '@/components/country/CountryDetail';
+
+export default function App() {
+  // ── Sesión / login ──
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [readNotifications, setReadNotifications] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showFastAction, setShowFastAction] = useState(false);
+
+  const [currentSection, setCurrentSection] = useState('main');
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [clientReportCountry, setClientReportCountry] = useState(null);
+  
+  // Estado compartido en memoria (sin Firebase para la demo)
+  const [globalWebinars, setGlobalWebinars] = useState(DEMO_WEBINARS);
+  const [globalCampaigns, setGlobalCampaigns] = useState(DEMO_CAMPAIGNS);
+  const [globalEvents, setGlobalEvents] = useState(DEMO_EVENTS);
+  const [globalStandaloneRequests, setGlobalStandaloneRequests] = useState(DEMO_STANDALONES);
+
+  // ─── Tareas asignadas entre usuarios (creadas desde Mi Semana) ───
+  const [globalAssignedTasks, setGlobalAssignedTasks] = useState(DEMO_ASSIGNED_TASKS);
+
+  // Crear nueva tarea asignada
+  const createAssignedTask = ({ title, detail, assignedTo, deadline, project }) => {
+    if (!currentUser) return null;
+    // Validación defensiva
+    if (!title || !title.trim()) {
+      console.warn('createAssignedTask: title vacío');
+      return null;
+    }
+    if (!assignedTo || !assignedTo.trim()) {
+      console.warn('createAssignedTask: assignedTo vacío');
+      return null;
+    }
+    const newTask = {
+      id: 'at-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      title: title.trim(),
+      detail: (detail || '').trim(),
+      assignedTo: assignedTo.trim(),
+      assignedBy: currentUser.name,
+      assignedAt: new Date().toISOString(),
+      deadline: deadline || '',
+      done: false,
+      project: project || null
+    };
+    setGlobalAssignedTasks(prev => [newTask, ...prev]);
+    return newTask;
+  };
+
+  // Toggle done en tarea asignada
+  const toggleAssignedTaskDone = (taskId, done) => {
+    setGlobalAssignedTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, done, completedAt: done ? new Date().toISOString() : null }
+        : t
+    ));
+  };
+
+  // Eliminar tarea asignada
+  const deleteAssignedTask = (taskId) => {
+    setGlobalAssignedTasks(prev => prev.filter(t => t.id !== taskId));
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // SYNC WEBINAR ↔ CAMPAIGN
+  // Cuando se crea un webinar, se crea automáticamente una campaña linkeada.
+  // Cuando se tilda un mail en el webinar, se tilda el step correspondiente
+  // en la campaña linkeada (y viceversa).
+  // ─────────────────────────────────────────────────────────────
+
+  const onWebinarCreated = (newWebinar) => {
+    const linkedCampaign = makeCampaignFromWebinar(newWebinar);
+    // Linkear bidireccional
+    setGlobalWebinars(prev => prev.map(w => w.id === newWebinar.id ? { ...w, linkedCampaignId: linkedCampaign.id } : w));
+    setGlobalCampaigns(prev => [linkedCampaign, ...prev]);
+  };
+
+  const onWebinarMailToggled = (webinarId, mailKey, done) => {
+    const stepKey = WEBINAR_MAIL_TO_STEP[mailKey];
+    if (!stepKey) return;
+    setGlobalCampaigns(prev => prev.map(c => {
+      if (c.linkedWebinarId !== webinarId) return c;
+      const completedSteps = c.completedSteps || [];
+      if (done && !completedSteps.includes(stepKey)) {
+        return { ...c, completedSteps: [...completedSteps, stepKey] };
+      }
+      if (!done && completedSteps.includes(stepKey)) {
+        return { ...c, completedSteps: completedSteps.filter(s => s !== stepKey) };
+      }
+      return c;
+    }));
+  };
+
+  const onCampaignWebinarStepToggled = (campaignId, stepKey, done) => {
+    const mailKey = STEP_TO_WEBINAR_MAIL[stepKey];
+    if (!mailKey) return;
+    // Buscar la campaña dentro del setter para evitar closure stale
+    setGlobalCampaigns(prevCampaigns => {
+      const campaign = prevCampaigns.find(c => c.id === campaignId);
+      if (!campaign?.linkedWebinarId) return prevCampaigns;
+      setGlobalWebinars(prev => prev.map(w => {
+        if (w.id !== campaign.linkedWebinarId) return w;
+        const current = w[mailKey] || {};
+        return { ...w, [mailKey]: { ...current, done } };
+      }));
+      return prevCampaigns;
+    });
+  };
+
+  // Cuando se borra un webinar, también borramos la campaña linkeada
+  const onWebinarDeleted = (webinarId) => {
+    setGlobalCampaigns(prev => prev.filter(c => c.linkedWebinarId !== webinarId));
+  };
+  // Cuando se borra una campaña linkeada a webinar, desvincular del webinar
+  const onCampaignDeleted = (campaignId) => {
+    setGlobalCampaigns(prevCampaigns => {
+      const camp = prevCampaigns.find(c => c.id === campaignId);
+      if (camp?.linkedWebinarId) {
+        setGlobalWebinars(prev => prev.map(w => w.id === camp.linkedWebinarId ? { ...w, linkedCampaignId: null } : w));
+      }
+      return prevCampaigns;
+    });
+  };
+
+  const paisesData = PAISES_DATA;
+
+  const sections = [
+    { id: 'paises', title: 'Países', description: 'Gestión de mercados globales y entidades.', icon: <Globe2 className="w-8 h-8 text-blue-600" />, stats: '15 Países', color: 'bg-blue-50' },
+    { id: 'webinar', title: 'Webinar', description: 'Eventos virtuales y transmisiones.', icon: <Video className="w-8 h-8 text-indigo-600" />, stats: `${globalWebinars.length} Programados`, color: 'bg-indigo-50' },
+    { id: 'campaigns', title: 'Campaigns', description: 'Automatización y seguimiento de leads.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalCampaigns.length} Activas`, color: 'bg-purple-50' },
+    { id: 'events', title: 'Events', description: 'Logística de eventos presenciales.', icon: <Calendar className="w-8 h-8 text-orange-600" />, stats: `${globalEvents.length} Activos`, color: 'bg-orange-50' },
+    { id: 'content', title: 'Content Hub', description: 'Mesa de contenido y diseño: Agus, Vicky, Fati, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
+    { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
+    { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
+    { id: 'client_portal', title: 'Portal Cliente', description: 'Vista que ve cada país de sus servicios.', icon: <User className="w-8 h-8 text-teal-600" />, stats: 'Público', color: 'bg-teal-50' }
+  ];
+
+
+  const renderContent = () => {
+    if (currentSection === 'main') {
+      return (
+        <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
+          <div className="mb-10">
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight italic">Marcomms Hub <span className="text-indigo-600 not-italic">Central</span></h1>
+            <p className="text-slate-500 mt-2 text-lg font-medium">Panel Maestro de Control Global.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
+            {sections.map((section) => (
+              <div 
+                key={section.id}
+                onClick={() => { setCurrentSection(section.id); setSelectedCountry(null); }}
+                className="group bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer"
+              >
+                <div className={`w-12 h-12 ${section.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  {React.cloneElement(section.icon, { size: 24 })}
+                </div>
+                <h3 className="text-lg font-bold text-slate-800">{section.title}</h3>
+                <p className="text-xs text-slate-400 mt-1 uppercase font-bold tracking-wider">{section.stats}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold">Actividad Reciente por Clientes</h2>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold">Ver Todo</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-slate-200 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-indigo-600 font-bold border border-slate-100">
+                        {i % 2 === 0 ? "AR" : "US"}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">Campaña "Green Logistics" lanzada</p>
+                        <p className="text-xs text-slate-400">Empresa: Peterson | Sector: Certificaciones</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-300" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <h2 className="text-xl font-bold mb-2">Resumen Global Q2</h2>
+                <p className="text-indigo-100 text-sm mb-8 opacity-80">Datos agregados de todos los países y verticales.</p>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-xs font-bold text-indigo-200 uppercase mb-2">Webinars Ejecutados</p>
+                    <p className="text-4xl font-black">{globalWebinars.length} <span className="text-sm font-medium text-emerald-400 ml-2">+12%</span></p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-indigo-200 uppercase mb-2">Campañas Lanzadas</p>
+                    <p className="text-4xl font-black">{globalCampaigns.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (clientReportCountry) {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+          <ClientReportApp
+            country={clientReportCountry}
+            webinars={globalWebinars}
+            campaigns={globalCampaigns}
+            events={globalEvents}
+            onBack={() => setClientReportCountry(null)}
+          />
+        </div>
+      );
+    }
+
+    if (currentSection === 'client_portal') {
+      return (
+        <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={() => setCurrentSection('main')}
+              className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 transition-all shadow-sm"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
+                <User className="w-8 h-8 text-teal-600" /> Portal Cliente
+              </h1>
+              <p className="text-slate-500 font-medium mt-1">Elegí un país para ver su reporte público de servicios.</p>
+            </div>
+          </div>
+
+          <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 mb-6">
+            <p className="text-xs text-teal-800 font-medium leading-relaxed flex items-start gap-2">
+              <Info className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Esta es la vista simplificada que puede ver cada país (cliente interno). Muestra sus servicios activos, completados, fee facturado y deals generados. Permite filtrar por mes, servicio y unidad de negocio.</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Object.keys(MARKETS).sort().map(country => {
+              const nWebinars = globalWebinars.filter(w => w.pais === country).length;
+              const nCampaigns = globalCampaigns.filter(c => c.country === country).length;
+              const nEvents = globalEvents.filter(e => e.country === country).length;
+              const nStandalones = (globalStandaloneRequests || []).filter(r => r.country === country).length;
+              const total = nWebinars + nCampaigns + nEvents + nStandalones;
+              const udns = MARKETS[country] || [];
+              const hasActivity = total > 0;
+              return (
+                <div
+                  key={country}
+                  onClick={() => setClientReportCountry(country)}
+                  className={`group bg-white p-6 rounded-2xl border transition-all cursor-pointer ${hasActivity ? 'border-slate-200 hover:border-teal-500 hover:shadow-lg' : 'border-slate-100 hover:border-slate-300 opacity-75 hover:opacity-100'}`}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${hasActivity ? 'bg-teal-50 group-hover:bg-teal-600' : 'bg-slate-100'}`}>
+                      <Globe className={`w-5 h-5 transition-all ${hasActivity ? 'text-teal-600 group-hover:text-white' : 'text-slate-400'}`} />
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-teal-600 transition-colors" />
+                  </div>
+                  <h3 className="font-black text-lg text-slate-900 uppercase mb-2">{country}</h3>
+
+                  {/* Lista de UDNs (igual que sección Países) */}
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {udns.map(udn => (
+                      <span key={udn} className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-100 uppercase tracking-wider">
+                        {udn}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-3 border-t border-slate-100">
+                    <span className="flex items-center gap-1"><Video className="w-3 h-3" /> {nWebinars}</span>
+                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {nCampaigns}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {nEvents}</span>
+                    <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> {nStandalones}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total servicios</span>
+                    <span className={`text-lg font-black ${hasActivity ? 'text-teal-600' : 'text-slate-400'}`}>{total}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    if (currentSection === 'paises') {
+      return (
+        <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="flex items-center gap-4 mb-8">
+            <button 
+              onClick={() => {
+                if (selectedCountry) setSelectedCountry(null);
+                else setCurrentSection('main');
+              }}
+              className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 transition-all shadow-sm"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-3xl font-black text-slate-900">Directorio de Países y Clientes</h1>
+          </div>
+
+          {selectedCountry ? (
+            <CountryDetail country={selectedCountry} webinars={globalWebinars} campaigns={globalCampaigns} events={globalEvents} standalones={globalStandaloneRequests} onNavigate={setCurrentSection} onViewAsClient={setClientReportCountry} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paisesData.map((item) => (
+                <div 
+                  key={item.id}
+                  onClick={() => setSelectedCountry(item)}
+                  className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer relative"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                      <Building2 size={20} />
+                    </div>
+                    <MoreVertical size={16} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-1">{item.pais}</h3>
+                  <p className="text-xs text-slate-500 mb-4 font-medium italic">{item.empresas.join(", ")}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                    <div className="flex -space-x-2">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-indigo-600">W</div>
+                      <div className="w-6 h-6 rounded-full bg-purple-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-purple-600">C</div>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Click para ver más</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    if (currentSection === 'webinar') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-100 min-h-[calc(100vh-80px)]">
+           <WebinarApp
+             webinars={globalWebinars}
+             setWebinars={setGlobalWebinars}
+             onBack={() => setCurrentSection('main')}
+             onWebinarCreated={onWebinarCreated}
+             onWebinarMailToggled={onWebinarMailToggled}
+             onWebinarDeleted={onWebinarDeleted}
+           />
+        </div>
+      );
+    }
+
+    if (currentSection === 'campaigns') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+           <CampaignsApp
+             onBack={() => setCurrentSection('main')}
+             campaigns={globalCampaigns}
+             setCampaigns={setGlobalCampaigns}
+             onCampaignWebinarStepToggled={onCampaignWebinarStepToggled}
+             onCampaignDeleted={onCampaignDeleted}
+           />
+        </div>
+      );
+    }
+
+    if (currentSection === 'events') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+           <EventsApp onBack={() => setCurrentSection('main')} events={globalEvents} setEvents={setGlobalEvents} campaigns={globalCampaigns} />
+        </div>
+      );
+    }
+
+    if (currentSection === 'facturacion') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+           <FacturacionApp
+             onBack={() => setCurrentSection('main')}
+             webinars={globalWebinars}
+             campaigns={globalCampaigns}
+             events={globalEvents}
+             standaloneRequests={globalStandaloneRequests}
+             onNavigate={setCurrentSection}
+           />
+        </div>
+      );
+    }
+
+    if (currentSection === 'content') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+           <ContentHubApp
+             onBack={() => setCurrentSection('main')}
+             webinars={globalWebinars}
+             setWebinars={setGlobalWebinars}
+             campaigns={globalCampaigns}
+             setCampaigns={setGlobalCampaigns}
+             events={globalEvents}
+             setEvents={setGlobalEvents}
+             standaloneRequests={globalStandaloneRequests}
+             setStandaloneRequests={setGlobalStandaloneRequests}
+           />
+        </div>
+      );
+    }
+
+    if (currentSection === 'my_week') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+           <MyWeekApp
+             onBack={() => setCurrentSection('main')}
+             webinars={globalWebinars}
+             setWebinars={setGlobalWebinars}
+             campaigns={globalCampaigns}
+             setCampaigns={setGlobalCampaigns}
+             events={globalEvents}
+             setEvents={setGlobalEvents}
+             standaloneRequests={globalStandaloneRequests}
+             setStandaloneRequests={setGlobalStandaloneRequests}
+             assignedTasks={globalAssignedTasks}
+             createAssignedTask={createAssignedTask}
+             toggleAssignedTaskDone={toggleAssignedTaskDone}
+             deleteAssignedTask={deleteAssignedTask}
+             currentUser={currentUser}
+             onNavigate={setCurrentSection}
+           />
+        </div>
+      );
+    }
+
+    const sectionInfo = sections.find(s => s.id === currentSection);
+    return (
+      <div className="p-8 max-w-7xl mx-auto">
+        <button onClick={() => setCurrentSection('main')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-6 font-medium">
+          <ArrowLeft size={20} /> Volver al Hub Central
+        </button>
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
+          <div className={`w-20 h-20 ${sectionInfo?.color} rounded-3xl flex items-center justify-center mx-auto mb-6`}>{sectionInfo?.icon}</div>
+          <h2 className="text-4xl font-black text-slate-900 mb-4">{sectionInfo?.title}</h2>
+          <p className="text-slate-500 text-xl max-w-2xl mx-auto">Próximamente: Integración del código de <strong>{sectionInfo?.title}</strong>.</p>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Generación dinámica de notificaciones del usuario logueado ───
+  const buildNotifications = () => {
+    if (!currentUser) return [];
+    const notifs = [];
+    const userName = (currentUser.name || '').toUpperCase();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const in3Days = new Date(today); in3Days.setDate(in3Days.getDate() + 3);
+    const last3Days = new Date(today); last3Days.setDate(last3Days.getDate() - 3);
+    const matchOwner = (o) => (o || '').toString().trim().toUpperCase() === userName;
+
+    // ── 1. Tareas atrasadas/próximas (webinar)
+    (globalWebinars || []).forEach(w => {
+      const taskKeys = ['teamsGroup', 'testDay', 'bbdd', 'hubspot', 'landingLivestorm', 'ppt', 'onePager',
+        'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost', 'mailPre1', 'mailPre2', 'mailPre3',
+        'mailPostAttended', 'mailPostNoShow', 'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte'];
+      const labels = {
+        teamsGroup: 'Equipos', testDay: 'Test Day', bbdd: 'Base de Datos', hubspot: 'HubSpot',
+        landingLivestorm: 'Landing Livestorm', ppt: 'PPT', onePager: 'One pager',
+        lknAnuncio: 'LKN anuncio', lknReminder: 'LKN 1 day to go', lknHoy: 'LKN es hoy', lknPost: 'LKN recap',
+        mailPre1: 'Mail 01', mailPre2: 'Mail 02', mailPre3: 'Mail 03',
+        mailPostAttended: 'Mail Post Asistentes', mailPostNoShow: 'Mail Post No-asistidos',
+        bannerInv1: 'Banner 1', bannerInv2: 'Banner 2', bannerInv3: 'Banner 3', bannerPost: 'Banner Post',
+        reporte: 'Reporte final'
+      };
+      taskKeys.forEach(k => {
+        const t = w[k];
+        if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
+        const d = new Date(t.date + 'T00:00:00');
+        if (d < today) {
+          notifs.push({ id: `overdue-w-${w.id}-${k}`, type: 'overdue', icon: AlertCircle, color: 'red',
+            title: `Atrasada: ${labels[k] || k}`, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
+        } else if (d <= in3Days) {
+          notifs.push({ id: `soon-w-${w.id}-${k}`, type: 'soon', icon: Clock, color: 'amber',
+            title: `Próxima a vencer: ${labels[k] || k}`, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
+        }
+      });
+    });
+
+    // ── 2. Tareas atrasadas/próximas (eventos)
+    (globalEvents || []).forEach(ev => {
+      const phaseLabels = {};
+      EVENT_PHASES.forEach(p => p.tasks.forEach(t => phaseLabels[t.id] = t.label));
+      Object.entries(ev.tasks || {}).forEach(([tid, t]) => {
+        if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
+        const d = new Date(t.date + 'T00:00:00');
+        if (d < today) {
+          notifs.push({ id: `overdue-e-${ev.id}-${tid}`, type: 'overdue', icon: AlertCircle, color: 'red',
+            title: `Atrasada: ${phaseLabels[tid] || tid}`, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
+        } else if (d <= in3Days) {
+          notifs.push({ id: `soon-e-${ev.id}-${tid}`, type: 'soon', icon: Clock, color: 'amber',
+            title: `Próxima a vencer: ${phaseLabels[tid] || tid}`, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
+        }
+      });
+      (ev.customTasks || []).forEach(ct => {
+        if (ct.done || !matchOwner(ct.owner) || !ct.date) return;
+        const d = new Date(ct.date + 'T00:00:00');
+        if (d < today) {
+          notifs.push({ id: `overdue-ec-${ev.id}-${ct.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
+            title: `Atrasada: ${ct.label}`, project: ev.name, source: 'Evento', date: ct.date, navTo: 'events' });
+        }
+      });
+    });
+
+    // ── 3. Servicios donde es responsable general con baja completitud cerca de fecha
+    (globalWebinars || []).forEach(w => {
+      const owner = w.serviceOwner || SERVICE_OWNERS.webinar;
+      if (!matchOwner(owner)) return;
+      if (calcProgress(w) >= 100) return;
+      if (!w.mainDate) return;
+      const d = new Date(w.mainDate + 'T00:00:00');
+      if (d >= today && d <= in3Days && calcProgress(w) < 80) {
+        notifs.push({ id: `resp-w-${w.id}`, type: 'responsible', icon: User, color: 'purple',
+          title: `Sos responsable · progreso ${calcProgress(w)}%`, project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar' });
+      }
+    });
+    (globalEvents || []).forEach(ev => {
+      const owner = ev.serviceOwner || SERVICE_OWNERS.event;
+      if (!matchOwner(owner)) return;
+      if (!ev.date) return;
+      const d = new Date(ev.date + 'T00:00:00');
+      const allTasks = [...Object.values(ev.tasks || {}), ...(ev.customTasks || [])];
+      const prog = allTasks.length ? Math.round(allTasks.filter(t => t.done).length / allTasks.length * 100) : 0;
+      if (prog >= 100) return;
+      if (d >= today && d <= in3Days && prog < 80) {
+        notifs.push({ id: `resp-e-${ev.id}`, type: 'responsible', icon: User, color: 'purple',
+          title: `Sos responsable · progreso ${prog}%`, project: ev.name, source: 'Evento', date: ev.date, navTo: 'events' });
+      }
+    });
+    // Campañas como responsable general
+    (globalCampaigns || []).forEach(c => {
+      if (c.variant === 'webinar') return; // campañas auto del webinar se contabilizan en el webinar
+      const owner = c.serviceOwner || SERVICE_OWNERS.campaign;
+      if (!matchOwner(owner)) return;
+      // Calcular progreso por tipo
+      let totalSteps = 3;
+      if (c.type === 'email') totalSteps = 13;
+      const prog = totalSteps > 0 ? Math.round(((c.completedSteps || []).length / totalSteps) * 100) : 0;
+      if (prog >= 100) return;
+      // Si tiene deadline final próximo y progreso < 80%
+      const finalDeadline = c.deadlines?.finalDelivery;
+      if (!finalDeadline) return;
+      const d = new Date(finalDeadline + 'T00:00:00');
+      if (d >= today && d <= in3Days && prog < 80) {
+        notifs.push({ id: `resp-c-${c.id}`, type: 'responsible', icon: User, color: 'purple',
+          title: `Sos responsable · progreso ${prog}%`, project: c.name, source: 'Campaña', date: finalDeadline, navTo: 'campaigns' });
+      }
+    });
+
+    // ── 4. Pedidos del Content Hub asignados (nuevos en últimos 3 días + deadline próximo)
+    (globalStandaloneRequests || []).forEach(r => {
+      if (r.status === 'done') return;
+      if (!matchOwner(r.owner)) return;
+      const created = r.createdAt ? new Date(r.createdAt) : null;
+      if (created && created >= last3Days) {
+        notifs.push({ id: `new-s-${r.id}`, type: 'new', icon: Sparkles, color: 'pink',
+          title: 'Nuevo pedido asignado a vos', project: r.name, source: 'Content Hub', date: r.deadline || '', navTo: 'content' });
+      }
+      if (r.deadline) {
+        const d = new Date(r.deadline + 'T00:00:00');
+        if (d < today) {
+          notifs.push({ id: `overdue-s-${r.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
+            title: 'Pedido atrasado', project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
+        } else if (d <= in3Days) {
+          notifs.push({ id: `soon-s-${r.id}`, type: 'soon', icon: Clock, color: 'amber',
+            title: 'Pedido próximo a vencer', project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
+        }
+      }
+    });
+
+    // ── 5. Tareas asignadas por otros usuarios al currentUser
+    (globalAssignedTasks || []).forEach(at => {
+      if (at.done) return;
+      if (!matchOwner(at.assignedTo)) return;
+
+      // Notif principal: te asignaron una tarea (siempre que no esté completa)
+      notifs.push({
+        id: `assigned-${at.id}`,
+        type: 'assigned',
+        icon: UserCheck,
+        color: 'cyan',
+        title: `${at.assignedBy || 'Alguien'} te asignó una tarea`,
+        project: at.title,
+        source: 'Asignada',
+        date: at.deadline || '',
+        navTo: 'my_week'
+      });
+
+      // Notif extra si está atrasada o próxima a vencer
+      if (at.deadline) {
+        const d = new Date(at.deadline + 'T00:00:00');
+        if (d < today) {
+          notifs.push({
+            id: `overdue-at-${at.id}`,
+            type: 'overdue', icon: AlertCircle, color: 'red',
+            title: `Atrasada: ${at.title}`, project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
+          });
+        } else if (d <= in3Days) {
+          notifs.push({
+            id: `soon-at-${at.id}`,
+            type: 'soon', icon: Clock, color: 'amber',
+            title: `Próxima a vencer: ${at.title}`, project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
+          });
+        }
+      }
+    });
+
+    // Dedup + ordenar (assigned arriba de todo, después atrasadas, soon, responsible, new)
+    const seen = new Set();
+    return notifs.filter(n => {
+      if (seen.has(n.id)) return false;
+      seen.add(n.id);
+      return true;
+    }).sort((a, b) => {
+      const order = { assigned: 0, overdue: 1, soon: 2, responsible: 3, new: 4 };
+      return (order[a.type] || 99) - (order[b.type] || 99);
+    });
+  };
+
+  const notifications = currentUser ? buildNotifications() : [];
+  const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
+
+  // ─── Búsqueda global ───
+  const buildSearchResults = () => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    const results = [];
+    const matches = (...fields) => fields.some(f => (f || '').toString().toLowerCase().includes(q));
+
+    (globalWebinars || []).forEach(w => {
+      if (matches(w.name, w.client, w.pais, w.unidadNegocio)) {
+        results.push({
+          id: `w-${w.id}`,
+          type: 'Webinar', icon: Video, color: 'bg-blue-50 text-blue-700 border-blue-200',
+          title: w.name,
+          subtitle: `${w.client || '—'} · ${w.pais || '—'} · ${w.unidadNegocio || '—'}`,
+          extra: w.mainDate ? new Date(w.mainDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+          navTo: 'webinar'
+        });
+      }
+    });
+
+    (globalCampaigns || []).forEach(c => {
+      if (matches(c.name, c.country, c.businessUnit, c.data?.requester)) {
+        const typeLabel = c.variant === 'webinar' ? 'Mailings Webinar' :
+          c.type === 'email' ? 'Email Marketing' :
+          c.type === 'paid' ? 'Paid Media' :
+          c.type === 'database' ? 'BBDD' : 'Investigación';
+        results.push({
+          id: `c-${c.id}`,
+          type: 'Campaña', icon: Mail, color: 'bg-purple-50 text-purple-700 border-purple-200',
+          title: c.name,
+          subtitle: `${typeLabel} · ${c.country || '—'} · ${c.businessUnit || '—'}`,
+          extra: c.budget ? `$${Number(c.budget).toLocaleString()}` : '',
+          navTo: 'campaigns'
+        });
+      }
+    });
+
+    (globalEvents || []).forEach(ev => {
+      if (matches(ev.name, ev.client, ev.country, ev.businessUnit)) {
+        results.push({
+          id: `e-${ev.id}`,
+          type: 'Evento', icon: Calendar, color: 'bg-orange-50 text-orange-700 border-orange-200',
+          title: ev.name,
+          subtitle: `${ev.client || '—'} · ${ev.country || '—'} · ${ev.businessUnit || '—'}`,
+          extra: ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+          navTo: 'events'
+        });
+      }
+    });
+
+    (globalStandaloneRequests || []).forEach(r => {
+      if (matches(r.name, r.country, r.businessUnit, r.requester)) {
+        results.push({
+          id: `s-${r.id}`,
+          type: 'Pedido', icon: Sparkles, color: 'bg-pink-50 text-pink-700 border-pink-200',
+          title: r.name,
+          subtitle: `${r.category} · ${r.country || '—'} · ${r.businessUnit || '—'}`,
+          extra: r.budget ? `$${Number(r.budget).toLocaleString()}` : '',
+          navTo: 'content'
+        });
+      }
+    });
+
+    // Países (matchea solo el nombre del país)
+    Object.keys(MARKETS).forEach(country => {
+      if (country.toLowerCase().includes(q)) {
+        results.push({
+          id: `country-${country}`,
+          type: 'País', icon: Globe, color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+          title: country,
+          subtitle: `${(MARKETS[country] || []).length} unidades de negocio`,
+          extra: '',
+          navTo: 'paises',
+          countryName: country
+        });
+      }
+    });
+
+    return results.slice(0, 12); // limitar a 12 resultados
+  };
+
+  const searchResults = currentUser ? buildSearchResults() : [];
+
+  // ── Login: sin usuario activo, mostrar pantalla de login ──
+  if (!currentUser) {
+    return <LoginScreen onLogin={(member) => setCurrentUser(member)} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900">
+      {/* Modal confirmación logout */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[80] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
+            <div className="p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                <LogOut className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 uppercase">¿Cerrar sesión?</h3>
+              <p className="text-sm text-slate-500">Vas a volver a la pantalla de selección de perfil.</p>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => { setCurrentUser(null); setShowLogoutConfirm(false); setCurrentSection('main'); }}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-200 transition-all"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      <aside className="w-72 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 shadow-sm">
+        <div className="p-8">
+          <div className="flex items-center gap-3 text-indigo-600 mb-12">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+              <Zap size={24} fill="currentColor" />
+            </div>
+            <span className="text-xl font-black tracking-tighter text-slate-800">MARCOMMS HUB</span>
+          </div>
+          
+          <nav className="space-y-1">
+            <button 
+              onClick={() => { setCurrentSection('main'); setSelectedCountry(null); }}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${currentSection === 'main' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <LayoutDashboard size={20} /> Hub Central
+            </button>
+            <div className="pt-8 pb-3 px-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operaciones</p>
+            </div>
+            {sections.map(s => (
+              <button 
+                key={s.id}
+                onClick={() => { setCurrentSection(s.id); setSelectedCountry(null); }}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${currentSection === s.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                {React.cloneElement(s.icon, { size: 18, className: currentSection === s.id ? 'text-indigo-600' : 'text-slate-400' })} 
+                {s.title}
+              </button>
+            ))}
+          </nav>
+        </div>
+        
+        <div className="mt-auto p-8 border-t border-slate-50 bg-slate-50/30">
+          {currentUser ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${currentUser.color} border-2 border-white shadow-md flex items-center justify-center text-white text-sm font-black`}>
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-slate-800 leading-none truncate">{currentUser.name}</p>
+                  <p className="text-slate-400 text-[10px] mt-1 font-bold uppercase tracking-wider truncate">{currentUser.team}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-full text-[10px] font-black bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+              >
+                <LogOut className="w-3 h-3" /> Cerrar sesión
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 border-2 border-white shadow-md flex items-center justify-center text-white text-xs font-black">AD</div>
+              <div>
+                <p className="text-sm font-black text-slate-800 leading-none">Admin Hub</p>
+                <p className="text-slate-400 text-[10px] mt-1 font-bold uppercase tracking-wider">Global Access</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200 px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
+          <div className="flex-1 max-w-2xl relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10" size={18} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+              onFocus={() => setShowSearchResults(true)}
+              placeholder="Buscar webinar, evento, campaña, pedido o país..."
+              className="w-full pl-12 pr-10 py-3 bg-slate-100/50 border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-600/10 transition-all text-sm font-medium outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(''); setShowSearchResults(false); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Dropdown de resultados */}
+            {showSearchResults && searchQuery.trim().length >= 2 && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setShowSearchResults(false)} />
+                <div className="absolute left-0 right-0 top-full mt-2 max-h-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden flex flex-col">
+                  <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">
+                      {searchResults.length} {searchResults.length === 1 ? 'resultado' : 'resultados'}
+                    </span>
+                    {searchResults.length > 0 && (
+                      <span className="text-[10px] font-bold text-slate-400">Click para ir al módulo</span>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    {searchResults.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Sin resultados</p>
+                        <p className="text-[10px] text-slate-400 mt-1">Probá con otro término</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {searchResults.map(r => {
+                          const ResIcon = r.icon;
+                          return (
+                            <button
+                              key={r.id}
+                              onClick={() => {
+                                setShowSearchResults(false);
+                                setSearchQuery('');
+                                if (r.countryName) {
+                                  setSelectedCountry({ pais: r.countryName });
+                                  setCurrentSection('paises');
+                                } else if (r.navTo) {
+                                  setCurrentSection(r.navTo);
+                                }
+                              }}
+                              className="w-full p-3 hover:bg-slate-50 text-left flex items-center gap-3 transition-colors"
+                            >
+                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${r.color} flex items-center gap-1 shrink-0`}>
+                                <ResIcon className="w-2.5 h-2.5" /> {r.type}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-black text-slate-800 leading-tight truncate">{r.title}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+                                  {r.subtitle}
+                                </p>
+                              </div>
+                              {r.extra && (
+                                <span className="text-[10px] font-black text-slate-600 shrink-0">{r.extra}</span>
+                              )}
+                              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-3 ml-8 relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`p-3 rounded-2xl transition-all relative ${showNotifications ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
+              title={`${unreadCount} notificaciones`}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full border-2 border-white text-[9px] font-black text-white flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Panel de notificaciones */}
+            {showNotifications && (
+              <>
+                {/* overlay para cerrar al click afuera */}
+                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                <div className="absolute right-0 top-full mt-2 w-96 max-h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden flex flex-col">
+                  <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-indigo-600" />
+                        <h3 className="font-black text-sm text-slate-800 uppercase tracking-tight">Notificaciones</h3>
+                      </div>
+                      <span className="bg-white text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-black border border-indigo-200">
+                        {notifications.length}
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                      Para {currentUser.name} · {unreadCount} sin leer
+                    </p>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() => setReadNotifications(new Set(notifications.map(n => n.id)))}
+                        className="mt-2 text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest"
+                      >
+                        Marcar todas como leídas
+                      </button>
+                    )}
+                  </div>
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">¡Todo al día!</p>
+                        <p className="text-[10px] text-slate-400 mt-1">Sin notificaciones pendientes</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {notifications.map(n => {
+                          const NotifIcon = n.icon;
+                          const isRead = readNotifications.has(n.id);
+                          const colorMap = {
+                            red: 'bg-red-50 text-red-600 border-red-100',
+                            amber: 'bg-amber-50 text-amber-600 border-amber-100',
+                            purple: 'bg-purple-50 text-purple-600 border-purple-100',
+                            pink: 'bg-pink-50 text-pink-600 border-pink-100',
+                            cyan: 'bg-cyan-50 text-cyan-600 border-cyan-100'
+                          };
+                          return (
+                            <button
+                              key={n.id}
+                              onClick={() => {
+                                setReadNotifications(prev => new Set([...prev, n.id]));
+                                setShowNotifications(false);
+                                if (n.navTo) setCurrentSection(n.navTo);
+                              }}
+                              className={`w-full p-3 hover:bg-slate-50 text-left flex items-start gap-3 transition-colors ${isRead ? 'opacity-60' : ''}`}
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${colorMap[n.color]}`}>
+                                <NotifIcon className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="text-xs font-black text-slate-800 leading-tight">{n.title}</p>
+                                  {!isRead && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full shrink-0"></span>}
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-500 truncate">{n.project}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-slate-100 text-slate-600">
+                                    {n.source}
+                                  </span>
+                                  {n.date && (
+                                    <span className="text-[9px] text-slate-400 font-bold">
+                                      {new Date(n.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0 mt-1" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
+            {/* Fast Action: menú con accesos rápidos */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFastAction(!showFastAction)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                  showFastAction ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white hover:bg-indigo-600'
+                }`}
+              >
+                <Zap size={14} className="fill-current" /> ACCIÓN RÁPIDA
+              </button>
+              {showFastAction && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowFastAction(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden">
+                    <div className="p-3 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-indigo-900">
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-amber-300 fill-current" />
+                        <h3 className="font-black text-sm text-white uppercase tracking-tight">Acción Rápida</h3>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">
+                        Crear o ir directo
+                      </p>
+                    </div>
+                    <div className="p-2">
+                      {[
+                        { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'webinar' },
+                        { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
+                        { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'events' },
+                        { id: 'pedido',   label: 'Nuevo pedido Content',  icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
+                        { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week', divider: true },
+                        { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises' },
+                        { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
+                      ].map(action => {
+                        const ActionIcon = action.icon;
+                        return (
+                          <React.Fragment key={action.id}>
+                            {action.divider && <div className="my-1 border-t border-slate-100" />}
+                            <button
+                              onClick={() => {
+                                setShowFastAction(false);
+                                setCurrentSection(action.section);
+                              }}
+                              className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition-colors ${action.color}`}
+                            >
+                              <ActionIcon className="w-4 h-4 shrink-0" />
+                              <span className="text-xs font-black uppercase tracking-wider flex-1 text-left">{action.label}</span>
+                              <ChevronRight className="w-3.5 h-3.5 opacity-50" />
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-x-hidden">
+          {renderContent()}
+        </main>
+      </div>
+    </div>
+  );
+}
+

@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════════════
+   Base styles
+   ════════════════════════════════════════════════════════════════════ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f8fafc;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Clases custom usadas por el MailchimpReportTool
+   (originalmente venían en un <style> inline del componente)
+   ════════════════════════════════════════════════════════════════════ */
+
+.mono {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.upload-zone {
+  border: 2px dashed #cbd5e1;
+  transition: all 0.2s;
+}
+.upload-zone:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.upload-zone.has-file {
+  border-color: #059669;
+  border-style: solid;
+  background: #f0fdf4;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Scrollbar más prolijo
+   ════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
