@@ -23,11 +23,12 @@ import {
 } from 'lucide-react';
 
 // Constants
-import { MARCOMMS, SERVICE_OWNERS } from '@/constants/team';
+import { MARCOMMS, SERVICE_OWNERS, TEAM_MEMBERS } from '@/constants/team';
 import { MARKETS } from '@/constants/markets';
 import { WEBINAR_MAIL_TO_STEP, STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { EVENT_PHASES } from '@/constants/events';
 import { PAISES_DATA } from '@/constants/countries';
+import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 
 // Data demo
 import { DEMO_WEBINARS } from '@/data/demoWebinars';
@@ -519,6 +520,11 @@ export default function App() {
     const last3Days = new Date(today); last3Days.setDate(last3Days.getDate() - 3);
     const matchOwner = (o) => (o || '').toString().trim().toUpperCase() === userName;
 
+    // ── Obtener el equipo del usuario para personalizar mensajes ──
+    const userTeam = currentUser.team?.toLowerCase() === 'marketing' ? 'marketing' : 'comunicacion';
+    const templates = NOTIFICATION_TEMPLATES[userTeam] || NOTIFICATION_TEMPLATES.comunicacion;
+    const priority = NOTIFICATION_PRIORITY[userTeam] || NOTIFICATION_PRIORITY.comunicacion;
+
     // ── 1. Tareas atrasadas/próximas (webinar)
     (globalWebinars || []).forEach(w => {
       const taskKeys = ['teamsGroup', 'testDay', 'bbdd', 'hubspot', 'landingLivestorm', 'ppt', 'onePager',
@@ -537,12 +543,15 @@ export default function App() {
         const t = w[k];
         if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
         const d = new Date(t.date + 'T00:00:00');
+        const taskLabel = labels[k] || k;
         if (d < today) {
+          const notifMsg = templates.overdue_task(taskLabel, w.name);
           notifs.push({ id: `overdue-w-${w.id}-${k}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: `Atrasada: ${labels[k] || k}`, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
         } else if (d <= in3Days) {
+          const notifMsg = templates.soon_task(taskLabel, w.name);
           notifs.push({ id: `soon-w-${w.id}-${k}`, type: 'soon', icon: Clock, color: 'amber',
-            title: `Próxima a vencer: ${labels[k] || k}`, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
         }
       });
     });
@@ -554,20 +563,24 @@ export default function App() {
       Object.entries(ev.tasks || {}).forEach(([tid, t]) => {
         if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
         const d = new Date(t.date + 'T00:00:00');
+        const taskLabel = phaseLabels[tid] || tid;
         if (d < today) {
+          const notifMsg = templates.overdue_task(taskLabel, ev.name);
           notifs.push({ id: `overdue-e-${ev.id}-${tid}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: `Atrasada: ${phaseLabels[tid] || tid}`, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
         } else if (d <= in3Days) {
+          const notifMsg = templates.soon_task(taskLabel, ev.name);
           notifs.push({ id: `soon-e-${ev.id}-${tid}`, type: 'soon', icon: Clock, color: 'amber',
-            title: `Próxima a vencer: ${phaseLabels[tid] || tid}`, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
         }
       });
       (ev.customTasks || []).forEach(ct => {
         if (ct.done || !matchOwner(ct.owner) || !ct.date) return;
         const d = new Date(ct.date + 'T00:00:00');
         if (d < today) {
+          const notifMsg = templates.overdue_task(ct.label, ev.name);
           notifs.push({ id: `overdue-ec-${ev.id}-${ct.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: `Atrasada: ${ct.label}`, project: ev.name, source: 'Evento', date: ct.date, navTo: 'events' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: ct.date, navTo: 'events' });
         }
       });
     });
@@ -580,8 +593,10 @@ export default function App() {
       if (!w.mainDate) return;
       const d = new Date(w.mainDate + 'T00:00:00');
       if (d >= today && d <= in3Days && calcProgress(w) < 80) {
+        const progress = calcProgress(w);
+        const notifMsg = templates.responsible(progress, w.name);
         notifs.push({ id: `resp-w-${w.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: `Sos responsable · progreso ${calcProgress(w)}%`, project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar' });
+          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar' });
       }
     });
     (globalEvents || []).forEach(ev => {
@@ -593,8 +608,9 @@ export default function App() {
       const prog = allTasks.length ? Math.round(allTasks.filter(t => t.done).length / allTasks.length * 100) : 0;
       if (prog >= 100) return;
       if (d >= today && d <= in3Days && prog < 80) {
+        const notifMsg = templates.responsible(prog, ev.name);
         notifs.push({ id: `resp-e-${ev.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: `Sos responsable · progreso ${prog}%`, project: ev.name, source: 'Evento', date: ev.date, navTo: 'events' });
+          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: ev.date, navTo: 'events' });
       }
     });
     // Campañas como responsable general
@@ -612,8 +628,9 @@ export default function App() {
       if (!finalDeadline) return;
       const d = new Date(finalDeadline + 'T00:00:00');
       if (d >= today && d <= in3Days && prog < 80) {
+        const notifMsg = templates.responsible(prog, c.name);
         notifs.push({ id: `resp-c-${c.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: `Sos responsable · progreso ${prog}%`, project: c.name, source: 'Campaña', date: finalDeadline, navTo: 'campaigns' });
+          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: c.name, source: 'Campaña', date: finalDeadline, navTo: 'campaigns' });
       }
     });
 
@@ -623,17 +640,20 @@ export default function App() {
       if (!matchOwner(r.owner)) return;
       const created = r.createdAt ? new Date(r.createdAt) : null;
       if (created && created >= last3Days) {
+        const notifMsg = templates.new_request(r.name);
         notifs.push({ id: `new-s-${r.id}`, type: 'new', icon: Sparkles, color: 'pink',
-          title: 'Nuevo pedido asignado a vos', project: r.name, source: 'Content Hub', date: r.deadline || '', navTo: 'content' });
+          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline || '', navTo: 'content' });
       }
       if (r.deadline) {
         const d = new Date(r.deadline + 'T00:00:00');
         if (d < today) {
+          const notifMsg = templates.overdue_task('Pedido', r.name);
           notifs.push({ id: `overdue-s-${r.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: 'Pedido atrasado', project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
         } else if (d <= in3Days) {
+          const notifMsg = templates.soon_task('Pedido', r.name);
           notifs.push({ id: `soon-s-${r.id}`, type: 'soon', icon: Clock, color: 'amber',
-            title: 'Pedido próximo a vencer', project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
         }
       }
     });
@@ -644,12 +664,15 @@ export default function App() {
       if (!matchOwner(at.assignedTo)) return;
 
       // Notif principal: te asignaron una tarea (siempre que no esté completa)
+      const assignedMsg = templates.assigned_task(at.assignedBy || 'Alguien', at.title);
       notifs.push({
         id: `assigned-${at.id}`,
         type: 'assigned',
         icon: UserCheck,
         color: 'cyan',
-        title: `${at.assignedBy || 'Alguien'} te asignó una tarea`,
+        title: assignedMsg.title_long,
+        shortTitle: assignedMsg.title_short,
+        emoji: assignedMsg.emoji,
         project: at.title,
         source: 'Asignada',
         date: at.deadline || '',
@@ -660,30 +683,38 @@ export default function App() {
       if (at.deadline) {
         const d = new Date(at.deadline + 'T00:00:00');
         if (d < today) {
+          const notifMsg = templates.overdue_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
           notifs.push({
             id: `overdue-at-${at.id}`,
             type: 'overdue', icon: AlertCircle, color: 'red',
-            title: `Atrasada: ${at.title}`, project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji,
+            project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
           });
         } else if (d <= in3Days) {
+          const notifMsg = templates.soon_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
           notifs.push({
             id: `soon-at-${at.id}`,
             type: 'soon', icon: Clock, color: 'amber',
-            title: `Próxima a vencer: ${at.title}`, project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
+            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji,
+            project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
           });
         }
       }
     });
 
-    // Dedup + ordenar (assigned arriba de todo, después atrasadas, soon, responsible, new)
+    // Dedup + ordenar (según prioridad del equipo)
     const seen = new Set();
     return notifs.filter(n => {
       if (seen.has(n.id)) return false;
       seen.add(n.id);
       return true;
     }).sort((a, b) => {
-      const order = { assigned: 0, overdue: 1, soon: 2, responsible: 3, new: 4 };
-      return (order[a.type] || 99) - (order[b.type] || 99);
+      // Usar índice de prioridad del equipo del usuario
+      const orderMap = {};
+      priority.forEach((type, idx) => { orderMap[type] = idx; });
+      const aOrder = orderMap[a.type] !== undefined ? orderMap[a.type] : 99;
+      const bOrder = orderMap[b.type] !== undefined ? orderMap[b.type] : 99;
+      return aOrder - bOrder;
     });
   };
 
