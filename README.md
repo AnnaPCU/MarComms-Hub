@@ -15,7 +15,7 @@ Maneja webinars, campañas, eventos, pedidos de contenido, facturación, países
 - **papaparse + xlsx** (procesamiento CSV/Excel)
 - **jsPDF** (generación de PDFs nativos, cargado desde CDN)
 
-**Sin backend todavía** — toda la data vive en memoria. La migración a Supabase está documentada en [`BACKEND_PLAN.md`](./BACKEND_PLAN.md).
+**Sin backend todavía** — toda la data vive en memoria. La capa de servicios mock + hooks **ya está preparada** para Supabase (ver [`DATA_AUDIT.md`](./DATA_AUDIT.md) y [`SERVICE_LAYER.md`](./SERVICE_LAYER.md)). Plan de migración a Supabase: [`BACKEND_PLAN.md`](./BACKEND_PLAN.md).
 
 ---
 
@@ -75,16 +75,38 @@ npm install -g vercel
 vercel deploy --prod
 ```
 
-### Variables de entorno en Vercel
+### Variables de entorno
 
-Cuando estén configuradas, agregarlas en **Project Settings → Environment Variables**:
+#### En local (`.env.local`)
 
-| Variable | Valor de ejemplo |
-|---|---|
-| `VITE_APP_NAME` | `Marcomms Hub` |
-| `VITE_SHARED_PASSWORD` | `marcomms2026` |
-| `VITE_SUPABASE_URL` | (pendiente) |
-| `VITE_SUPABASE_ANON_KEY` | (pendiente) |
+Copiar `.env.example` a `.env.local` y completar:
+
+```env
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJxxxxx
+VITE_SHARED_PASSWORD=marcomms2026
+```
+
+> ⚠️ La app **lanza error** al iniciar si `VITE_SUPABASE_URL` o `VITE_SUPABASE_PUBLISHABLE_KEY` faltan — `src/lib/supabaseClient.js` valida que estén presentes.
+
+Las claves se obtienen del **Dashboard de Supabase → Project Settings → API**:
+- `URL` → `VITE_SUPABASE_URL`
+- `Publishable key` (también llamada "anon" en proyectos viejos) → `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+❌ **Nunca** poner en variables `VITE_*` el service role key, database password, ni connection string completa — todo lo que empiece con `VITE_` queda expuesto en el bundle del cliente.
+
+#### En Vercel
+
+**Project Settings → Environment Variables**:
+
+| Variable | Necesaria | Ejemplo |
+|---|---|---|
+| `VITE_SUPABASE_URL` | ✅ | `https://xxxxx.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | ✅ | `eyJxxxxx...` |
+| `VITE_SHARED_PASSWORD` | opcional | `marcomms2026` |
+| `VITE_APP_NAME` | opcional | `Marcomms Hub` |
+
+Después de agregar las variables, **redeployar** para que el bundle las incluya (Vercel → Deployments → Redeploy).
 
 ---
 
@@ -106,9 +128,12 @@ marcomms-hub/
 │   │   ├── myweek/       # MyWeekApp
 │   │   └── client/       # ClientReportApp (portal externo)
 │   ├── constants/        # Configuración (no datos)
-│   ├── data/             # Demo data (mock, futuro Supabase)
-│   ├── hooks/            # Custom hooks
-│   ├── services/         # Auth, storage, PDF
+│   ├── data/             # Mock data + seed (futuro Supabase)
+│   │   ├── mock*.js      # Stores normalizados (Users, Requests, Tasks, etc.)
+│   │   ├── seed.js       # Punto único de entrada de la data
+│   │   └── demo*.js      # Originales — re-exportados por mock*
+│   ├── hooks/            # useRequests, useTasks, useAuth, useFilters, ...
+│   ├── services/         # Capa de servicios mock + auth + storage + PDF
 │   ├── utils/            # Funciones puras (progress, slugify, csv, date, html, pdf)
 │   ├── App.jsx           # Componente raíz + routing
 │   ├── main.jsx          # Bootstrap React
@@ -143,6 +168,30 @@ marcomms-hub/
 - **Boli** — Soporte y operaciones
 
 **Login**: cualquier miembro → password compartida `marcomms2026` (se cambia en `.env.local` → `VITE_SHARED_PASSWORD`).
+
+---
+
+## 🗄️ Data layer (mock, lista para Supabase)
+
+Toda la data inicial vive en `src/data/` y se consume vía servicios async en `src/services/` + hooks en `src/hooks/`. La UI no toca data directamente.
+
+```
+src/data/        — MOCK_USERS, MOCK_REQUESTS, MOCK_CAMPAIGNS, ... + seed.js
+src/services/    — requestsService, tasksService, campaignsService, ...
+src/hooks/       — useRequests, useTasks, useAuth, useFilters
+```
+
+**Estado actual de conexiones:**
+| Servicio | Modo | Tabla |
+|---|---|---|
+| `requestsService` (Content Hub) | ✅ **Supabase** (CRUD + realtime) | `public.requests` |
+| Resto (tasks, campaigns, webinars, events, ...) | 🚧 Mock (in-memory) | — |
+
+El módulo de pedidos persiste todo en Supabase: al crear, editar o borrar un pedido, el cambio impacta la DB y se propaga a los demás navegadores via realtime (`postgres_changes` sobre `public.requests`).
+
+Documentación detallada:
+- [`DATA_AUDIT.md`](./DATA_AUDIT.md) — inventario completo (hardcodes, archivos, tablas futuras)
+- [`SERVICE_LAYER.md`](./SERVICE_LAYER.md) — cómo usar los servicios y hooks
 
 ---
 

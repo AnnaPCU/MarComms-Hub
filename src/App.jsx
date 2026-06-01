@@ -34,8 +34,10 @@ import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userN
 import { DEMO_WEBINARS } from '@/data/demoWebinars';
 import { DEMO_CAMPAIGNS } from '@/data/demoCampaigns';
 import { DEMO_EVENTS } from '@/data/demoEvents';
-import { DEMO_STANDALONES } from '@/data/demoStandalones';
 import { DEMO_ASSIGNED_TASKS } from '@/data/demoAssignedTasks';
+
+// Hooks
+import { useRequests } from '@/hooks/useRequests';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
@@ -70,7 +72,32 @@ export default function App() {
   const [globalWebinars, setGlobalWebinars] = useState(DEMO_WEBINARS);
   const [globalCampaigns, setGlobalCampaigns] = useState(DEMO_CAMPAIGNS);
   const [globalEvents, setGlobalEvents] = useState(DEMO_EVENTS);
-  const [globalStandaloneRequests, setGlobalStandaloneRequests] = useState(DEMO_STANDALONES);
+
+  // ─── Pedidos / Standalone requests: conectado a Supabase (tabla `requests`) ───
+  // El hook maneja fetch inicial, realtime, create/update/delete y un overlay
+  // local para comments/files (aún no persistidos en DB).
+  const {
+    data: globalStandaloneRequests,
+    loading: requestsLoading,
+    error: requestsError,
+    create: createRequest,
+    update: updateRequest,
+    remove: removeRequest,
+    setStatus: setRequestStatus,
+    setOwner: setRequestOwner,
+    addComment: addRequestComment,
+    removeComment: removeRequestComment,
+    addFile: addRequestFile,
+    removeFile: removeRequestFile,
+    updateContent: updateRequestContent,
+  } = useRequests();
+
+  if (requestsError) {
+    // No bloquea la app — sólo log. La UI muestra lista vacía mientras se
+    // recupera. Si se mantiene el error, revisar env vars y red en consola.
+    // eslint-disable-next-line no-console
+    console.error('Requests (Supabase) error:', requestsError);
+  }
 
   // ─── Tareas asignadas entre usuarios (creadas desde Mi Semana) ───
   const [globalAssignedTasks, setGlobalAssignedTasks] = useState(DEMO_ASSIGNED_TASKS);
@@ -465,7 +492,18 @@ export default function App() {
              events={globalEvents}
              setEvents={setGlobalEvents}
              standaloneRequests={globalStandaloneRequests}
-             setStandaloneRequests={setGlobalStandaloneRequests}
+             requestsLoading={requestsLoading}
+             requestsError={requestsError}
+             createRequest={createRequest}
+             updateRequest={updateRequest}
+             removeRequest={removeRequest}
+             setRequestStatus={setRequestStatus}
+             setRequestOwner={setRequestOwner}
+             addRequestComment={addRequestComment}
+             removeRequestComment={removeRequestComment}
+             addRequestFile={addRequestFile}
+             removeRequestFile={removeRequestFile}
+             updateRequestContent={updateRequestContent}
            />
         </div>
       );
@@ -483,7 +521,7 @@ export default function App() {
              events={globalEvents}
              setEvents={setGlobalEvents}
              standaloneRequests={globalStandaloneRequests}
-             setStandaloneRequests={setGlobalStandaloneRequests}
+             setRequestStatus={setRequestStatus}
              assignedTasks={globalAssignedTasks}
              createAssignedTask={createAssignedTask}
              toggleAssignedTaskDone={toggleAssignedTaskDone}

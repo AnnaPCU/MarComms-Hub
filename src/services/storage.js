@@ -1,12 +1,14 @@
 // ════════════════════════════════════════════════════════════════════
-// STORAGE SERVICE — Capa de persistencia
+// STORAGE SERVICE — Capa de persistencia (factory mock/supabase)
 // ════════════════════════════════════════════════════════════════════
-// 🚧 PLACEHOLDER — En modo demo, toda la data vive en memoria de React.
+// Hoy: modo mock (in-memory) — los servicios específicos manejan su
+// propio store. Este módulo expone solo `isBackendReady()` y los
+// stubs de las operaciones que ofrecerá Supabase.
 //
-// CUANDO INTEGREMOS SUPABASE:
+// Cuando integremos Supabase:
 //   1. Crear cliente: import { createClient } from '@supabase/supabase-js'
-//   2. Exportar funciones loadX/saveX/deleteX para cada tabla
-//   3. Reemplazar useState global en App.jsx por hooks que llamen acá
+//   2. Implementar loadCollection/saveItem/deleteItem/subscribeCollection
+//   3. Los servicios ya están preparados (preguntan isMockMode())
 //
 // Ver BACKEND_PLAN.md sección "Fase 3 — Data layer" para detalles.
 // ════════════════════════════════════════════════════════════════════
@@ -23,8 +25,13 @@ export const isBackendReady = () => {
 };
 
 /**
+ * Diagnóstico: nombre del backend activo.
+ */
+export const getBackendName = () => (isBackendReady() ? 'supabase' : 'mock');
+
+/**
  * 🚧 Cargar todos los items de una colección.
- * En demo: devuelve null (App.jsx usa la data demo).
+ * En demo: devuelve null (los servicios usan sus propios stores).
  * Con Supabase: hace SELECT * FROM <collection>.
  */
 export const loadCollection = async (_collection) => {
@@ -35,8 +42,6 @@ export const loadCollection = async (_collection) => {
 
 /**
  * 🚧 Guardar/actualizar un item.
- * En demo: no hace nada (App.jsx mantiene state local).
- * Con Supabase: hace UPSERT.
  */
 export const saveItem = async (_collection, _item) => {
   if (!isBackendReady()) return null;

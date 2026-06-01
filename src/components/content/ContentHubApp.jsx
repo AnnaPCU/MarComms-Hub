@@ -16,7 +16,13 @@
 // Props:
 //   onBack — volver al hub
 //   webinars / setWebinars / campaigns / setCampaigns / events / setEvents
-//   standaloneRequests / setStandaloneRequests
+//   standaloneRequests           — lista (read-only) viniendo de useRequests()
+//   requestsLoading, requestsError — estados del hook
+//   createRequest / updateRequest / removeRequest         — CRUD Supabase
+//   setRequestStatus / setRequestOwner                    — wrappers
+//   addRequestComment / removeRequestComment              — overlay local
+//   addRequestFile / removeRequestFile                    — overlay local
+//   updateRequestContent                                  — overlay local genérico
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo } from 'react';
@@ -37,7 +43,28 @@ import { calcProgress } from '@/utils/progress';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import MailchimpReportTool from './MailchimpReportTool';
 
-export default function ContentHubApp({ onBack, webinars, setWebinars, campaigns, setCampaigns, events, setEvents, standaloneRequests, setStandaloneRequests }) {
+export default function ContentHubApp({
+  onBack,
+  webinars,
+  setWebinars,
+  campaigns,
+  setCampaigns,
+  events,
+  setEvents,
+  standaloneRequests,
+  requestsLoading,
+  requestsError,
+  createRequest,
+  updateRequest,
+  removeRequest,
+  setRequestStatus,
+  setRequestOwner,
+  addRequestComment,
+  removeRequestComment,
+  addRequestFile,
+  removeRequestFile,
+  updateRequestContent,
+}) {
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
   const [mainTab, setMainTab] = useState('pedidos'); // pedidos | herramientas
   const [activeTool, setActiveTool] = useState('utm'); // utm | mailchimp | newsletter
@@ -172,21 +199,24 @@ export default function ContentHubApp({ onBack, webinars, setWebinars, campaigns
     const field = who === 'marcomms' ? 'marcommsApproval' : 'clientApproval';
 
     if (sourceType === 'standalone') {
-      setStandaloneRequests(prev => prev.map(r => {
-        if (r.id !== projectId) return r;
-        const content = { ...(r.content || {}) };
-        const cur = content[piece.key] || {};
-        content[piece.key] = { ...cur, [field]: newValue };
-        // Si ambos están aprobados, marcar el pedido entero como done
-        const both = (field === 'marcommsApproval' ? newValue : !!cur.marcommsApproval) &&
-                     (field === 'clientApproval' ? newValue : !!cur.clientApproval);
-        let updated = { ...r, content };
-        if (both && r.status !== 'done') {
-          updated.status = 'done';
-          updated.completedAt = new Date().toISOString();
-        }
-        return updated;
-      }));
+      // Aprobaciones de pieza viven en el overlay local de content (no persistido)
+      const currentReq = (standaloneRequests || []).find(r => r.id === projectId);
+      const cur = currentReq?.content?.[piece.key] || {};
+
+      if (updateRequestContent) {
+        updateRequestContent(projectId, (content) => {
+          const next = { ...(content || {}) };
+          next[piece.key] = { ...(next[piece.key] || {}), [field]: newValue };
+          return next;
+        });
+      }
+
+      // Si ambos quedan aprobados → marcar el pedido entero como done (persiste en Supabase)
+      const both = (field === 'marcommsApproval' ? newValue : !!cur.marcommsApproval) &&
+                   (field === 'clientApproval' ? newValue : !!cur.clientApproval);
+      if (both && currentReq && currentReq.status !== 'done' && setRequestStatus) {
+        setRequestStatus(projectId, 'done');
+      }
       return;
     }
 
@@ -294,11 +324,11 @@ export default function ContentHubApp({ onBack, webinars, setWebinars, campaigns
   };
 
   // ─── Standalone Requests (pedidos independientes) ───
-  const createStandaloneRequest = () => {
+  // Persisten en Supabase (tabla `requests`) vía las acciones del hook useRequests.
+  const createStandaloneRequest = async () => {
     if (!newRequest.name.trim() || !newRequest.country) return;
     const cat = STANDALONE_CATEGORIES.find(c => c.id === newRequest.category);
-    const req = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+    const payload = {
       name: newRequest.name.trim(),
       category: newRequest.category,
       country: newRequest.country,
@@ -306,91 +336,49 @@ export default function ContentHubApp({ onBack, webinars, setWebinars, campaigns
       requester: newRequest.requester.trim(),
       budget: Number(newRequest.budget) || 0,
       detail: newRequest.detail.trim(),
-      deadline: newRequest.deadline || '',
+      deadline: newRequest.deadline || null,
       owner: cat?.defaultOwner || 'Agus',
       status: 'pending',
-      content: { comments: [], files: [] },
-      createdAt: new Date().toISOString()
     };
-    setStandaloneRequests(prev => [req, ...prev]);
+    try {
+      if (createRequest) await createRequest(payload);
+    } catch (e) {
+      console.error('Error creando pedido:', e);
+      alert('No se pudo crear el pedido. Revisá la consola.');
+      return;
+    }
     setNewRequest({ name: '', category: 'one_pager', country: '', businessUnit: '', requester: '', budget: '', detail: '', deadline: '' });
     setShowNewRequest(false);
   };
 
   const updateStandaloneStatus = (reqId, newStatus) => {
-    setStandaloneRequests(prev => prev.map(r => {
-      if (r.id !== reqId) return r;
-      let updated = { ...r, status: newStatus };
-      // Si pasa a done, marcar completedAt (corte de facturación)
-      if (newStatus === 'done' && !r.completedAt) {
-        updated.completedAt = new Date().toISOString();
-      }
-      // Si vuelve a pending/in_progress, limpiar completedAt
-      if (newStatus !== 'done' && r.completedAt) {
-        const { completedAt, ...rest } = updated;
-        updated = rest;
-      }
-      return updated;
-    }));
+    // El hook se encarga del completedAt automáticamente
+    if (setRequestStatus) setRequestStatus(reqId, newStatus);
   };
 
   const updateStandaloneOwner = (reqId, newOwner) => {
-    setStandaloneRequests(prev => prev.map(r => r.id === reqId ? { ...r, owner: newOwner } : r));
+    if (setRequestOwner) setRequestOwner(reqId, newOwner);
   };
 
   const deleteStandalone = (reqId) => {
-    setStandaloneRequests(prev => prev.filter(r => r.id !== reqId));
+    if (removeRequest) removeRequest(reqId);
   };
 
-  // Comments y files para standalone
+  // Comments y files para standalone (overlay local — no persistido todavía)
   const addStandaloneComment = (reqId, text, author) => {
-    if (!text.trim()) return;
-    setStandaloneRequests(prev => prev.map(r => {
-      if (r.id !== reqId) return r;
-      const content = { ...(r.content || {}) };
-      content.comments = [...(content.comments || []), {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        author: author || 'Equipo',
-        text: text.trim(),
-        timestamp: new Date().toISOString()
-      }];
-      return { ...r, content };
-    }));
+    if (addRequestComment) addRequestComment(reqId, text, author);
   };
 
   const removeStandaloneComment = (reqId, commentId) => {
-    setStandaloneRequests(prev => prev.map(r => {
-      if (r.id !== reqId) return r;
-      const content = { ...(r.content || {}) };
-      content.comments = (content.comments || []).filter(c => c.id !== commentId);
-      return { ...r, content };
-    }));
+    if (removeRequestComment) removeRequestComment(reqId, commentId);
   };
 
   const addStandaloneFile = (reqId, file, category = 'design') => {
-    const fileKey = category === 'wording' ? 'wordingFiles' : 'designFiles';
-    setStandaloneRequests(prev => prev.map(r => {
-      if (r.id !== reqId) return r;
-      const content = { ...(r.content || {}) };
-      content[fileKey] = [...(content[fileKey] || []), {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        name: file.name,
-        url: file.url || '',
-        category,
-        addedAt: new Date().toISOString()
-      }];
-      return { ...r, content };
-    }));
+    if (addRequestFile) addRequestFile(reqId, file, category);
   };
 
   const removeStandaloneFile = (reqId, fileId, category = 'design') => {
-    const fileKey = category === 'wording' ? 'wordingFiles' : 'designFiles';
-    setStandaloneRequests(prev => prev.map(r => {
-      if (r.id !== reqId) return r;
-      const content = { ...(r.content || {}) };
-      content[fileKey] = (content[fileKey] || []).filter(f => f.id !== fileId);
-      return { ...r, content };
-    }));
+    if (removeRequestFile) removeRequestFile(reqId, fileId, category);
   };
 
   // Construir lista plana de todas las piezas de todos los proyectos NO completados
@@ -655,6 +643,18 @@ export default function ContentHubApp({ onBack, webinars, setWebinars, campaigns
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col w-full">
+      {/* Banner: loading / error de Supabase */}
+      {requestsError && (
+        <div className="bg-red-50 border-b border-red-200 text-red-700 text-xs font-bold px-4 py-2 text-center">
+          ⚠️ No se pudieron cargar los pedidos. Revisá la consola.
+        </div>
+      )}
+      {requestsLoading && (
+        <div className="bg-pink-50 border-b border-pink-100 text-pink-700 text-[11px] font-bold px-4 py-1.5 text-center">
+          Cargando pedidos…
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-gradient-to-r from-pink-600 to-rose-600 text-white p-6 sticky top-0 z-30 shadow-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
