@@ -9,6 +9,7 @@
 //   onBack, currentUser, onNavigate
 //   webinars / campaigns / events / standaloneRequests / assignedTasks (+ setters)
 //   createAssignedTask, toggleAssignedTaskDone, deleteAssignedTask
+//   setRequestStatus(id, status) — standalones ya van por Supabase
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo } from 'react';
@@ -21,7 +22,7 @@ import { DESIGNERS, MARCOMMS, PEOPLE, SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { formatDate } from '@/utils/date';
 
-export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, setCampaigns, events, setEvents, standaloneRequests, setStandaloneRequests, assignedTasks, createAssignedTask, toggleAssignedTaskDone, deleteAssignedTask, currentUser, onNavigate }) {
+export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, setCampaigns, events, setEvents, standaloneRequests, setRequestStatus, assignedTasks, createAssignedTask, toggleAssignedTaskDone, deleteAssignedTask, currentUser, onNavigate }) {
   const [filterPerson, setFilterPerson] = useState(() => {
     // Por defecto, abrir con el usuario logueado si está en la lista
     if (currentUser && PEOPLE.includes(currentUser.name)) return currentUser.name;
@@ -250,18 +251,11 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
         return c;
       }));
     } else if (task.sourceType === 'standalone') {
-      setStandaloneRequests(prev => prev.map(r => {
-        if (r.id !== task.projectId) return r;
-        let updated = { ...r, status: newDone ? 'done' : 'in_progress' };
-        if (newDone && !r.completedAt) {
-          updated.completedAt = new Date().toISOString();
-        }
-        if (!newDone && r.completedAt) {
-          const { completedAt, ...rest } = updated;
-          updated = rest;
-        }
-        return updated;
-      }));
+      // Standalones viven en Supabase — delegamos al wrapper del hook,
+      // que maneja completedAt automáticamente.
+      if (setRequestStatus) {
+        setRequestStatus(task.projectId, newDone ? 'done' : 'in_progress');
+      }
     } else if (task.sourceType === 'assigned') {
       if (toggleAssignedTaskDone) {
         toggleAssignedTaskDone(task.projectId, newDone);

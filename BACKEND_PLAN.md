@@ -1,6 +1,11 @@
 # Backend Plan — Migración a Supabase
 
-Plan de integración del backend para Marcomms Hub. **NO IMPLEMENTAR TODAVÍA** — este documento describe el estado deseado.
+Plan de integración del backend para Marcomms Hub.
+
+> ✅ **Hecho en este turno**: el módulo **requests** ya quedó migrado a Supabase (tabla `public.requests`).
+> Cliente: `src/lib/supabaseClient.js`. Servicio: `src/services/requestsService.js`. Hook: `src/hooks/useRequests.js`. UI conectada en `ContentHubApp.jsx` y `MyWeekApp.jsx`. Realtime activo.
+>
+> 🚧 **Resto pendiente**: tasks, comments, files, campaigns, webinars, events, auth real. Las tablas de tasks/comments/files ya existen en Supabase — falta crear sus servicios y refactorizar las UIs correspondientes.
 
 ---
 
@@ -254,10 +259,11 @@ supabase
 3. Gate la app detrás del login real
 
 ### Fase 3 — Data layer (3-5 días)
-1. Crear servicio `src/services/supabase.js` con cliente
-2. Crear hooks `useWebinars`, `useCampaigns`, etc. que reemplacen los useState
-3. Migrar cada módulo uno por uno (empezar por el más simple: standalones)
-4. Eliminar archivos de `src/data/demo*.js` (o dejarlos como seed)
+1. Crear servicio `src/services/supabase.js` con cliente Supabase
+2. Implementar la rama no-mock en cada servicio existente (`requestsService`, `tasksService`, `campaignsService`, `webinarsService`, `eventsService`, `usersService`, `commentsService`, `filesService`)
+3. Crear hooks `useWebinars`, `useCampaigns`, `useEvents` siguiendo el patrón de los ya existentes (`useRequests`, `useTasks`)
+4. Refactorizar `App.jsx`: reemplazar `globalCampaigns`, `globalWebinars`, `globalEvents`, `globalStandaloneRequests`, `globalAssignedTasks` por hooks
+5. Dejar los archivos de `src/data/mock*.js` y `seed.js` como **seed** (utilidad para `npm run seed`)
 
 ### Fase 4 — Real-time (1-2 días)
 1. Agregar subscriptions a cada tabla

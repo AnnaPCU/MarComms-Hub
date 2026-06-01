@@ -1,7 +1,9 @@
 // ════════════════════════════════════════════════════════════════════
 // AUTH SERVICE — Autenticación
 // ════════════════════════════════════════════════════════════════════
-// MODO DEMO: password compartida hardcoded.
+// MODO DEMO: password compartida.
+//   - Configurable vía .env → VITE_SHARED_PASSWORD
+//   - Fallback hardcoded para desarrollo local: 'marcomms2026'
 //
 // CUANDO INTEGREMOS SUPABASE:
 //   1. Reemplazar checkPassword con Supabase Auth (Magic Link)
@@ -13,12 +15,22 @@
 
 import { PEOPLE } from '@/constants/team';
 
+// Default solo para desarrollo. En producción usar VITE_SHARED_PASSWORD.
+const DEMO_FALLBACK_PASSWORD = 'marcomms2026';
+
 /**
  * Obtiene la password compartida desde env vars.
- * Default: 'marcomms2026' si no está configurada.
  */
-const getSharedPassword = () => {
-  return import.meta.env.VITE_SHARED_PASSWORD || 'marcomms2026';
+export const getSharedPassword = () => {
+  return import.meta.env.VITE_SHARED_PASSWORD || DEMO_FALLBACK_PASSWORD;
+};
+
+/**
+ * Indica si la app está corriendo con la password default (no configurada).
+ * Útil para mostrar un warning en UI durante desarrollo.
+ */
+export const isUsingDefaultPassword = () => {
+  return !import.meta.env.VITE_SHARED_PASSWORD;
 };
 
 /**
@@ -36,15 +48,28 @@ export const isValidMember = (name) => {
 };
 
 /**
- * 🚧 PLACEHOLDER para integración Supabase Auth futura.
+ * Login compartido (modo demo).
+ * Devuelve { ok, error? } sin lanzar excepciones — más fácil de consumir
+ * desde el hook useAuth.
  */
+export const sharedLogin = ({ name, password }) => {
+  if (!isValidMember(name)) {
+    return { ok: false, error: 'Usuario inválido' };
+  }
+  if (!checkPassword(password)) {
+    return { ok: false, error: 'Contraseña incorrecta' };
+  }
+  return { ok: true };
+};
+
+// ────────────────────────────────────────────────────────────────────
+// 🚧 PLACEHOLDERS para integración Supabase Auth futura.
+// ────────────────────────────────────────────────────────────────────
+
 export const loginWithSupabase = async (_email) => {
   throw new Error('Supabase Auth no integrado todavía. Ver BACKEND_PLAN.md');
 };
 
-/**
- * 🚧 PLACEHOLDER para logout con Supabase.
- */
 export const logoutWithSupabase = async () => {
   // TODO: supabase.auth.signOut()
 };
