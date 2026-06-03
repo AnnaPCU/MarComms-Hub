@@ -39,6 +39,7 @@ export const fromRow = (row) => {
     asistentes:       row.asistentes || '',
     dealsCreated:     row.deals_created || 0,
     completedAt:      row.completed_at || null,
+    createdAt:        row.created_at || null,
     updatedAt:        row.updated_at || null,
     // Sub-tareas top-level (vienen de tasks jsonb)
     ...TASK_KEYS.reduce((acc, k) => {

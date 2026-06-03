@@ -41,6 +41,7 @@ import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 // Utils
 import { calcProgress } from '@/utils/progress';
 import { makeCampaignFromWebinar } from '@/utils/webinar';
+import { buildNotifications } from '@/utils/notifications';
 
 // Components
 import LoginScreen from '@/components/login/LoginScreen';
@@ -53,9 +54,9 @@ import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import CountryDetail from '@/components/country/CountryDetail';
 
-// Clave de localStorage para la sesión (versionada — si rompemos el shape,
-// subir el sufijo para que las sesiones viejas se descarten solas).
+// Claves de localStorage. Versionadas → si cambia el shape, subir el sufijo.
 const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
+const READ_NOTIFS_STORAGE_KEY = 'marcomms_hub_read_notifs_v1';
 
 const readStoredUser = () => {
   if (typeof window === 'undefined') return null;
@@ -63,11 +64,22 @@ const readStoredUser = () => {
     const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Validación mínima: tiene que tener al menos { name, team }
     if (parsed && typeof parsed === 'object' && parsed.name) return parsed;
     return null;
   } catch (_e) {
     return null;
+  }
+};
+
+const readStoredReadNotifs = () => {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(READ_NOTIFS_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch (_e) {
+    return new Set();
   }
 };
 
@@ -91,7 +103,20 @@ export default function App() {
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [readNotifications, setReadNotifications] = useState(new Set());
+  // Notificaciones leídas — persistidas en localStorage para que sobrevivan el refresh
+  const [readNotifications, setReadNotifications] = useState(readStoredReadNotifs);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        READ_NOTIFS_STORAGE_KEY,
+        JSON.stringify(Array.from(readNotifications)),
+      );
+    } catch (_e) {
+      // localStorage podría estar deshabilitado — ignorar
+    }
+  }, [readNotifications]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showFastAction, setShowFastAction] = useState(false);
@@ -495,6 +520,7 @@ export default function App() {
              setCampaigns={setGlobalCampaigns}
              onCampaignWebinarStepToggled={onCampaignWebinarStepToggled}
              onCampaignDeleted={onCampaignDeleted}
+             currentUser={currentUser}
            />
         </div>
       );
@@ -591,275 +617,25 @@ export default function App() {
     );
   };
 
-  // ─── Generación dinámica de notificaciones del usuario logueado ───
-  // Memoizado: se recalcula sólo cuando cambia el usuario o alguna coleccion.
-  // Crítico ahora que los hooks de Supabase + realtime disparan re-renders frecuentes.
+  // ─── Notificaciones del usuario logueado (memoizado) ───
+  // Lógica pura en src/utils/notifications.js (testeable con vitest).
+  // Se recomputa solo cuando cambian las colecciones o el usuario.
   const notifications = useMemo(() => {
     if (!currentUser) return [];
-
-    // Warning si el currentUser no es uno de los 9 miembros oficiales del equipo.
-    // En ese caso las notificaciones quedan vacías porque nadie le matchea como owner.
-    if (!PEOPLE.includes(currentUser.name)) {
+    // Warning si currentUser.name no está en los 9 miembros oficiales:
+    // en ese caso las notificaciones quedan vacías porque nadie le matchea como owner.
+    if (currentUser.name && !PEOPLE.includes(currentUser.name)) {
       console.warn(
         `[notifications] currentUser.name='${currentUser.name}' no está en PEOPLE. ` +
         `Las notificaciones no van a aparecer hasta que loggees con uno de: ${PEOPLE.join(', ')}.`,
       );
-      return [];
     }
-
-    const notifs = [];
-    const userName = (currentUser.name || '').toUpperCase();
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const in3Days = new Date(today); in3Days.setDate(in3Days.getDate() + 3);
-    const last3Days = new Date(today); last3Days.setDate(last3Days.getDate() - 3);
-    const matchOwner = (o) => (o || '').toString().trim().toUpperCase() === userName;
-
-    // ── Obtener el equipo del usuario para personalizar mensajes ──
-    const userTeam = currentUser.team?.toLowerCase() === 'marketing' ? 'marketing' : 'comunicacion';
-    const templates = NOTIFICATION_TEMPLATES[userTeam] || NOTIFICATION_TEMPLATES.comunicacion;
-    const priority = NOTIFICATION_PRIORITY[userTeam] || NOTIFICATION_PRIORITY.comunicacion;
-
-    // ── 1. Tareas atrasadas/próximas (webinar)
-    (globalWebinars || []).forEach(w => {
-      const taskKeys = ['teamsGroup', 'testDay', 'bbdd', 'hubspot', 'landingLivestorm', 'ppt', 'onePager',
-        'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost', 'mailPre1', 'mailPre2', 'mailPre3',
-        'mailPostAttended', 'mailPostNoShow', 'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte'];
-      const labels = {
-        teamsGroup: 'Equipos', testDay: 'Test Day', bbdd: 'Base de Datos', hubspot: 'HubSpot',
-        landingLivestorm: 'Landing Livestorm', ppt: 'PPT', onePager: 'One pager',
-        lknAnuncio: 'LKN anuncio', lknReminder: 'LKN 1 day to go', lknHoy: 'LKN es hoy', lknPost: 'LKN recap',
-        mailPre1: 'Mail 01', mailPre2: 'Mail 02', mailPre3: 'Mail 03',
-        mailPostAttended: 'Mail Post Asistentes', mailPostNoShow: 'Mail Post No-asistidos',
-        bannerInv1: 'Banner 1', bannerInv2: 'Banner 2', bannerInv3: 'Banner 3', bannerPost: 'Banner Post',
-        reporte: 'Reporte final'
-      };
-      taskKeys.forEach(k => {
-        const t = w[k];
-        if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-        const d = new Date(t.date + 'T00:00:00');
-        const taskLabel = labels[k] || k;
-        if (d < today) {
-          const notifMsg = templates.overdue_task(taskLabel, w.name);
-          notifs.push({ id: `overdue-w-${w.id}-${k}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
-        } else if (d <= in3Days) {
-          const notifMsg = templates.soon_task(taskLabel, w.name);
-          notifs.push({ id: `soon-w-${w.id}-${k}`, type: 'soon', icon: Clock, color: 'amber',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar' });
-        }
-      });
-    });
-
-    // ── 2. Tareas atrasadas/próximas (eventos)
-    (globalEvents || []).forEach(ev => {
-      const phaseLabels = {};
-      EVENT_PHASES.forEach(p => p.tasks.forEach(t => phaseLabels[t.id] = t.label));
-      Object.entries(ev.tasks || {}).forEach(([tid, t]) => {
-        if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-        const d = new Date(t.date + 'T00:00:00');
-        const taskLabel = phaseLabels[tid] || tid;
-        if (d < today) {
-          const notifMsg = templates.overdue_task(taskLabel, ev.name);
-          notifs.push({ id: `overdue-e-${ev.id}-${tid}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
-        } else if (d <= in3Days) {
-          const notifMsg = templates.soon_task(taskLabel, ev.name);
-          notifs.push({ id: `soon-e-${ev.id}-${tid}`, type: 'soon', icon: Clock, color: 'amber',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: t.date, navTo: 'events' });
-        }
-      });
-      (ev.customTasks || []).forEach(ct => {
-        if (ct.done || !matchOwner(ct.owner) || !ct.date) return;
-        const d = new Date(ct.date + 'T00:00:00');
-        if (d < today) {
-          const notifMsg = templates.overdue_task(ct.label, ev.name);
-          notifs.push({ id: `overdue-ec-${ev.id}-${ct.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: ct.date, navTo: 'events' });
-        }
-      });
-    });
-
-    // ── 3. Servicios donde es responsable general con baja completitud cerca de fecha
-    (globalWebinars || []).forEach(w => {
-      const owner = w.serviceOwner || SERVICE_OWNERS.webinar;
-      if (!matchOwner(owner)) return;
-      if (calcProgress(w) >= 100) return;
-      if (!w.mainDate) return;
-      const d = new Date(w.mainDate + 'T00:00:00');
-      if (d >= today && d <= in3Days && calcProgress(w) < 80) {
-        const progress = calcProgress(w);
-        const notifMsg = templates.responsible(progress, w.name);
-        notifs.push({ id: `resp-w-${w.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar' });
-      }
-    });
-    (globalEvents || []).forEach(ev => {
-      const owner = ev.serviceOwner || SERVICE_OWNERS.event;
-      if (!matchOwner(owner)) return;
-      if (!ev.date) return;
-      const d = new Date(ev.date + 'T00:00:00');
-      const allTasks = [...Object.values(ev.tasks || {}), ...(ev.customTasks || [])];
-      const prog = allTasks.length ? Math.round(allTasks.filter(t => t.done).length / allTasks.length * 100) : 0;
-      if (prog >= 100) return;
-      if (d >= today && d <= in3Days && prog < 80) {
-        const notifMsg = templates.responsible(prog, ev.name);
-        notifs.push({ id: `resp-e-${ev.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: ev.name, source: 'Evento', date: ev.date, navTo: 'events' });
-      }
-    });
-    // Campañas como responsable general
-    (globalCampaigns || []).forEach(c => {
-      if (c.variant === 'webinar') return; // campañas auto del webinar se contabilizan en el webinar
-      const owner = c.serviceOwner || SERVICE_OWNERS.campaign;
-      if (!matchOwner(owner)) return;
-      // Calcular progreso por tipo
-      let totalSteps = 3;
-      if (c.type === 'email') totalSteps = 13;
-      const prog = totalSteps > 0 ? Math.round(((c.completedSteps || []).length / totalSteps) * 100) : 0;
-      if (prog >= 100) return;
-      // Si tiene deadline final próximo y progreso < 80%
-      const finalDeadline = c.deadlines?.finalDelivery;
-      if (!finalDeadline) return;
-      const d = new Date(finalDeadline + 'T00:00:00');
-      if (d >= today && d <= in3Days && prog < 80) {
-        const notifMsg = templates.responsible(prog, c.name);
-        notifs.push({ id: `resp-c-${c.id}`, type: 'responsible', icon: User, color: 'purple',
-          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: c.name, source: 'Campaña', date: finalDeadline, navTo: 'campaigns' });
-      }
-    });
-
-    // ── 4. Pedidos del Content Hub asignados (nuevos en últimos 3 días + deadline próximo)
-    (globalStandaloneRequests || []).forEach(r => {
-      if (r.status === 'done') return;
-      if (!matchOwner(r.owner)) return;
-      const created = r.createdAt ? new Date(r.createdAt) : null;
-      if (created && created >= last3Days) {
-        const notifMsg = templates.new_request(r.name);
-        notifs.push({ id: `new-s-${r.id}`, type: 'new', icon: Sparkles, color: 'pink',
-          title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline || '', navTo: 'content' });
-      }
-      if (r.deadline) {
-        const d = new Date(r.deadline + 'T00:00:00');
-        if (d < today) {
-          const notifMsg = templates.overdue_task('Pedido', r.name);
-          notifs.push({ id: `overdue-s-${r.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
-        } else if (d <= in3Days) {
-          const notifMsg = templates.soon_task('Pedido', r.name);
-          notifs.push({ id: `soon-s-${r.id}`, type: 'soon', icon: Clock, color: 'amber',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji, project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content' });
-        }
-      }
-    });
-
-    // ── 5. Tareas asignadas por otros usuarios al currentUser
-    (globalAssignedTasks || []).forEach(at => {
-      if (at.done) return;
-      if (!matchOwner(at.assignedTo)) return;
-
-      // Notif principal: te asignaron una tarea (siempre que no esté completa)
-      const assignedMsg = templates.assigned_task(at.assignedBy || 'Alguien', at.title);
-      notifs.push({
-        id: `assigned-${at.id}`,
-        type: 'assigned',
-        icon: UserCheck,
-        color: 'cyan',
-        title: assignedMsg.title_long,
-        shortTitle: assignedMsg.title_short,
-        emoji: assignedMsg.emoji,
-        project: at.title,
-        source: 'Asignada',
-        date: at.deadline || '',
-        navTo: 'my_week'
-      });
-
-      // Notif extra si está atrasada o próxima a vencer
-      if (at.deadline) {
-        const d = new Date(at.deadline + 'T00:00:00');
-        if (d < today) {
-          const notifMsg = templates.overdue_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
-          notifs.push({
-            id: `overdue-at-${at.id}`,
-            type: 'overdue', icon: AlertCircle, color: 'red',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji,
-            project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
-          });
-        } else if (d <= in3Days) {
-          const notifMsg = templates.soon_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
-          notifs.push({
-            id: `soon-at-${at.id}`,
-            type: 'soon', icon: Clock, color: 'amber',
-            title: notifMsg.title_long, shortTitle: notifMsg.title_short, emoji: notifMsg.emoji,
-            project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week'
-          });
-        }
-      }
-    });
-
-    // ── 6. Responsable de proyecto con tareas atrasadas (asignadas a CUALQUIERA del equipo) ──
-    // Permite que el serviceOwner se entere de problemas en su proyecto antes de que llegue
-    // el deadline final, aunque las tareas atrasadas estén asignadas a otra persona.
-    const countOverdueTasks = (taskList) => {
-      let c = 0;
-      taskList.forEach((t) => {
-        if (!t || t.done || !t.date) return;
-        const dd = new Date(t.date + 'T00:00:00');
-        if (dd < today) c++;
-      });
-      return c;
-    };
-    (globalWebinars || []).forEach((w) => {
-      const owner = w.serviceOwner || SERVICE_OWNERS.webinar;
-      if (!matchOwner(owner)) return;
-      if (calcProgress(w) >= 100) return;
-      // Recolectar las 21 sub-tareas con fecha y NO done
-      const subTasks = [
-        w.teamsGroup, w.testDay, w.bbdd, w.hubspot,
-        w.landingLivestorm, w.ppt, w.onePager,
-        w.lknAnuncio, w.lknReminder, w.lknHoy, w.lknPost,
-        w.mailPre1, w.mailPre2, w.mailPre3, w.mailPostAttended, w.mailPostNoShow,
-        w.bannerInv1, w.bannerInv2, w.bannerInv3, w.bannerPost, w.reporte,
-      ];
-      const overdueCount = countOverdueTasks(subTasks);
-      if (overdueCount > 0) {
-        notifs.push({
-          id: `team-overdue-w-${w.id}`,
-          type: 'responsible', icon: AlertCircle, color: 'purple',
-          title: `Tu proyecto "${w.name}" tiene ${overdueCount} tarea${overdueCount > 1 ? 's' : ''} atrasada${overdueCount > 1 ? 's' : ''}`,
-          shortTitle: `⚠️ ${overdueCount} atrasada${overdueCount > 1 ? 's' : ''} en ${w.name}`,
-          emoji: '⚠️', project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar',
-        });
-      }
-    });
-    (globalEvents || []).forEach((ev) => {
-      const owner = ev.serviceOwner || SERVICE_OWNERS.event;
-      if (!matchOwner(owner)) return;
-      const allTasks = [...Object.values(ev.tasks || {}), ...(ev.customTasks || [])];
-      const overdueCount = countOverdueTasks(allTasks);
-      if (overdueCount > 0) {
-        notifs.push({
-          id: `team-overdue-e-${ev.id}`,
-          type: 'responsible', icon: AlertCircle, color: 'purple',
-          title: `Tu evento "${ev.name}" tiene ${overdueCount} tarea${overdueCount > 1 ? 's' : ''} atrasada${overdueCount > 1 ? 's' : ''}`,
-          shortTitle: `⚠️ ${overdueCount} atrasada${overdueCount > 1 ? 's' : ''} en ${ev.name}`,
-          emoji: '⚠️', project: ev.name, source: 'Evento', date: ev.date, navTo: 'events',
-        });
-      }
-    });
-
-    // Dedup + ordenar (según prioridad del equipo)
-    const seen = new Set();
-    return notifs.filter(n => {
-      if (seen.has(n.id)) return false;
-      seen.add(n.id);
-      return true;
-    }).sort((a, b) => {
-      // Usar índice de prioridad del equipo del usuario
-      const orderMap = {};
-      priority.forEach((type, idx) => { orderMap[type] = idx; });
-      const aOrder = orderMap[a.type] !== undefined ? orderMap[a.type] : 99;
-      const bOrder = orderMap[b.type] !== undefined ? orderMap[b.type] : 99;
-      return aOrder - bOrder;
+    return buildNotifications(currentUser, {
+      webinars:      globalWebinars,
+      campaigns:     globalCampaigns,
+      events:        globalEvents,
+      requests:      globalStandaloneRequests,
+      assignedTasks: globalAssignedTasks,
     });
   }, [currentUser, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 

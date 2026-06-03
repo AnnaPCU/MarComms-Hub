@@ -43,7 +43,7 @@ const campaignId = () => {
   });
 };
 
-export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted }) {
+export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser }) {
   const [activeView, setActiveView] = useState(null); 
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
@@ -118,7 +118,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     if (!text || !text.trim()) return;
     setCampaigns(campaigns.map(c => {
       if (c.id !== campaignId) return c;
-      const comment = { id: Date.now(), text: text.trim(), date: new Date().toISOString() };
+      const comment = {
+        id: Date.now(),
+        text: text.trim(),
+        author: currentUser?.name || 'Equipo',
+        date: new Date().toISOString(),
+      };
       return { ...c, comments: [...(c.comments || []), comment] };
     }));
     setNewComment({ ...newComment, [campaignId]: "" });
