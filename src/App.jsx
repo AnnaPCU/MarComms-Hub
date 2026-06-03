@@ -14,7 +14,7 @@
 // Para producción real, integrar Supabase (ver BACKEND_PLAN.md).
 // ════════════════════════════════════════════════════════════════════
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2,
   ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard,
@@ -38,6 +38,7 @@ import { DEMO_ASSIGNED_TASKS } from '@/data/demoAssignedTasks';
 
 // Hooks
 import { useRequests } from '@/hooks/useRequests';
+import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
@@ -54,9 +55,42 @@ import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import CountryDetail from '@/components/country/CountryDetail';
 
+// Clave de localStorage para la sesión (versionada — si rompemos el shape,
+// subir el sufijo para que las sesiones viejas se descarten solas).
+const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
+
+const readStoredUser = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    // Validación mínima: tiene que tener al menos { name, team }
+    if (parsed && typeof parsed === 'object' && parsed.name) return parsed;
+    return null;
+  } catch (_e) {
+    return null;
+  }
+};
+
 export default function App() {
-  // ── Sesión / login ──
-  const [currentUser, setCurrentUser] = useState(null);
+  // ── Sesión / login (persiste en localStorage) ──
+  const [currentUser, setCurrentUser] = useState(readStoredUser);
+
+  // Sync de currentUser → localStorage en cada cambio
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (currentUser) {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(currentUser));
+      } else {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch (_e) {
+      // localStorage podría estar deshabilitado (modo incógnito estricto, etc.) — ignorar
+    }
+  }, [currentUser]);
+
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [readNotifications, setReadNotifications] = useState(new Set());
@@ -67,6 +101,15 @@ export default function App() {
   const [currentSection, setCurrentSection] = useState('main');
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [clientReportCountry, setClientReportCountry] = useState(null);
+
+  // ── Refs para cerrar dropdowns al hacer click afuera ──
+  const searchContainerRef = useRef(null);
+  const notificationsContainerRef = useRef(null);
+  const fastActionContainerRef = useRef(null);
+
+  useOnClickOutside(searchContainerRef,        () => setShowSearchResults(false), showSearchResults);
+  useOnClickOutside(notificationsContainerRef, () => setShowNotifications(false), showNotifications);
+  useOnClickOutside(fastActionContainerRef,    () => setShowFastAction(false),    showFastAction);
   
   // Estado compartido en memoria (sin Firebase para la demo)
   const [globalWebinars, setGlobalWebinars] = useState(DEMO_WEBINARS);
@@ -942,7 +985,7 @@ export default function App() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-white/70 backdrop-blur-xl border-b border-slate-200 px-8 py-4 sticky top-0 z-50 flex items-center justify-between">
-          <div className="flex-1 max-w-2xl relative group">
+          <div ref={searchContainerRef} className="flex-1 max-w-2xl relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10" size={18} />
             <input
               type="text"
@@ -963,8 +1006,6 @@ export default function App() {
 
             {/* Dropdown de resultados */}
             {showSearchResults && searchQuery.trim().length >= 2 && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setShowSearchResults(false)} />
                 <div className="absolute left-0 right-0 top-full mt-2 max-h-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden flex flex-col">
                   <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                     <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">
@@ -1020,10 +1061,9 @@ export default function App() {
                     )}
                   </div>
                 </div>
-              </>
             )}
           </div>
-          <div className="flex items-center gap-3 ml-8 relative">
+          <div ref={notificationsContainerRef} className="flex items-center gap-3 ml-8 relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className={`p-3 rounded-2xl transition-all relative ${showNotifications ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
@@ -1039,9 +1079,6 @@ export default function App() {
 
             {/* Panel de notificaciones */}
             {showNotifications && (
-              <>
-                {/* overlay para cerrar al click afuera */}
-                <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
                 <div className="absolute right-0 top-full mt-2 w-96 max-h-[500px] bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden flex flex-col">
                   <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50">
                     <div className="flex items-center justify-between">
@@ -1122,13 +1159,12 @@ export default function App() {
                     )}
                   </div>
                 </div>
-              </>
             )}
 
             <div className="h-8 w-px bg-slate-200 mx-2"></div>
 
             {/* Fast Action: menú con accesos rápidos */}
-            <div className="relative">
+            <div ref={fastActionContainerRef} className="relative">
               <button
                 onClick={() => setShowFastAction(!showFastAction)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
@@ -1138,8 +1174,6 @@ export default function App() {
                 <Zap size={14} className="fill-current" /> ACCIÓN RÁPIDA
               </button>
               {showFastAction && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setShowFastAction(false)} />
                   <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden">
                     <div className="p-3 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-indigo-900">
                       <div className="flex items-center gap-2">
@@ -1180,7 +1214,6 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                </>
               )}
             </div>
           </div>

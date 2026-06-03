@@ -13,8 +13,8 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  ArrowLeft, BarChart3, Building2, DollarSign, Download, Globe,
-  Plus, Receipt, Trash2, TrendingUp, Video, X,
+  ArrowLeft, BarChart3, Building2, DollarSign, Download, Globe, Info,
+  LayoutDashboard, Plus, Receipt, Tag, Trash2, TrendingUp, Video, X,
 } from 'lucide-react';
 
 import { MARKETS } from '@/constants/markets';

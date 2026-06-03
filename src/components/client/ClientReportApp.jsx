@@ -15,7 +15,8 @@
 import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft, Calendar, CheckCircle2, CheckSquare, Circle, Clock,
-  Database, DollarSign, Download, Globe, Mail, TrendingUp, Video, X,
+  Database, DollarSign, Download, Filter, Globe, Mail, TrendingUp,
+  Video, X, Zap,
 } from 'lucide-react';
 
 import { calcProgress } from '@/utils/progress';

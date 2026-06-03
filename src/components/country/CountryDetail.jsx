@@ -13,8 +13,9 @@
 
 import React, { useState } from 'react';
 import {
-  ArrowLeft, ChevronRight, Clock, Download, ExternalLink,
-  FileText, Mail, Plus, User, Video, Zap,
+  ArrowLeft, Calendar, CheckCircle2, ChevronRight, Clock, Download,
+  ExternalLink, FileText, LayoutDashboard, Mail, Plus, Receipt,
+  Sparkles, User, Video, Zap,
 } from 'lucide-react';
 
 import { calcProgress, calcEventProgress } from '@/utils/progress';
