@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 // Constants
-import { MARCOMMS, SERVICE_OWNERS, TEAM_MEMBERS } from '@/constants/team';
+import { MARCOMMS, PEOPLE, SERVICE_OWNERS, TEAM_MEMBERS } from '@/constants/team';
 import { MARKETS } from '@/constants/markets';
 import { WEBINAR_MAIL_TO_STEP, STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { EVENT_PHASES } from '@/constants/events';
@@ -592,8 +592,21 @@ export default function App() {
   };
 
   // ─── Generación dinámica de notificaciones del usuario logueado ───
-  const buildNotifications = () => {
+  // Memoizado: se recalcula sólo cuando cambia el usuario o alguna coleccion.
+  // Crítico ahora que los hooks de Supabase + realtime disparan re-renders frecuentes.
+  const notifications = useMemo(() => {
     if (!currentUser) return [];
+
+    // Warning si el currentUser no es uno de los 9 miembros oficiales del equipo.
+    // En ese caso las notificaciones quedan vacías porque nadie le matchea como owner.
+    if (!PEOPLE.includes(currentUser.name)) {
+      console.warn(
+        `[notifications] currentUser.name='${currentUser.name}' no está en PEOPLE. ` +
+        `Las notificaciones no van a aparecer hasta que loggees con uno de: ${PEOPLE.join(', ')}.`,
+      );
+      return [];
+    }
+
     const notifs = [];
     const userName = (currentUser.name || '').toUpperCase();
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -783,6 +796,57 @@ export default function App() {
       }
     });
 
+    // ── 6. Responsable de proyecto con tareas atrasadas (asignadas a CUALQUIERA del equipo) ──
+    // Permite que el serviceOwner se entere de problemas en su proyecto antes de que llegue
+    // el deadline final, aunque las tareas atrasadas estén asignadas a otra persona.
+    const countOverdueTasks = (taskList) => {
+      let c = 0;
+      taskList.forEach((t) => {
+        if (!t || t.done || !t.date) return;
+        const dd = new Date(t.date + 'T00:00:00');
+        if (dd < today) c++;
+      });
+      return c;
+    };
+    (globalWebinars || []).forEach((w) => {
+      const owner = w.serviceOwner || SERVICE_OWNERS.webinar;
+      if (!matchOwner(owner)) return;
+      if (calcProgress(w) >= 100) return;
+      // Recolectar las 21 sub-tareas con fecha y NO done
+      const subTasks = [
+        w.teamsGroup, w.testDay, w.bbdd, w.hubspot,
+        w.landingLivestorm, w.ppt, w.onePager,
+        w.lknAnuncio, w.lknReminder, w.lknHoy, w.lknPost,
+        w.mailPre1, w.mailPre2, w.mailPre3, w.mailPostAttended, w.mailPostNoShow,
+        w.bannerInv1, w.bannerInv2, w.bannerInv3, w.bannerPost, w.reporte,
+      ];
+      const overdueCount = countOverdueTasks(subTasks);
+      if (overdueCount > 0) {
+        notifs.push({
+          id: `team-overdue-w-${w.id}`,
+          type: 'responsible', icon: AlertCircle, color: 'purple',
+          title: `Tu proyecto "${w.name}" tiene ${overdueCount} tarea${overdueCount > 1 ? 's' : ''} atrasada${overdueCount > 1 ? 's' : ''}`,
+          shortTitle: `⚠️ ${overdueCount} atrasada${overdueCount > 1 ? 's' : ''} en ${w.name}`,
+          emoji: '⚠️', project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar',
+        });
+      }
+    });
+    (globalEvents || []).forEach((ev) => {
+      const owner = ev.serviceOwner || SERVICE_OWNERS.event;
+      if (!matchOwner(owner)) return;
+      const allTasks = [...Object.values(ev.tasks || {}), ...(ev.customTasks || [])];
+      const overdueCount = countOverdueTasks(allTasks);
+      if (overdueCount > 0) {
+        notifs.push({
+          id: `team-overdue-e-${ev.id}`,
+          type: 'responsible', icon: AlertCircle, color: 'purple',
+          title: `Tu evento "${ev.name}" tiene ${overdueCount} tarea${overdueCount > 1 ? 's' : ''} atrasada${overdueCount > 1 ? 's' : ''}`,
+          shortTitle: `⚠️ ${overdueCount} atrasada${overdueCount > 1 ? 's' : ''} en ${ev.name}`,
+          emoji: '⚠️', project: ev.name, source: 'Evento', date: ev.date, navTo: 'events',
+        });
+      }
+    });
+
     // Dedup + ordenar (según prioridad del equipo)
     const seen = new Set();
     return notifs.filter(n => {
@@ -797,9 +861,8 @@ export default function App() {
       const bOrder = orderMap[b.type] !== undefined ? orderMap[b.type] : 99;
       return aOrder - bOrder;
     });
-  };
+  }, [currentUser, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 
-  const notifications = currentUser ? buildNotifications() : [];
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
 
   // ─── Búsqueda global ───
