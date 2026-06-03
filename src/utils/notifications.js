@@ -21,7 +21,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { AlertCircle, Clock, MessageCircle, Sparkles, User, UserCheck, CheckCircle2, Calendar } from 'lucide-react';
-import { SERVICE_OWNERS, PEOPLE } from '@/constants/team';
+import { SERVICE_OWNERS as DEFAULT_SERVICE_OWNERS, PEOPLE } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 import { calcProgress } from './progress';
@@ -59,6 +59,7 @@ const WEBINAR_TASK_LABELS = {
 export const buildNotifications = (currentUser, data, options = {}) => {
   if (!currentUser) return [];
   const peopleList = options.peopleList || PEOPLE;
+  const SERVICE_OWNERS = options.serviceOwners || DEFAULT_SERVICE_OWNERS;
   if (!peopleList.includes(currentUser.name)) {
     // Usuario no es uno del equipo → nadie le matchea como owner → 0 notifs.
     return [];

@@ -102,7 +102,14 @@ export default function App() {
   }, [currentUser]);
 
   // ─── Equipo (Supabase + fallback a constants/team.js) ───
-  const { team: liveTeam, people: livePeople } = useTeam();
+  // Live: lista de miembros, derivados (people, serviceOwners) y helpers
+  // (greetingFor, accentFor) que reemplazan los constants estáticos.
+  const {
+    team: liveTeam,
+    people: livePeople,
+    serviceOwners: liveServiceOwners,
+    greetingFor,
+  } = useTeam();
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -295,7 +302,11 @@ export default function App() {
         <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
           <div className="mb-10">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight italic">Marcomms Hub <span className="text-indigo-600 not-italic">Central</span></h1>
-            <p className="text-slate-500 mt-2 text-lg font-medium">Panel Maestro de Control Global.</p>
+            {currentUser && (
+              <p className="text-slate-500 mt-2 text-lg font-medium">
+                {greetingFor(currentUser.name) || 'Panel Maestro de Control Global.'}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
@@ -640,8 +651,11 @@ export default function App() {
       events:        globalEvents,
       requests:      globalStandaloneRequests,
       assignedTasks: globalAssignedTasks,
-    }, { peopleList: validNames });
-  }, [currentUser, livePeople, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
+    }, {
+      peopleList:    validNames,
+      serviceOwners: liveServiceOwners,
+    });
+  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
 

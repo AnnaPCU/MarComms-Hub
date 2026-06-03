@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { TEAM_MEMBERS as DEFAULTS } from '@/constants/team';
 import { listTeamMembers, subscribeTeamMembers } from '@/services/teamService';
+import { deriveServiceOwners, getGreeting, getAccent } from '@/utils/teamHelpers';
 
 export const useTeam = () => {
   const [team, setTeam] = useState(DEFAULTS);
@@ -49,6 +50,17 @@ export const useTeam = () => {
     [team],
   );
   const people = useMemo(() => team.map((m) => m.name), [team]);
+  const serviceOwners = useMemo(() => deriveServiceOwners(team), [team]);
 
-  return { team, designers, marcomms, people, loading };
+  return {
+    team,
+    designers,
+    marcomms,
+    people,
+    serviceOwners,
+    loading,
+    // Helpers — closures sobre `team` para que el caller no tenga que pasarlo
+    greetingFor: (name) => getGreeting(team, name),
+    accentFor:   (name) => getAccent(team, name),
+  };
 };
