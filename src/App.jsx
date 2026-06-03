@@ -24,10 +24,9 @@ import {
 
 // Constants
 import { MARCOMMS, PEOPLE, SERVICE_OWNERS, TEAM_MEMBERS } from '@/constants/team';
-import { MARKETS } from '@/constants/markets';
+import { MARKETS, MARKETS_LIST } from '@/constants/markets';
 import { WEBINAR_MAIL_TO_STEP, STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { EVENT_PHASES } from '@/constants/events';
-import { PAISES_DATA } from '@/constants/countries';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 
 // Hooks
@@ -272,7 +271,7 @@ export default function App() {
     });
   };
 
-  const paisesData = PAISES_DATA;
+  const paisesData = MARKETS_LIST;
 
   const sections = [
     { id: 'paises', title: 'Países', description: 'Gestión de mercados globales y entidades.', icon: <Globe2 className="w-8 h-8 text-blue-600" />, stats: '15 Países', color: 'bg-blue-50' },
