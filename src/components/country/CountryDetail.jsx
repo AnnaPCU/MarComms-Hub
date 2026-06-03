@@ -20,6 +20,7 @@ import {
 
 import { calcProgress, calcEventProgress } from '@/utils/progress';
 import { STANDALONE_CATEGORIES } from '@/constants/standalones';
+import { HS_FORM_MARCOMMS_URL } from '@/constants/externalLinks';
 import { generateProjectPDF } from '@/utils/pdf';
 
 export default function CountryDetail({ country, webinars, campaigns, events, standalones, onNavigate, onViewAsClient }) {
@@ -65,9 +66,9 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
           >
             <User size={16} /> Ver como Cliente
           </button>
-          <a 
-            href="https://share.hsforms.com/17nzrYb3HSta0xiURkq9lqAs14mk" 
-            target="_blank" 
+          <a
+            href={HS_FORM_MARCOMMS_URL}
+            target="_blank"
             rel="noreferrer" 
             className="w-full md:w-auto px-5 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-slate-900/20 hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"
           >
