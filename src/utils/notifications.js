@@ -49,14 +49,18 @@ const WEBINAR_TASK_LABELS = {
  *
  * @param {Object|null} currentUser  team member del LoginScreen ({ name, team, ... })
  * @param {Object} data              { webinars, campaigns, events, requests, assignedTasks }
- * @param {Object} options           { now?: Date } — opcional para tests (default: new Date())
+ * @param {Object} options           { now?: Date, peopleList?: string[] }
+ *                                   - now: para tests (default: new Date())
+ *                                   - peopleList: lista de nombres válidos (default: PEOPLE
+ *                                     hardcodeado). Pasar la lista LIVE de team_members
+ *                                     cuando se quiere validar contra Supabase.
  * @returns {Array} notifications ordenadas por prioridad del equipo
  */
 export const buildNotifications = (currentUser, data, options = {}) => {
   if (!currentUser) return [];
-  if (!PEOPLE.includes(currentUser.name)) {
-    // Usuario no es uno de los 9 miembros → nadie le matchea como owner → 0 notifs.
-    // (el caller debería loggear un warning)
+  const peopleList = options.peopleList || PEOPLE;
+  if (!peopleList.includes(currentUser.name)) {
+    // Usuario no es uno del equipo → nadie le matchea como owner → 0 notifs.
     return [];
   }
 

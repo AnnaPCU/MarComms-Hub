@@ -11,10 +11,14 @@
 
 import React, { useState } from 'react';
 import { Sparkles, Lock, Eye, EyeOff, AlertCircle, X, ChevronRight } from 'lucide-react';
-import { TEAM_MEMBERS } from '@/constants/team';
+import { TEAM_MEMBERS as DEFAULT_TEAM } from '@/constants/team';
 import { checkPassword } from '@/services/auth';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, teamMembers }) {
+  // Fallback: si no nos pasan teamMembers (o vienen vacíos), usar el default
+  const members = (Array.isArray(teamMembers) && teamMembers.length > 0)
+    ? teamMembers
+    : DEFAULT_TEAM;
   const [hoveredMember, setHoveredMember] = useState(null);
   const [selectedMember, setSelectedMember] = useState(null);
   const [password, setPassword] = useState('');
@@ -68,12 +72,12 @@ export default function LoginScreen({ onLogin }) {
               </div>
             </div>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:block">
-              {TEAM_MEMBERS.length} miembros
+              {members.length} miembros
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {TEAM_MEMBERS.map((member) => {
+            {members.map((member) => {
               const isHovered = hoveredMember === member.name;
               const teamShort = member.team === 'Comunicación' ? 'COMMS' : 'MKT';
               const teamChipColor = member.team === 'Comunicación'

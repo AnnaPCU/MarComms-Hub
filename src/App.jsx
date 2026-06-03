@@ -36,6 +36,7 @@ import { useCampaigns } from '@/hooks/useCampaigns';
 import { useEvents } from '@/hooks/useEvents';
 import { useAssignedTasks } from '@/hooks/useAssignedTasks';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
+import { useTeam } from '@/hooks/useTeam';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
@@ -99,6 +100,9 @@ export default function App() {
       // localStorage podría estar deshabilitado (modo incógnito estricto, etc.) — ignorar
     }
   }, [currentUser]);
+
+  // ─── Equipo (Supabase + fallback a constants/team.js) ───
+  const { team: liveTeam, people: livePeople } = useTeam();
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -621,12 +625,13 @@ export default function App() {
   // Se recomputa solo cuando cambian las colecciones o el usuario.
   const notifications = useMemo(() => {
     if (!currentUser) return [];
-    // Warning si currentUser.name no está en los 9 miembros oficiales:
+    // Warning si currentUser.name no es del equipo (live de Supabase o fallback constants):
     // en ese caso las notificaciones quedan vacías porque nadie le matchea como owner.
-    if (currentUser.name && !PEOPLE.includes(currentUser.name)) {
+    const validNames = livePeople.length > 0 ? livePeople : PEOPLE;
+    if (currentUser.name && !validNames.includes(currentUser.name)) {
       console.warn(
-        `[notifications] currentUser.name='${currentUser.name}' no está en PEOPLE. ` +
-        `Las notificaciones no van a aparecer hasta que loggees con uno de: ${PEOPLE.join(', ')}.`,
+        `[notifications] currentUser.name='${currentUser.name}' no está en el equipo. ` +
+        `Las notificaciones no van a aparecer hasta que loggees con uno de: ${validNames.join(', ')}.`,
       );
     }
     return buildNotifications(currentUser, {
@@ -635,8 +640,8 @@ export default function App() {
       events:        globalEvents,
       requests:      globalStandaloneRequests,
       assignedTasks: globalAssignedTasks,
-    });
-  }, [currentUser, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
+    }, { peopleList: validNames });
+  }, [currentUser, livePeople, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
 
@@ -725,7 +730,7 @@ export default function App() {
 
   // ── Login: sin usuario activo, mostrar pantalla de login ──
   if (!currentUser) {
-    return <LoginScreen onLogin={(member) => setCurrentUser(member)} />;
+    return <LoginScreen teamMembers={liveTeam} onLogin={(member) => setCurrentUser(member)} />;
   }
 
   return (
