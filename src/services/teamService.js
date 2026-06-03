@@ -7,18 +7,29 @@
 // Esto permite que la app SIEMPRE funcione, y que Anna pueda
 // gestionar el equipo desde el Dashboard de Supabase sin redeploy.
 //
-// Columnas esperadas (defensivo: usa lo que esté disponible):
+// Columnas que esta service entiende (todas opcionales — usa lo disponible):
 //   - name              : text  (obligatorio — clave de matching con defaults)
-//   - team              : text  ('Comunicación' | 'Marketing')
-//   - area              : text  ('comunicacion' | 'marketing')
-//   - role              : text
-//   - color             : text  (clases Tailwind para el gradient avatar)
+//   - profile_key       : text  (slug, ej. 'agus')
+//   - initials          : text  (1-2 letras para avatar)
+//   - role              : text  ← código de equipo: 'Comms' | 'MKT' (o
+//                                  literal 'Comunicación' | 'Marketing' por
+//                                  compatibilidad)
+//   - team              : text  (opcional, si en el futuro se agrega esta columna)
+//   - area              : text  (opcional)
+//   - color             : text  (clases Tailwind del gradient avatar)
+//   - active            : bool  (rows con active=false se filtran)
 //   - email             : text
-//   - greeting          : text   (futuro: saludo personalizado)
-//   - accent_color      : text   (futuro: USER_NOTIFICATION_ACCENT.color)
+//   - greeting          : text
+//   - accent_color      : text
 //   - accent_emoji      : text
 //   - accent_vibe       : text
-//   - service_owner_for : text[] (futuro: ['webinar', 'event', ...] o tabla aparte)
+//   - service_owner_for : text[]
+//
+// Mapping de role (DB) → team (UI):
+//   'Comms'        → 'Comunicación'
+//   'MKT'          → 'Marketing'
+//   'Comunicación' → 'Comunicación' (literal, por compat)
+//   'Marketing'    → 'Marketing' (literal, por compat)
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
@@ -26,21 +37,44 @@ import { TEAM_MEMBERS as DEFAULTS } from '@/constants/team';
 
 const TABLE = 'team_members';
 
+// Traduce el role code de la DB ('Comms'/'MKT') al nombre completo del team.
+// Acepta también el nombre completo por compatibilidad.
+const teamFromRole = (role) => {
+  if (!role) return null;
+  const r = role.toString().trim().toLowerCase();
+  if (r === 'comms' || r === 'comunicación' || r === 'comunicacion') return 'Comunicación';
+  if (r === 'mkt' || r === 'marketing') return 'Marketing';
+  return null;
+};
+
 // Mapeo defensivo: si una columna no viene de la DB, usa el default
 // del miembro homónimo en constants/team.js. Permite incrementar el
 // schema de Supabase de a poco sin romper la app.
 export const fromRow = (row) => {
   if (!row || !row.name) return null;
+  // Filtrar inactivos (si la columna existe y es false)
+  if (row.active === false) return null;
+
   const fallback = DEFAULTS.find((m) => m.name === row.name) || {};
-  const team = row.team || fallback.team || 'Marketing';
+
+  // Derivar team: prioridad row.team → role code → fallback constants
+  const team = row.team || teamFromRole(row.role) || fallback.team || 'Marketing';
+  const area = row.area || (team === 'Comunicación' ? 'comunicacion' : 'marketing');
+
   return {
-    name:  row.name,
+    name:       row.name,
     team,
-    role:  row.role || fallback.role || '',
-    color: row.color || fallback.color || 'from-slate-500 to-slate-600',
-    area:  row.area || (team === 'Comunicación' ? 'comunicacion' : 'marketing'),
-    email: row.email || null,
-    // Campos opcionales (sólo se exponen si existen en la DB)
+    area,
+    // role en el shape de la app es el job title — siempre del fallback.
+    // El "role code" original de la DB se expone aparte como teamCode.
+    role:       fallback.role || (team === 'Comunicación' ? 'Content & Design' : 'Marketing'),
+    teamCode:   row.role || (team === 'Comunicación' ? 'Comms' : 'MKT'),
+    color:      row.color || fallback.color || 'from-slate-500 to-slate-600',
+    profileKey: row.profile_key || row.name.toLowerCase(),
+    initials:   row.initials || row.name.charAt(0).toUpperCase(),
+    email:      row.email || null,
+    active:     row.active !== false,
+    // Campos opcionales
     greeting:        row.greeting        ?? null,
     accentColor:     row.accent_color    ?? null,
     accentEmoji:     row.accent_emoji    ?? null,
