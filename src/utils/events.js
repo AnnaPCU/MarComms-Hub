@@ -5,6 +5,15 @@
 import { addDaysIso } from './date';
 import { EVENT_PHASES } from '@/constants/events';
 
+const newId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 /**
  * Construye el objeto `tasks` inicial de un evento a partir de la fecha.
  * Cada tarea hereda su offset de EVENT_PHASES.
@@ -47,7 +56,7 @@ export const recalcEventDates = (eventDate, tasks, removedDefaults = []) => {
  * Crea un evento con valores default.
  */
 export const makeEvent = (name, date, country, businessUnit, client, fee) => ({
-  id: Date.now(),
+  id: newId(),
   name: name || '',
   date: date || '',
   country: country || '',

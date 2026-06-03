@@ -33,6 +33,16 @@ import SimpleStep from '@/components/shared/SimpleStep';
 import CommentsSection from '@/components/shared/CommentsSection';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 
+// UUID para IDs de campañas (compatible con Supabase uuid PK)
+const campaignId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted }) {
   const [activeView, setActiveView] = useState(null); 
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -136,7 +146,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
     if (newCampData.type === "paid") {
       newCampaign = {
-        id: Date.now(),
+        id: campaignId(),
         type: "paid",
         name: newCampData.name,
         budget: parseFloat(newCampData.budget),  // Fee Marcomms
@@ -153,7 +163,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       };
     } else if (newCampData.type === "database" || newCampData.type === "research") {
       newCampaign = {
-        id: Date.now(),
+        id: campaignId(),
         type: newCampData.type,
         name: newCampData.name,
         budget: parseFloat(newCampData.budget),
@@ -165,7 +175,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       };
     } else {
       newCampaign = {
-        id: Date.now(),
+        id: campaignId(),
         type: "email",
         name: newCampData.name,
         budget: parseFloat(newCampData.budget),

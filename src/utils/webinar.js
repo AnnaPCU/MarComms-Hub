@@ -5,6 +5,17 @@
 import { addDays } from './date';
 import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
+// Compatibilidad: crypto.randomUUID en browsers modernos; fallback simple.
+const newId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback (no criptográfico, sólo para devs muy viejos)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 /**
  * Calcula automáticamente las fechas de las tareas relativas al evento.
  * Cada tarea tiene un offset (días respecto a la fecha del webinar).
@@ -33,7 +44,7 @@ export const autoCalcDates = (date, w = {}) => {
  */
 export const makeWebinar = (name, date, client, monto, pais, unidadNegocio) => {
   let w = {
-    id: Date.now(),
+    id: newId(),
     name,
     mainDate: date,
     client: client || '',
@@ -83,7 +94,7 @@ export const makeCampaignFromWebinar = (webinar) => {
   });
 
   return {
-    id: Date.now() + Math.floor(Math.random() * 1000),
+    id: newId(),
     name: `WEBINAR - ${webinar.name}`,
     type: 'email',
     variant: 'webinar', // marca especial

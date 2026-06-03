@@ -1,67 +1,109 @@
 // ════════════════════════════════════════════════════════════════════
-// CAMPAIGNS SERVICE — Campañas (mock CRUD)
-// ════════════════════════════════════════════════════════════════════
-// IMPORTANTE: por ahora App.jsx sigue manejando su propio state global
-// de campaigns. Este servicio existe para que el futuro refactor pueda
-// reemplazar useState por hooks que llamen acá sin tocar la UI.
+// CAMPAIGNS SERVICE — Conectado a Supabase (tabla `public.campaigns`)
 // ════════════════════════════════════════════════════════════════════
 
-import { MOCK_CAMPAIGNS } from '@/data/mockCampaigns';
-import { mockDelay, isMockMode, newId, clone } from './dataService';
+import { supabase } from '@/lib/supabaseClient';
 
-let _store = clone(MOCK_CAMPAIGNS);
+const TABLE = 'campaigns';
 
-export const listCampaigns = async (filters = {}) => {
-  await mockDelay();
-  if (!isMockMode()) return []; // TODO Supabase
-  let result = clone(_store);
-  if (filters.type)         result = result.filter((c) => c.type === filters.type);
-  if (filters.variant)      result = result.filter((c) => c.variant === filters.variant);
-  if (filters.country)      result = result.filter((c) => c.country === filters.country);
-  if (filters.businessUnit) result = result.filter((c) => c.businessUnit === filters.businessUnit);
-  return result;
+// ── Mappers ──
+export const fromRow = (row) => {
+  if (!row) return null;
+  return {
+    id:                row.id,
+    name:              row.name || '',
+    type:              row.type || 'email',
+    variant:           row.variant || undefined,
+    linkedWebinarId:   row.linked_webinar_id || null,
+    country:           row.country || '',
+    businessUnit:      row.business_unit || '',
+    serviceOwner:      row.service_owner || '',
+    budget:            row.budget == null ? 0 : Number(row.budget),
+    platformInvestment: row.platform_investment == null ? 0 : Number(row.platform_investment),
+    numEmails:         row.num_emails || 0,
+    dealsCreated:      row.deals_created || 0,
+    completedSteps:    row.completed_steps || [],
+    deadlines:         row.deadlines || {},
+    data:              row.data || {},
+    report:            row.report || null,
+    comments:          row.comments || [],
+    completedAt:       row.completed_at || null,
+    createdAt:         row.created_at || null,
+    updatedAt:         row.updated_at || null,
+  };
 };
 
-export const getCampaignById = async (id) => {
-  await mockDelay();
-  if (!isMockMode()) return null;
-  const found = _store.find((c) => String(c.id) === String(id));
-  return found ? clone(found) : null;
+export const toRow = (obj) => {
+  const row = {};
+  if (obj.id !== undefined)                  row.id = obj.id;
+  if (obj.name !== undefined)                row.name = obj.name;
+  if (obj.type !== undefined)                row.type = obj.type;
+  if (obj.variant !== undefined)             row.variant = obj.variant || null;
+  if (obj.linkedWebinarId !== undefined)     row.linked_webinar_id = obj.linkedWebinarId;
+  if (obj.country !== undefined)             row.country = obj.country;
+  if (obj.businessUnit !== undefined)        row.business_unit = obj.businessUnit;
+  if (obj.serviceOwner !== undefined)        row.service_owner = obj.serviceOwner;
+  if (obj.budget !== undefined)              row.budget = Number(obj.budget) || 0;
+  if (obj.platformInvestment !== undefined)  row.platform_investment = Number(obj.platformInvestment) || 0;
+  if (obj.numEmails !== undefined)           row.num_emails = Number(obj.numEmails) || 0;
+  if (obj.dealsCreated !== undefined)        row.deals_created = Number(obj.dealsCreated) || 0;
+  if (obj.completedSteps !== undefined)      row.completed_steps = obj.completedSteps || [];
+  if (obj.deadlines !== undefined)           row.deadlines = obj.deadlines || {};
+  if (obj.data !== undefined)                row.data = obj.data || {};
+  if (obj.report !== undefined)              row.report = obj.report;
+  if (obj.comments !== undefined)            row.comments = obj.comments || [];
+  if (obj.completedAt !== undefined)         row.completed_at = obj.completedAt;
+  return row;
+};
+
+// ── CRUD ──
+export const listCampaigns = async () => {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(fromRow);
 };
 
 export const createCampaign = async (data) => {
-  await mockDelay();
-  const item = {
-    id: newId('cmp'),
-    completedSteps: [],
-    comments: [],
-    ...data,
-  };
-  if (!isMockMode()) return item;
-  _store = [..._store, item];
-  return clone(item);
+  const row = toRow(data);
+  const { data: inserted, error } = await supabase
+    .from(TABLE)
+    .insert(row)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return fromRow(inserted);
 };
 
 export const updateCampaign = async (id, patch) => {
-  await mockDelay();
-  if (!isMockMode()) return null;
-  let updated = null;
-  _store = _store.map((c) => {
-    if (String(c.id) !== String(id)) return c;
-    updated = { ...c, ...patch };
-    return updated;
-  });
-  return updated ? clone(updated) : null;
+  const row = toRow(patch);
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update(row)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return fromRow(data);
 };
 
 export const deleteCampaign = async (id) => {
-  await mockDelay();
-  if (!isMockMode()) return false;
-  const before = _store.length;
-  _store = _store.filter((c) => String(c.id) !== String(id));
-  return _store.length < before;
+  const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  if (error) throw error;
+  return true;
 };
 
-export const __resetCampaignsStore = () => {
-  _store = clone(MOCK_CAMPAIGNS);
+// ── Realtime ──
+export const subscribeCampaigns = (onChange) => {
+  const channel = supabase
+    .channel('campaigns-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: TABLE },
+      (payload) => onChange(payload),
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 };

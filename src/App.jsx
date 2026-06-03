@@ -30,14 +30,12 @@ import { EVENT_PHASES } from '@/constants/events';
 import { PAISES_DATA } from '@/constants/countries';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 
-// Data demo
-import { DEMO_WEBINARS } from '@/data/demoWebinars';
-import { DEMO_CAMPAIGNS } from '@/data/demoCampaigns';
-import { DEMO_EVENTS } from '@/data/demoEvents';
-import { DEMO_ASSIGNED_TASKS } from '@/data/demoAssignedTasks';
-
 // Hooks
 import { useRequests } from '@/hooks/useRequests';
+import { useWebinars } from '@/hooks/useWebinars';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { useEvents } from '@/hooks/useEvents';
+import { useAssignedTasks } from '@/hooks/useAssignedTasks';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 
 // Utils
@@ -111,10 +109,16 @@ export default function App() {
   useOnClickOutside(notificationsContainerRef, () => setShowNotifications(false), showNotifications);
   useOnClickOutside(fastActionContainerRef,    () => setShowFastAction(false),    showFastAction);
   
-  // Estado compartido en memoria (sin Firebase para la demo)
-  const [globalWebinars, setGlobalWebinars] = useState(DEMO_WEBINARS);
-  const [globalCampaigns, setGlobalCampaigns] = useState(DEMO_CAMPAIGNS);
-  const [globalEvents, setGlobalEvents] = useState(DEMO_EVENTS);
+  // ─── Webinars / Campaigns / Events: Supabase + realtime via hooks ───
+  // Los hooks devuelven [data, setData, meta] — setData se comporta
+  // como un useState setter normal, pero persiste en Supabase.
+  const [globalWebinars,  setGlobalWebinars,  webinarsMeta]  = useWebinars();
+  const [globalCampaigns, setGlobalCampaigns, campaignsMeta] = useCampaigns();
+  const [globalEvents,    setGlobalEvents,    eventsMeta]    = useEvents();
+
+  if (webinarsMeta.error)  console.error('Webinars Supabase error:',  webinarsMeta.error);
+  if (campaignsMeta.error) console.error('Campaigns Supabase error:', campaignsMeta.error);
+  if (eventsMeta.error)    console.error('Events Supabase error:',    eventsMeta.error);
 
   // ─── Pedidos / Standalone requests: conectado a Supabase (tabla `requests`) ───
   // El hook maneja fetch inicial, realtime, create/update/delete y un overlay
@@ -142,48 +146,44 @@ export default function App() {
     console.error('Requests (Supabase) error:', requestsError);
   }
 
-  // ─── Tareas asignadas entre usuarios (creadas desde Mi Semana) ───
-  const [globalAssignedTasks, setGlobalAssignedTasks] = useState(DEMO_ASSIGNED_TASKS);
+  // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
+  const {
+    tasks: globalAssignedTasks,
+    create: createAssignedTaskSvc,
+    toggleDone: toggleAssignedTaskDoneSvc,
+    remove: deleteAssignedTaskSvc,
+    error: assignedTasksError,
+  } = useAssignedTasks();
 
-  // Crear nueva tarea asignada
-  const createAssignedTask = ({ title, detail, assignedTo, deadline, project }) => {
+  if (assignedTasksError) console.error('AssignedTasks Supabase error:', assignedTasksError);
+
+  // Wrappers que mantienen la firma original que los hijos esperan
+  const createAssignedTask = async ({ title, detail, assignedTo, deadline, project }) => {
     if (!currentUser) return null;
-    // Validación defensiva
-    if (!title || !title.trim()) {
-      console.warn('createAssignedTask: title vacío');
+    if (!title || !title.trim())        { console.warn('createAssignedTask: title vacío'); return null; }
+    if (!assignedTo || !assignedTo.trim()) { console.warn('createAssignedTask: assignedTo vacío'); return null; }
+    try {
+      return await createAssignedTaskSvc({
+        title:      title.trim(),
+        detail:     (detail || '').trim(),
+        assignedTo: assignedTo.trim(),
+        assignedBy: currentUser.name,
+        deadline:   deadline || null,
+        done:       false,
+        project:    project || null,
+      });
+    } catch (e) {
+      console.error('createAssignedTask error:', e);
       return null;
     }
-    if (!assignedTo || !assignedTo.trim()) {
-      console.warn('createAssignedTask: assignedTo vacío');
-      return null;
-    }
-    const newTask = {
-      id: 'at-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      title: title.trim(),
-      detail: (detail || '').trim(),
-      assignedTo: assignedTo.trim(),
-      assignedBy: currentUser.name,
-      assignedAt: new Date().toISOString(),
-      deadline: deadline || '',
-      done: false,
-      project: project || null
-    };
-    setGlobalAssignedTasks(prev => [newTask, ...prev]);
-    return newTask;
   };
 
-  // Toggle done en tarea asignada
   const toggleAssignedTaskDone = (taskId, done) => {
-    setGlobalAssignedTasks(prev => prev.map(t =>
-      t.id === taskId
-        ? { ...t, done, completedAt: done ? new Date().toISOString() : null }
-        : t
-    ));
+    toggleAssignedTaskDoneSvc(taskId, done).catch((e) => console.error(e));
   };
 
-  // Eliminar tarea asignada
   const deleteAssignedTask = (taskId) => {
-    setGlobalAssignedTasks(prev => prev.filter(t => t.id !== taskId));
+    deleteAssignedTaskSvc(taskId).catch((e) => console.error(e));
   };
 
   // ─────────────────────────────────────────────────────────────

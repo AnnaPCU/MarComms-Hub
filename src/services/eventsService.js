@@ -1,59 +1,101 @@
 // ════════════════════════════════════════════════════════════════════
-// EVENTS SERVICE — Eventos (mock CRUD)
+// EVENTS SERVICE — Conectado a Supabase (tabla `public.events`)
 // ════════════════════════════════════════════════════════════════════
 
-import { MOCK_EVENTS } from '@/data/mockEvents';
-import { mockDelay, isMockMode, newId, clone } from './dataService';
+import { supabase } from '@/lib/supabaseClient';
 
-let _store = clone(MOCK_EVENTS);
+const TABLE = 'events';
 
-export const listEvents = async (filters = {}) => {
-  await mockDelay();
-  if (!isMockMode()) return [];
-  let result = clone(_store);
-  if (filters.country)      result = result.filter((e) => e.country === filters.country);
-  if (filters.businessUnit) result = result.filter((e) => e.businessUnit === filters.businessUnit);
-  return result;
+// ── Mappers ──
+export const fromRow = (row) => {
+  if (!row) return null;
+  return {
+    id:               row.id,
+    name:             row.name || '',
+    date:             row.date || '',
+    country:          row.country || '',
+    businessUnit:     row.business_unit || '',
+    client:           row.client || '',
+    fee:              row.fee == null ? 0 : Number(row.fee),
+    serviceOwner:     row.service_owner || '',
+    dealsCreated:     row.deals_created || 0,
+    tasks:            row.tasks || {},
+    customTasks:      row.custom_tasks || [],
+    removedDefaults:  row.removed_defaults || [],
+    participants:     row.participants || [],
+    completedAt:      row.completed_at || null,
+    createdAt:        row.created_at || null,
+    updatedAt:        row.updated_at || null,
+  };
 };
 
-export const getEventById = async (id) => {
-  await mockDelay();
-  if (!isMockMode()) return null;
-  const found = _store.find((e) => String(e.id) === String(id));
-  return found ? clone(found) : null;
+export const toRow = (obj) => {
+  const row = {};
+  if (obj.id !== undefined)               row.id = obj.id;
+  if (obj.name !== undefined)             row.name = obj.name;
+  if (obj.date !== undefined)             row.date = obj.date || null;
+  if (obj.country !== undefined)          row.country = obj.country;
+  if (obj.businessUnit !== undefined)     row.business_unit = obj.businessUnit;
+  if (obj.client !== undefined)           row.client = obj.client;
+  if (obj.fee !== undefined)              row.fee = Number(obj.fee) || 0;
+  if (obj.serviceOwner !== undefined)     row.service_owner = obj.serviceOwner;
+  if (obj.dealsCreated !== undefined)     row.deals_created = Number(obj.dealsCreated) || 0;
+  if (obj.tasks !== undefined)            row.tasks = obj.tasks || {};
+  if (obj.customTasks !== undefined)      row.custom_tasks = obj.customTasks || [];
+  if (obj.removedDefaults !== undefined)  row.removed_defaults = obj.removedDefaults || [];
+  if (obj.participants !== undefined)     row.participants = obj.participants || [];
+  if (obj.completedAt !== undefined)      row.completed_at = obj.completedAt;
+  return row;
+};
+
+// ── CRUD ──
+export const listEvents = async () => {
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(fromRow);
 };
 
 export const createEvent = async (data) => {
-  await mockDelay();
-  const item = {
-    id: newId('ev'),
-    ...data,
-  };
-  if (!isMockMode()) return item;
-  _store = [..._store, item];
-  return clone(item);
+  const row = toRow(data);
+  const { data: inserted, error } = await supabase
+    .from(TABLE)
+    .insert(row)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return fromRow(inserted);
 };
 
 export const updateEvent = async (id, patch) => {
-  await mockDelay();
-  if (!isMockMode()) return null;
-  let updated = null;
-  _store = _store.map((e) => {
-    if (String(e.id) !== String(id)) return e;
-    updated = { ...e, ...patch };
-    return updated;
-  });
-  return updated ? clone(updated) : null;
+  const row = toRow(patch);
+  const { data, error } = await supabase
+    .from(TABLE)
+    .update(row)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return fromRow(data);
 };
 
 export const deleteEvent = async (id) => {
-  await mockDelay();
-  if (!isMockMode()) return false;
-  const before = _store.length;
-  _store = _store.filter((e) => String(e.id) !== String(id));
-  return _store.length < before;
+  const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  if (error) throw error;
+  return true;
 };
 
-export const __resetEventsStore = () => {
-  _store = clone(MOCK_EVENTS);
+// ── Realtime ──
+export const subscribeEvents = (onChange) => {
+  const channel = supabase
+    .channel('events-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: TABLE },
+      (payload) => onChange(payload),
+    )
+    .subscribe();
+  return () => supabase.removeChannel(channel);
 };
