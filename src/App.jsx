@@ -921,14 +921,15 @@ export default function App() {
         </div>
       )}
       <aside className="w-72 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 shadow-sm">
-        <div className="p-8">
+        {/* Bloque scrolleable: logo + nav. min-h-0 es clave para que overflow funcione dentro de un flex column. */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-8">
           <div className="flex items-center gap-3 text-indigo-600 mb-12">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
               <Zap size={24} fill="currentColor" />
             </div>
             <span className="text-xl font-black tracking-tighter text-slate-800">MARCOMMS HUB</span>
           </div>
-          
+
           <nav className="space-y-1">
             <button 
               onClick={() => { setCurrentSection('main'); setSelectedCountry(null); }}
@@ -952,7 +953,8 @@ export default function App() {
           </nav>
         </div>
         
-        <div className="mt-auto p-8 border-t border-slate-50 bg-slate-50/30">
+        {/* Footer del sidebar: usuario + logout. shrink-0 asegura que no se comprima cuando el nav es largo. */}
+        <div className="shrink-0 p-8 border-t border-slate-50 bg-slate-50/30">
           {currentUser ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
