@@ -2195,32 +2195,45 @@ td a { color: #2563eb; text-decoration: none; }
                             )}
                           </div>
 
-                          {/* Desglose read-only — toggle "Ver desglose" */}
+                          {/* Desglose editable — toggle "Ver/editar desglose".
+                              Los pasos son clickeables: si se destilda uno, la campaña
+                              baja de 100% y vuelve automáticamente a "Campañas Activas"
+                              (el useEffect limpia completedAt y el filtro la reubica). */}
                           {(() => {
                             const isOpen = expandedCampaigns.has(c.id);
-                            const checklist = getCampaignChecklist(c);
+                            const stepDefs = CAMPAIGN_STEPS[c.type] || CAMPAIGN_STEPS.email;
+                            const completedSet = new Set(c.completedSteps || []);
+                            const doneCount = stepDefs.filter(s => completedSet.has(s.id)).length;
                             return (
                               <>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleExpand(c.id); }}
                                   className="mt-3 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg py-2 transition-all"
                                 >
-                                  {isOpen ? <ChevronRight className="w-3 h-3 rotate-90 transition-transform" /> : <ChevronRight className="w-3 h-3 transition-transform" />}
-                                  {isOpen ? 'Ocultar desglose' : 'Ver desglose'}
+                                  <ChevronRight className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                                  {isOpen ? 'Ocultar desglose' : 'Ver / editar desglose'}
                                 </button>
                                 {isOpen && (
-                                  <div className="mt-3 space-y-1.5 bg-slate-50/60 border border-slate-100 rounded-xl p-3">
+                                  <div className="mt-3 space-y-1 bg-slate-50/60 border border-slate-100 rounded-xl p-3">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                      Pasos completados ({checklist.filter(t => t.done).length}/{checklist.length})
+                                      Pasos completados ({doneCount}/{stepDefs.length}) · click para editar
                                     </p>
-                                    {checklist.map((t, i) => (
-                                      <div key={i} className="flex items-center gap-2">
-                                        {t.done
-                                          ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                          : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                                        <span className={`text-[10px] font-bold ${t.done ? 'text-slate-600' : 'text-slate-400'}`}>{t.label}</span>
-                                      </div>
-                                    ))}
+                                    {stepDefs.map((s) => {
+                                      const done = completedSet.has(s.id);
+                                      return (
+                                        <button
+                                          key={s.id}
+                                          onClick={(e) => { e.stopPropagation(); toggleStep(c, s.id); }}
+                                          className="w-full flex items-center gap-2 py-1 text-left hover:bg-white/60 rounded-md px-1 transition-colors"
+                                          title={done ? 'Click para destildar (la campaña volverá a Activas)' : 'Click para marcar como hecho'}
+                                        >
+                                          {done
+                                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                            : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+                                          <span className={`text-[10px] font-bold ${done ? 'text-slate-600' : 'text-slate-400'}`}>{s.label}</span>
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </>

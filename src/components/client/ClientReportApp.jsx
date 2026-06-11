@@ -291,7 +291,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                 rel="noreferrer"
                 className="bg-orange-500 text-white hover:bg-orange-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-md"
               >
-                <Database className="w-3.5 h-3.5" /> HS Request
+                <Database className="w-3.5 h-3.5" /> CRM Request
               </a>
               {isPublic && (
                 <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">
@@ -355,15 +355,13 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
           </div>
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-amber-600" />
+              <div className="w-8 h-8 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-cyan-600" />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fee Marcomms</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total servicios</p>
             </div>
-            <p className="text-3xl font-black text-amber-600 tracking-tight">${totalFee.toLocaleString()}</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">
-              {totalCompletedFee > 0 ? `$${totalCompletedFee.toLocaleString()} facturado` : 'incluye activos'}
-            </p>
+            <p className="text-3xl font-black text-cyan-600 tracking-tight">{activeItems.length + completedItems.length}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">activos + completados</p>
           </div>
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
@@ -455,7 +453,6 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                         </div>
                         <span className="text-[11px] font-black text-slate-600">{item.progress}%</span>
                       </div>
-                      {item.fee > 0 && <span className="text-xs font-black text-slate-700">${item.fee.toLocaleString()}</span>}
                     </div>
                   </div>
                 );
@@ -480,12 +477,6 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
               <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Entregados</p>
             </div>
             <div className="flex items-center gap-3">
-              {totalCompletedFee > 0 && (
-                <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl text-right">
-                  <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Fee facturado</p>
-                  <p className="text-lg font-black text-amber-700">${totalCompletedFee.toLocaleString()}</p>
-                </div>
-              )}
               <span className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-full text-xs font-black border border-emerald-100">
                 {completedItems.length}
               </span>
@@ -503,7 +494,6 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                       <th className="text-left p-3 font-black text-[10px] text-slate-500 uppercase tracking-widest">Unidad</th>
                       <th className="text-left p-3 font-black text-[10px] text-slate-500 uppercase tracking-widest">Completado</th>
                       <th className="text-right p-3 font-black text-[10px] text-slate-500 uppercase tracking-widest">Deals</th>
-                      <th className="text-right p-3 font-black text-[10px] text-slate-500 uppercase tracking-widest">Fee</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -534,7 +524,6 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                               <Database className="w-3 h-3" /> {item.deals}
                             </span>
                           </td>
-                          <td className="p-3 text-right font-black text-slate-800">${item.fee.toLocaleString()}</td>
                         </tr>
                       );
                     })}
@@ -543,7 +532,6 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                     <tr>
                       <td colSpan="4" className="p-3 text-[10px] font-black text-emerald-800 uppercase tracking-widest">Totales</td>
                       <td className="p-3 text-right font-black text-blue-700">{completedItems.reduce((s, i) => s + i.deals, 0)}</td>
-                      <td className="p-3 text-right font-black text-emerald-800">${totalCompletedFee.toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -686,11 +674,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
               </div>
 
               {/* Footer con info resumen */}
-              <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fee</p>
-                  <p className="text-sm font-black text-slate-800">${selectedItem.fee.toLocaleString()}</p>
-                </div>
+              <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-3 gap-3">
                 <div className="text-center">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Deals HS</p>
                   <p className="text-sm font-black text-blue-600">{selectedItem.deals}</p>

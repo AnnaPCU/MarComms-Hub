@@ -137,6 +137,15 @@ export default function App() {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [clientReportCountry, setClientReportCountry] = useState(null);
 
+  // ─── Reset de scroll al cambiar de sección ───
+  // Sin esto, al navegar desde una sección scrolleada hacia abajo a otra,
+  // la nueva quedaba "scrolleada" (parecía rota) hasta volver al hub.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+  }, [currentSection, selectedCountry, clientReportCountry]);
+
   // ── Refs para cerrar dropdowns al hacer click afuera ──
   const searchContainerRef = useRef(null);
   const notificationsContainerRef = useRef(null);
@@ -400,7 +409,7 @@ export default function App() {
 
     if (currentSection === 'client_portal') {
       return (
-        <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
           <div className="flex items-center gap-4 mb-6">
             <button
               onClick={() => setCurrentSection('main')}
@@ -475,7 +484,7 @@ export default function App() {
 
     if (currentSection === 'paises') {
       return (
-        <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
           <div className="flex items-center gap-4 mb-8">
             <button 
               onClick={() => {

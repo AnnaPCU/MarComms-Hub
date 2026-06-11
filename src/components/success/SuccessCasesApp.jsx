@@ -88,16 +88,28 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
   const saveAndDownload = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
+    const payload = { ...form, author: currentUser?.name || '' };
+
+    // 1) Generar y descargar el PDF SIEMPRE — es client-side (jsPDF),
+    //    no depende de Supabase. Así el PDF sale aunque el guardado falle.
     try {
-      const payload = { ...form, author: currentUser?.name || '' };
-      const created = await createCase(payload);
-      await generateSuccessCasePDF(created || payload);
-      cancelWizard();
+      await generateSuccessCasePDF(payload);
     } catch (e) {
-      console.error('Error guardando caso de éxito:', e);
-      alert('No se pudo guardar el caso. Revisá la consola.');
+      console.error('Error generando PDF:', e);
+      alert('No se pudo generar el PDF. Revisá la consola.');
+      setSaving(false);
+      return;
+    }
+
+    // 2) Intentar guardar en Supabase (no bloquea la descarga ya hecha)
+    try {
+      await createCase(payload);
+    } catch (e) {
+      console.error('Error guardando caso de éxito en Supabase:', e);
+      alert('El PDF se descargó correctamente, pero el caso no se pudo guardar en la base.\n\nProbablemente falta correr la migration 0007_success_cases.sql en Supabase.');
     } finally {
       setSaving(false);
+      cancelWizard();
     }
   };
 
@@ -264,9 +276,10 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
                 <div>
                   <label className={labelCls}>Unidad de negocio</label>
                   <select className={inputCls} value={form.businessUnit}
-                    onChange={(e) => set('businessUnit', e.target.value)} disabled={!form.country}>
+                    onChange={(e) => set('businessUnit', e.target.value)}>
                     <option value="">Seleccionar…</option>
-                    {form.country && MARKETS[form.country].map((u) => <option key={u} value={u}>{u}</option>)}
+                    <option value="Control Union">Control Union</option>
+                    <option value="Peterson Solutions">Peterson Solutions</option>
                   </select>
                 </div>
               </div>
