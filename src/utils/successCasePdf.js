@@ -29,6 +29,45 @@ const SERVICE_LABELS = {
   otro: 'Otro',
 };
 
+// Detecta la organización a partir de la unidad de negocio / cliente.
+// 'peterson' | 'cu' (default).
+const detectOrg = (sc) => {
+  const hay = `${sc.businessUnit || ''} ${sc.client || ''}`.toLowerCase();
+  if (hay.includes('peterson')) return 'peterson';
+  return 'cu';
+};
+
+const LOGO_PATHS = {
+  cu:       '/logos/control-union.png',
+  peterson: '/logos/peterson-solutions.png',
+};
+
+// Carga una imagen de /public como dataURL. null si no existe (404).
+const loadImageDataURL = async (url) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  } catch (_e) {
+    return null;
+  }
+};
+
+// Dimensiones naturales de un dataURL de imagen.
+const imageRatio = (dataURL) =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth / img.naturalHeight || 4);
+    img.onerror = () => resolve(4);
+    img.src = dataURL;
+  });
+
 /**
  * Genera y descarga el PDF del caso de éxito con branding Control Union.
  */
@@ -46,17 +85,36 @@ export const generateSuccessCasePDF = async (sc) => {
   doc.setFillColor(...CYAN);
   doc.rect(0, 0, pageW, 8, 'F');
 
-  // ── Header ──
-  let y = 54;
+  // ── Header con logo de la organización (Control Union / Peterson) ──
+  const org = detectOrg(sc);
+  let y = 50;
+  const logoData = await loadImageDataURL(LOGO_PATHS[org]);
+  if (logoData) {
+    // Logo real desde /public/logos
+    const ratio = await imageRatio(logoData);
+    const logoH = 26;
+    const logoW = Math.min(logoH * ratio, 200);
+    try {
+      doc.addImage(logoData, 'PNG', margin, y - 16, logoW, logoH);
+    } catch (_e) { /* si el formato no es PNG válido, ignorar */ }
+    y += logoH;
+  } else {
+    // Fallback textual de marca
+    doc.setTextColor(...(org === 'peterson' ? DBLUE : GREY));
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(org === 'peterson' ? 'PETERSON SOLUTIONS' : 'CONTROL UNION', margin, y);
+    y += 6;
+    doc.setDrawColor(...CYAN);
+    doc.setLineWidth(1.5);
+    doc.line(margin, y, margin + 46, y);
+    y += 8;
+  }
+
   doc.setTextColor(...GREY);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('CONTROL UNION  ·  MARKETING & COMUNICACIONES', margin, y);
-
-  y += 10;
-  doc.setDrawColor(...CYAN);
-  doc.setLineWidth(1.5);
-  doc.line(margin, y, margin + 46, y); // subrayado corto cyan
+  doc.text('MARKETING & COMUNICACIONES', margin, y);
 
   y += 28;
   doc.setTextColor(...DBLUE);
@@ -178,8 +236,9 @@ export const generateSuccessCasePDF = async (sc) => {
     doc.text('The Proof to Your Promise', margin, pageH - 24);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...DGREY);
+    const orgName = org === 'peterson' ? 'Peterson Solutions' : 'Control Union LATAM';
     const stamp = sc.author ? `Armado por ${sc.author}` : '';
-    doc.text(`MarComms Hub · Control Union LATAM   ${stamp}`, margin, pageH - 12);
+    doc.text(`MarComms Hub · ${orgName}   ${stamp}`, margin, pageH - 12);
     // Número de página
     doc.setTextColor(...GREY);
     doc.text(`${p} / ${pageCount}`, pageW - margin - 20, pageH - 12);

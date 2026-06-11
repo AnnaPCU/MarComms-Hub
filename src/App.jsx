@@ -132,6 +132,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showFastAction, setShowFastAction] = useState(false);
+  const [contentAutoNew, setContentAutoNew] = useState(false); // abre "nuevo pedido" al entrar desde acción rápida
 
   const [currentSection, setCurrentSection] = useState('main');
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -172,6 +173,7 @@ export default function App() {
     loading: successCasesLoading,
     error: successCasesError,
     create: createSuccessCase,
+    update: updateSuccessCase,
     remove: removeSuccessCase,
   } = useSuccessCases();
 
@@ -608,6 +610,8 @@ export default function App() {
              addRequestFile={addRequestFile}
              removeRequestFile={removeRequestFile}
              updateRequestContent={updateRequestContent}
+             autoNew={contentAutoNew}
+             onAutoNewDone={() => setContentAutoNew(false)}
            />
         </div>
       );
@@ -623,6 +627,7 @@ export default function App() {
             loading={successCasesLoading}
             error={successCasesError}
             createCase={createSuccessCase}
+            updateCase={updateSuccessCase}
             removeCase={removeSuccessCase}
           />
         </div>
@@ -1098,6 +1103,7 @@ export default function App() {
                               onClick={() => {
                                 setShowFastAction(false);
                                 setCurrentSection(action.section);
+                                if (action.id === 'pedido') setContentAutoNew(true);
                               }}
                               className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition-colors ${action.color}`}
                             >

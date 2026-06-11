@@ -38,6 +38,7 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
     title: '', detail: '', assignedTo: '', deadline: ''
   });
   const [confirmDeleteAssignedId, setConfirmDeleteAssignedId] = useState(null);
+  const [taskDetail, setTaskDetail] = useState(null); // tarea abierta en el modal de desglose
 
   // Construir lista plana de TODAS las tareas con responsable + deadline
   const buildAllTasks = () => {
@@ -275,7 +276,13 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
     }
   };
 
+  // Click en una tarea → abre el modal de desglose con toda su info
   const goToTask = (task) => {
+    setTaskDetail(task);
+  };
+  // Desde el modal, ir al pilar correspondiente
+  const navigateToTaskSection = (task) => {
+    setTaskDetail(null);
     if (onNavigate) onNavigate(task.navSection);
   };
 
@@ -585,6 +592,71 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
           </div>
         )}
       </main>
+
+      {/* Modal Desglose de Tarea */}
+      {taskDetail && (() => {
+        const t = taskDetail;
+        const TIco = t.sourceIcon;
+        const isOverdue = t.date && new Date(t.date + 'T00:00:00') < today;
+        return (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setTaskDetail(null)}>
+            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="p-5 border-b border-slate-100 flex items-start gap-3">
+                <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-wider border ${t.sourceColor} flex items-center gap-1 shrink-0`}>
+                  <TIco className="w-3 h-3" /> {t.source}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-black text-slate-900 leading-tight">{t.taskLabel}</h2>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{t.projectName}</p>
+                </div>
+                <button onClick={() => setTaskDetail(null)} className="text-slate-300 hover:text-slate-600 shrink-0">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Cuerpo: info de la tarea */}
+              <div className="p-5 space-y-3">
+                {[
+                  ['Responsable', t.owner],
+                  ['Estado', t.done ? 'Completada' : 'Pendiente'],
+                  ['Fecha', t.date ? formatDate(t.date) : 'Sin fecha'],
+                  ['País', t.country],
+                  ['Unidad de negocio', t.businessUnit],
+                  t.assignedBy ? ['Asignada por', t.assignedBy] : null,
+                ].filter(Boolean).filter(([, v]) => v).map(([label, value]) => (
+                  <div key={label} className="flex gap-3 text-sm">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-32 shrink-0 pt-0.5">{label}</span>
+                    <span className={`font-bold ${label === 'Estado' ? (t.done ? 'text-emerald-600' : (isOverdue ? 'text-red-600' : 'text-slate-700')) : 'text-slate-700'}`}>{value}</span>
+                  </div>
+                ))}
+                {t.detail && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mt-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Detalle</p>
+                    <p className="text-sm text-slate-700 font-medium italic">"{t.detail}"</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Acciones */}
+              <div className="p-5 pt-0 flex items-center gap-3">
+                <button
+                  onClick={() => { toggleTaskDone(t, !t.done); setTaskDetail(null); }}
+                  className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${t.done ? 'bg-slate-100 hover:bg-slate-200 text-slate-600' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                >
+                  {t.done ? 'Marcar pendiente' : 'Marcar completada'}
+                </button>
+                <button
+                  onClick={() => navigateToTaskSection(t)}
+                  className="flex-1 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white transition-all flex items-center justify-center gap-1.5"
+                >
+                  Ir al proyecto <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal Asignar Nueva Tarea */}
       {showAssignModal && (

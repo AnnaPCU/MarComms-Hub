@@ -2257,7 +2257,7 @@ td a { color: #2563eb; text-decoration: none; }
       </main>
 
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[90] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
             <div className="p-8 space-y-6">
               <div className="text-center space-y-2">

@@ -13,7 +13,7 @@
 import React, { useState } from 'react';
 import {
   ArrowLeft, Award, Building2, ChevronLeft, ChevronRight, Download,
-  Globe, Plus, Sparkles, Trash2, Trophy, User, X,
+  Globe, Pencil, Plus, Sparkles, Trash2, Trophy, User, X,
 } from 'lucide-react';
 
 import { MARKETS } from '@/constants/markets';
@@ -67,17 +67,29 @@ const STEPS = [
   },
 ];
 
-export default function SuccessCasesApp({ onBack, currentUser, cases, loading, error, createCase, removeCase }) {
+export default function SuccessCasesApp({ onBack, currentUser, cases, loading, error, createCase, updateCase, removeCase }) {
   const confirm = useConfirm();
   const [mode, setMode] = useState('list'); // 'list' | 'wizard'
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null); // null = creando, id = editando
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const startWizard = () => { setForm(EMPTY); setStep(0); setMode('wizard'); };
-  const cancelWizard = () => { setMode('list'); setForm(EMPTY); setStep(0); };
+  const startWizard = () => { setForm(EMPTY); setStep(0); setEditingId(null); setMode('wizard'); };
+  const startEdit = (sc) => {
+    setForm({
+      title: sc.title || '', client: sc.client || '', country: sc.country || '',
+      businessUnit: sc.businessUnit || '', serviceType: sc.serviceType || '',
+      challenge: sc.challenge || '', solution: sc.solution || '',
+      results: sc.results || '', metrics: sc.metrics || '', testimonial: sc.testimonial || '',
+    });
+    setStep(0);
+    setEditingId(sc.id);
+    setMode('wizard');
+  };
+  const cancelWizard = () => { setMode('list'); setForm(EMPTY); setStep(0); setEditingId(null); };
 
   // Validación mínima por paso
   const canAdvance = () => {
@@ -101,9 +113,10 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
       return;
     }
 
-    // 2) Intentar guardar en Supabase (no bloquea la descarga ya hecha)
+    // 2) Guardar en Supabase: update si estamos editando, create si es nuevo
     try {
-      await createCase(payload);
+      if (editingId) await updateCase(editingId, payload);
+      else await createCase(payload);
     } catch (e) {
       console.error('Error guardando caso de éxito en Supabase:', e);
       alert('El PDF se descargó correctamente, pero el caso no se pudo guardar en la base.\n\nProbablemente falta correr la migration 0007_success_cases.sql en Supabase.');
@@ -200,12 +213,20 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
                     {[sc.country, sc.businessUnit].filter(Boolean).join(' · ') || '—'}
                   </p>
                   {sc.results && <p className="text-[11px] text-slate-600 line-clamp-3 mb-3">{sc.results}</p>}
-                  <button
-                    onClick={() => generateSuccessCasePDF(sc)}
-                    className="w-full mt-auto flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg py-2 transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Descargar PDF
-                  </button>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <button
+                      onClick={() => startEdit(sc)}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-lg py-2 transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </button>
+                    <button
+                      onClick={() => generateSuccessCasePDF(sc)}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg py-2 transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" /> PDF
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -230,7 +251,7 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
               <X className="w-5 h-5 text-white" />
             </button>
             <div>
-              <h1 className="text-xl font-black uppercase tracking-tight">Nuevo caso de éxito</h1>
+              <h1 className="text-xl font-black uppercase tracking-tight">{editingId ? 'Editar caso de éxito' : 'Nuevo caso de éxito'}</h1>
               <p className="text-[10px] text-amber-100 font-bold uppercase tracking-widest">
                 Paso {step + 1} de {STEPS.length} · {current.title}
               </p>
@@ -372,7 +393,7 @@ export default function SuccessCasesApp({ onBack, currentUser, cases, loading, e
                 disabled={saving || !form.title.trim()}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white transition-all shadow-md"
               >
-                <Download className="w-4 h-4" /> {saving ? 'Guardando…' : 'Guardar y descargar PDF'}
+                <Download className="w-4 h-4" /> {saving ? 'Guardando…' : (editingId ? 'Guardar cambios y descargar PDF' : 'Guardar y descargar PDF')}
               </button>
             ) : (
               <button

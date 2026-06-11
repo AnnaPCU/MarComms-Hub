@@ -25,7 +25,7 @@
 //   updateRequestContent                                  — overlay local genérico
 // ════════════════════════════════════════════════════════════════════
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, BarChart3, Briefcase, Calendar, CheckSquare, Clock,
   ExternalLink, FileText, Files, Filter, Link, Mail, Plus,
@@ -66,6 +66,8 @@ export default function ContentHubApp({
   addRequestFile,
   removeRequestFile,
   updateRequestContent,
+  autoNew,
+  onAutoNewDone,
 }) {
   const confirm = useConfirm();
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
@@ -86,6 +88,16 @@ export default function ContentHubApp({
     name: '', category: 'one_pager', country: '', businessUnit: '',
     requester: '', budget: '', detail: '', deadline: ''
   });
+
+  // Abre el modal de "nuevo pedido" cuando se entra desde Acción Rápida
+  useEffect(() => {
+    if (autoNew) {
+      setMainTab('pedidos');
+      setShowNewRequest(true);
+      if (onAutoNewDone) onAutoNewDone();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoNew]);
 
   // Helper: leer una pieza de un proyecto
   // El proyecto guarda content[piece.key] = { owner, status }
