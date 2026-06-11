@@ -26,7 +26,7 @@ import {
 import { MARKETS } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
-import { getCampaignChecklist } from '@/constants/campaigns';
+import { CAMPAIGN_STEPS, getCampaignChecklist } from '@/constants/campaigns';
 import { parseMailchimpReport, parseMailchimpSubscribers } from '@/utils/csv';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
