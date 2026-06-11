@@ -33,7 +33,7 @@ import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
 import { useConfirm } from '@/hooks/useConfirm';
 
-export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted }) {
+export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, focusProjectId, onFocusHandled }) {
   const confirm = useConfirm();
   const [view,setView]=useState("internal"); 
   const [activeW,setActiveW]=useState(null);
@@ -52,6 +52,15 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webinars]);
+
+  // ─── Deep-link: abrir el detalle de un webinar al venir desde Mi Semana ───
+  useEffect(() => {
+    if (!focusProjectId) return;
+    const w = webinars.find(x => String(x.id) === String(focusProjectId));
+    if (w) { setActiveW(w); setView('internal_detail'); }
+    if (onFocusHandled) onFocusHandled();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusProjectId]);
 
   // ─── Auto-marca completedAt cuando el webinar llega al 100% ───
   useEffect(() => {
@@ -322,8 +331,9 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
       )}
 
       {showForm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] flex items-center justify-center p-6">
-          <div className="bg-white rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] flex items-center justify-center p-6" onClick={() => setShowForm(false)}>
+          <div className="bg-white rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h2 className="text-xl font-black uppercase text-slate-900 tracking-tight">Nuevo Proyecto</h2>
               <button onClick={()=>setShowForm(false)} className="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center"><Ico name="Plus" className="rotate-45" size={20} color="#64748b"/></button>
@@ -359,6 +369,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

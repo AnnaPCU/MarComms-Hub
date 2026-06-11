@@ -133,6 +133,14 @@ export default function App() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showFastAction, setShowFastAction] = useState(false);
   const [contentAutoNew, setContentAutoNew] = useState(false); // abre "nuevo pedido" al entrar desde acción rápida
+  const [focusProjectId, setFocusProjectId] = useState(null);  // deep-link: card a abrir al navegar desde Mi Semana
+
+  // Navega a una sección y opcionalmente enfoca un proyecto específico (abre su card/detalle)
+  const navigateToProject = (section, projectId = null) => {
+    setSelectedCountry(null);
+    setFocusProjectId(projectId);
+    setCurrentSection(section);
+  };
 
   const [currentSection, setCurrentSection] = useState('main');
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -543,6 +551,8 @@ export default function App() {
              onWebinarCreated={onWebinarCreated}
              onWebinarMailToggled={onWebinarMailToggled}
              onWebinarDeleted={onWebinarDeleted}
+             focusProjectId={focusProjectId}
+             onFocusHandled={() => setFocusProjectId(null)}
            />
         </div>
       );
@@ -558,6 +568,8 @@ export default function App() {
              onCampaignWebinarStepToggled={onCampaignWebinarStepToggled}
              onCampaignDeleted={onCampaignDeleted}
              currentUser={currentUser}
+             focusProjectId={focusProjectId}
+             onFocusHandled={() => setFocusProjectId(null)}
            />
         </div>
       );
@@ -566,7 +578,7 @@ export default function App() {
     if (currentSection === 'events') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-           <EventsApp onBack={() => setCurrentSection('main')} events={globalEvents} setEvents={setGlobalEvents} campaigns={globalCampaigns} />
+           <EventsApp onBack={() => setCurrentSection('main')} events={globalEvents} setEvents={setGlobalEvents} campaigns={globalCampaigns} focusProjectId={focusProjectId} onFocusHandled={() => setFocusProjectId(null)} />
         </div>
       );
     }
@@ -652,7 +664,7 @@ export default function App() {
              toggleAssignedTaskDone={toggleAssignedTaskDone}
              deleteAssignedTask={deleteAssignedTask}
              currentUser={currentUser}
-             onNavigate={setCurrentSection}
+             onNavigate={navigateToProject}
            />
         </div>
       );

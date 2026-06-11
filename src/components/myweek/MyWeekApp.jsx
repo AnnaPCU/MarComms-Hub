@@ -280,10 +280,12 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
   const goToTask = (task) => {
     setTaskDetail(task);
   };
-  // Desde el modal, ir al pilar correspondiente
+  // ¿La tarea pertenece a un pilar navegable? (las asignadas viven en Mi Semana)
+  const hasProject = (task) => task && task.navSection && task.navSection !== 'my_week';
+  // Desde el modal, ir a la card específica del pilar
   const navigateToTaskSection = (task) => {
     setTaskDetail(null);
-    if (onNavigate) onNavigate(task.navSection);
+    if (onNavigate) onNavigate(task.navSection, task.projectId);
   };
 
   // Filtros
@@ -646,12 +648,14 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
                 >
                   {t.done ? 'Marcar pendiente' : 'Marcar completada'}
                 </button>
-                <button
-                  onClick={() => navigateToTaskSection(t)}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white transition-all flex items-center justify-center gap-1.5"
-                >
-                  Ir al proyecto <ChevronRight className="w-4 h-4" />
-                </button>
+                {hasProject(t) && (
+                  <button
+                    onClick={() => navigateToTaskSection(t)}
+                    className="flex-1 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white transition-all flex items-center justify-center gap-1.5"
+                  >
+                    Ir al proyecto <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

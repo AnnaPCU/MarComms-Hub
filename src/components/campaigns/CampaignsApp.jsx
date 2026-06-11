@@ -34,6 +34,7 @@ import SimpleStep from '@/components/shared/SimpleStep';
 import CommentsSection from '@/components/shared/CommentsSection';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
+import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
@@ -46,11 +47,23 @@ const campaignId = () => {
   });
 };
 
-export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser }) {
+export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser, focusProjectId, onFocusHandled }) {
   const confirm = useConfirm();
   const [activeView, setActiveView] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
+
+  // ─── Deep-link: expandir y scrollear a una campaña al venir desde Mi Semana ───
+  useEffect(() => {
+    if (!focusProjectId) return;
+    setExpandedCampaigns(prev => new Set(prev).add(focusProjectId));
+    setTimeout(() => {
+      const el = campaignRefs.current[focusProjectId];
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    if (onFocusHandled) onFocusHandled();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusProjectId]);
 
   // ─── Auto-marca completedAt cuando la campaña llega al 100% ───
   useEffect(() => {
@@ -2257,8 +2270,9 @@ td a { color: #2563eb; text-decoration: none; }
       </main>
 
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[90] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <ModalPortal>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[90] flex items-center justify-center p-4" onClick={() => setShowBudgetModal(false)}>
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-8 space-y-6">
               <div className="text-center space-y-2">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 ${
@@ -2569,6 +2583,7 @@ td a { color: #2563eb; text-decoration: none; }
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Modal de confirmación de borrado */}
