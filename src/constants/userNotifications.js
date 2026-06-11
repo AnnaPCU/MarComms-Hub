@@ -85,33 +85,33 @@ export const NOTIFICATION_TEMPLATES = {
   },
 };
 
-// ── Mensajes context específicos por usuario ──
+// ── Mensajes context específicos por usuario (key = nombre completo) ──
 export const USER_GREETINGS = {
-  Agus: '¡Hola Agus! 👋 Acá están tus piezas de contenido',
-  Vicky: '¡Hola Vicky! 👋 Mirá los webinars y eventos del día',
-  Delfi: '¡Hola Delfi! 👋 Tus diseños están aquí',
-  Fati: '¡Hola Fati! 👋 Que siga la creatividad',
-  Ale: '¡Hola Ale! 📊 Mirá el pipeline de campañas',
-  Felo: '¡Hola Felo! 📈 Acá están tus responsabilidades',
-  Fran: '¡Hola Fran! 🎯 Venga con las estrategias',
-  Tomi: '¡Hola Tomi! 🚀 Mirá qué hay para hoy',
-  Boli: '¡Hola Boli! 💡 Tus tareas están listas',
+  'Agustina Ball':              '¡Hola Agustina! 👋 Acá están tus piezas de contenido',
+  'Victoria Colombo':          '¡Hola Victoria! 👋 Mirá los webinars y eventos del día',
+  'Delfina Palmero':           '¡Hola Delfina! 👋 Tus diseños están aquí',
+  'Fatima Lacroze':            '¡Hola Fátima! 👋 Que siga la creatividad',
+  'Alejandro Juan Sanguinetti':'¡Hola Alejandro! 📊 Mirá el pipeline de campañas',
+  'Felipe Señorans':           '¡Hola Felipe! 📈 Acá están tus responsabilidades',
+  'Francisco Capoulat':        '¡Hola Francisco! 🎯 Venga con las estrategias',
+  'Tomas Misrahi':             '¡Hola Tomás! 🚀 Mirá qué hay para hoy',
+  'Eugenio Marotta':           '¡Hola Eugenio! 💡 Tus tareas están listas',
 };
 
-// ── Acentos personalizados para notificaciones ──
+// ── Acentos personalizados para notificaciones (key = nombre completo) ──
 export const USER_NOTIFICATION_ACCENT = {
   // Comunicación
-  Agus: { color: 'pink', emoji: '🎨', vibe: 'creativa' },
-  Vicky: { color: 'purple', emoji: '✨', vibe: 'lideresa' },
-  Delfi: { color: 'fuchsia', emoji: '🖌️', vibe: 'metódica' },
-  Fati: { color: 'rose', emoji: '💫', vibe: 'energética' },
+  'Agustina Ball':    { color: 'pink', emoji: '🎨', vibe: 'creativa' },
+  'Victoria Colombo': { color: 'purple', emoji: '✨', vibe: 'lideresa' },
+  'Delfina Palmero':  { color: 'fuchsia', emoji: '🖌️', vibe: 'metódica' },
+  'Fatima Lacroze':   { color: 'rose', emoji: '💫', vibe: 'energética' },
 
   // Marketing
-  Ale: { color: 'blue', emoji: '📊', vibe: 'analítica' },
-  Felo: { color: 'cyan', emoji: '📈', vibe: 'estratégica' },
-  Fran: { color: 'indigo', emoji: '🎯', vibe: 'ejecutora' },
-  Tomi: { color: 'sky', emoji: '🚀', vibe: 'innovadora' },
-  Boli: { color: 'teal', emoji: '🌿', vibe: 'equilibrada' },
+  'Alejandro Juan Sanguinetti': { color: 'blue', emoji: '📊', vibe: 'analítica' },
+  'Felipe Señorans':            { color: 'cyan', emoji: '📈', vibe: 'estratégica' },
+  'Francisco Capoulat':         { color: 'indigo', emoji: '🎯', vibe: 'ejecutora' },
+  'Tomas Misrahi':              { color: 'sky', emoji: '🚀', vibe: 'innovadora' },
+  'Eugenio Marotta':            { color: 'teal', emoji: '🌿', vibe: 'equilibrada' },
 };
 
 // ── Orden de prioridad de notificaciones por equipo ──

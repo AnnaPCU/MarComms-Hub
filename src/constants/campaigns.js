@@ -6,10 +6,10 @@
 
 // ── Piezas de contenido para CAMPAÑA email (manual, no la del webinar) ──
 export const CAMPAIGN_CONTENT_PIECES = [
-  { key: 'banner_emails', label: 'Banner emails', defaultOwner: 'Vicky', kind: 'design' },
-  { key: 'formulario',    label: 'Formulario',    defaultOwner: 'Vicky', kind: 'design' },
-  { key: 'one_pager',     label: 'One pager',     defaultOwner: 'Agus',  kind: 'design' },
-  { key: 'landing',       label: 'Landing',       defaultOwner: 'Vicky', kind: 'design' },
+  { key: 'banner_emails', label: 'Banner emails', defaultOwner: 'Victoria Colombo', kind: 'design' },
+  { key: 'formulario',    label: 'Formulario',    defaultOwner: 'Victoria Colombo', kind: 'design' },
+  { key: 'one_pager',     label: 'One pager',     defaultOwner: 'Agustina Ball',  kind: 'design' },
+  { key: 'landing',       label: 'Landing',       defaultOwner: 'Victoria Colombo', kind: 'design' },
 ];
 
 // ── Opciones de UTMs ──

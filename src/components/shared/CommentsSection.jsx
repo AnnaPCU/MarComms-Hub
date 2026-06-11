@@ -18,6 +18,8 @@
 
 import React from 'react';
 import { FileText, Trash2, Plus } from 'lucide-react';
+import { PEOPLE } from '@/constants/team';
+import MentionTextarea from './MentionTextarea';
 
 const ACCENT_MAP = {
   blue:    { ring: 'focus:ring-blue-400',    btn: 'bg-blue-600 hover:bg-blue-700',       icon: 'text-blue-500',    chip: 'bg-blue-50 border-blue-100' },
@@ -90,12 +92,12 @@ export default function CommentsSection({
       )}
 
       <div className="space-y-2">
-        <textarea
-          rows="2"
-          className={`w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 resize-none outline-none focus:ring-2 ${a.ring}`}
-          placeholder={placeholder}
+        <MentionTextarea
           value={value}
-          onChange={(e) => setNewComment({ ...newComment, [campaignId]: e.target.value })}
+          onChange={(text) => setNewComment({ ...newComment, [campaignId]: text })}
+          placeholder={`${placeholder} — usá @ para etiquetar`}
+          people={PEOPLE}
+          ringClass={a.ring}
         />
         <button
           onClick={() => addComment(campaignId, value)}

@@ -12,7 +12,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'one_pager',
     label: 'One pager',
-    defaultOwner: 'Agus',
+    defaultOwner: 'Agustina Ball',
     color: 'bg-blue-50 text-blue-700 border-blue-200',
     dot: 'bg-blue-500',
     kind: 'design',
@@ -20,7 +20,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'ppt',
     label: 'PPT',
-    defaultOwner: 'Agus',
+    defaultOwner: 'Agustina Ball',
     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     dot: 'bg-indigo-500',
     kind: 'design',
@@ -28,7 +28,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'formulario',
     label: 'Formulario',
-    defaultOwner: 'Vicky',
+    defaultOwner: 'Victoria Colombo',
     color: 'bg-purple-50 text-purple-700 border-purple-200',
     dot: 'bg-purple-500',
     kind: 'design',
@@ -36,7 +36,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'branding',
     label: 'Branding',
-    defaultOwner: 'Fati',
+    defaultOwner: 'Fatima Lacroze',
     color: 'bg-pink-50 text-pink-700 border-pink-200',
     dot: 'bg-pink-500',
     kind: 'design',
@@ -44,7 +44,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'landing',
     label: 'Landing page',
-    defaultOwner: 'Vicky',
+    defaultOwner: 'Victoria Colombo',
     color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     dot: 'bg-emerald-500',
     kind: 'design',
@@ -52,7 +52,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'video',
     label: 'Video',
-    defaultOwner: 'Delfi',
+    defaultOwner: 'Delfina Palmero',
     color: 'bg-amber-50 text-amber-700 border-amber-200',
     dot: 'bg-amber-500',
     kind: 'design',

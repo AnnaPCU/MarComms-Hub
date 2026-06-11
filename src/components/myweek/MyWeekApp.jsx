@@ -31,7 +31,8 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
     return PEOPLE[0];
   });
   const [filterCustomPerson, setFilterCustomPerson] = useState('');
-  const [filterRange, setFilterRange] = useState('week'); // overdue | today | week | month | all
+  const [filterRange, setFilterRange] = useState('all'); // overdue | today | week | month | all
+  const [showCompleted, setShowCompleted] = useState(false); // tareas finalizadas (ocultas por default)
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     title: '', detail: '', assignedTo: '', deadline: ''
@@ -281,8 +282,8 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
   // Filtros
   const personFilter = (filterPerson === '__OTHER__' ? filterCustomPerson : filterPerson).toUpperCase();
   const inRange = (dIso) => {
+    if (filterRange === 'all') return true; // "Todas" incluye tareas sin fecha
     if (!dIso) return false;
-    if (filterRange === 'all') return true;
     const d = new Date(dIso + 'T00:00:00');
     if (filterRange === 'overdue') return d < today;
     if (filterRange === 'today') return dIso === todayIso;
@@ -302,6 +303,11 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
     .filter(t => inRange(t.date))
     .filter(t => !t.done)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  // Tareas finalizadas de la persona (no se muestran por defecto)
+  const completedTasks = allTasks
+    .filter(t => personFilter && t.owner === personFilter && t.done)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   // Stats
   const overdue = allTasks.filter(t => personFilter && t.owner === personFilter && t.date && new Date(t.date + 'T00:00:00') < today && !t.done).length;
@@ -520,6 +526,64 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
             </div>
           )}
         </div>
+
+        {/* ── Tareas finalizadas (colapsable, oculto por defecto) ── */}
+        {completedTasks.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <button
+              onClick={() => setShowCompleted(v => !v)}
+              className="w-full p-4 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition-colors"
+            >
+              <h3 className="font-black text-slate-600 uppercase text-sm tracking-wider flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                Tareas finalizadas
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full border border-emerald-200">
+                  {completedTasks.length}
+                </span>
+                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${showCompleted ? 'rotate-90' : ''}`} />
+              </div>
+            </button>
+            {showCompleted && (
+              <div className="divide-y divide-slate-100">
+                {completedTasks.map(t => {
+                  const SourceIco = t.sourceIcon;
+                  return (
+                    <div key={t.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center gap-3 flex-wrap group">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleTaskDone(t, !t.done); }}
+                        title="Marcar como pendiente"
+                        className="shrink-0 w-6 h-6 rounded-full border-2 bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center transition-all"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => goToTask(t)}
+                        className="flex-1 min-w-0 text-left flex items-center gap-3 flex-wrap cursor-pointer"
+                      >
+                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${t.sourceColor} flex items-center gap-1 shrink-0`}>
+                          <SourceIco className="w-2.5 h-2.5" /> {t.source}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black leading-tight text-slate-400 line-through">{t.taskLabel}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 truncate">
+                            {t.projectName}
+                            {t.country ? ` · ${t.country}` : ''}
+                            {t.businessUnit ? ` · ${t.businessUnit}` : ''}
+                          </p>
+                        </div>
+                        <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest border shrink-0 bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Listo
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Modal Asignar Nueva Tarea */}

@@ -32,7 +32,7 @@ import {
   Send, Sparkles, Trash2, User, Video, X, Zap,
 } from 'lucide-react';
 
-import { DESIGNERS } from '@/constants/team';
+import { DESIGNERS, PEOPLE } from '@/constants/team';
 import { MARKETS } from '@/constants/markets';
 import { STANDALONE_CATEGORIES } from '@/constants/standalones';
 import { WEBINAR_CONTENT_PIECES } from '@/constants/webinar';
@@ -42,6 +42,7 @@ import { calcProgress } from '@/utils/progress';
 
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import MailchimpReportTool from './MailchimpReportTool';
+import MentionTextarea from '@/components/shared/MentionTextarea';
 import { useConfirm } from '@/hooks/useConfirm';
 
 export default function ContentHubApp({
@@ -1293,12 +1294,13 @@ export default function ContentHubApp({
                         {DESIGNERS.map(d => <option key={d} value={d}>{d}</option>)}
                         <option value="Equipo">Equipo Marcomms</option>
                       </select>
-                      <textarea
-                        rows="3"
-                        placeholder="Escribí un comentario, feedback, o ajuste..."
+                      <MentionTextarea
+                        rows={3}
+                        placeholder="Escribí un comentario, feedback, o ajuste… usá @ para etiquetar"
                         value={newCommentText}
-                        onChange={e => setNewCommentText(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-xs text-slate-700 resize-none outline-none focus:ring-2 focus:ring-blue-400"
+                        onChange={(text) => setNewCommentText(text)}
+                        people={PEOPLE}
+                        ringClass="focus:ring-blue-400"
                       />
                       <button
                         onClick={() => {

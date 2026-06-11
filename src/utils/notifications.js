@@ -422,6 +422,48 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   });
 
   // ────────────────────────────────────────────────────────────────
+  // 10.b NUEVO — @menciones en comentarios (campañas + pedidos)
+  //   Si alguien te etiquetó con "@Tu Nombre" en un comentario reciente
+  //   (últimos 3 días) y no lo escribiste vos → notificación.
+  // ────────────────────────────────────────────────────────────────
+  const mentionTag = `@${currentUser.name}`.toLowerCase();
+  const isMentioned = (text) => (text || '').toLowerCase().includes(mentionTag);
+  const recentEnough = (iso) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return d >= last3Days;
+  };
+
+  campaigns.forEach((c) => {
+    (c.comments || []).forEach((cm) => {
+      if (!isMentioned(cm.text)) return;
+      if (sameName(cm.author)) return;
+      if (!recentEnough(cm.date)) return;
+      notifs.push({
+        id: `mention-c-${c.id}-${cm.id || cm.date}`, type: 'assigned', icon: MessageCircle, color: 'cyan',
+        title: `${cm.author || 'Alguien'} te etiquetó en "${c.name}"`,
+        shortTitle: `💬 Te etiquetaron en ${c.name}`,
+        emoji: '💬', project: c.name, source: 'Campaña', date: cm.date, navTo: 'campaigns',
+      });
+    });
+  });
+
+  requests.forEach((r) => {
+    const comments = (r.content && r.content.comments) || [];
+    comments.forEach((cm) => {
+      if (!isMentioned(cm.text)) return;
+      if (sameName(cm.author)) return;
+      if (!recentEnough(cm.timestamp || cm.date)) return;
+      notifs.push({
+        id: `mention-r-${r.id}-${cm.id || cm.timestamp || cm.date}`, type: 'assigned', icon: MessageCircle, color: 'cyan',
+        title: `${cm.author || 'Alguien'} te etiquetó en "${r.name}"`,
+        shortTitle: `💬 Te etiquetaron en ${r.name}`,
+        emoji: '💬', project: r.name, source: 'Content Hub', date: cm.timestamp || cm.date, navTo: 'content',
+      });
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────
   // 11. NUEVO — Resumen diario (al primer login del día)
   //     El "una vez por día" se hace por ID estable (yyyy-mm-dd) +
   //     readNotifications persistido en localStorage.

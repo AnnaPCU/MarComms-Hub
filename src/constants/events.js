@@ -77,15 +77,15 @@ export const EVENT_PHASES = [
 
 // ── Piezas de contenido del evento (Content Hub) ──
 export const EVENT_CONTENT_PIECES = [
-  { key: 'landing',         label: 'Landing',                       defaultOwner: 'Vicky', syncTaskId: 'landing',         kind: 'design' },
-  { key: 'formulario',      label: 'Formulario',                    defaultOwner: 'Vicky', syncTaskId: 'formulario',      kind: 'mixed' },
-  { key: 'ppt',             label: 'PPT',                           defaultOwner: 'Agus',  syncTaskId: 'presentacion',    kind: 'mixed' },
-  { key: 'one_pager',       label: 'One pager',                     defaultOwner: 'Agus',  syncTaskId: 'one_pager',       kind: 'mixed' },
-  { key: 'stand',           label: 'Stand',                         defaultOwner: 'Vicky', syncTaskId: 'stand',           kind: 'design' },
-  { key: 'qrs',             label: 'QRs',                           defaultOwner: 'Vicky', syncTaskId: 'qrs',             kind: 'design' },
-  { key: 'lkn_anuncio',     label: 'LKN post "anuncio"',            defaultOwner: 'Fati',  syncTaskId: 'lkn_anuncio',     kind: 'design' },
-  { key: 'lkn_personales',  label: 'LKN post a cuentas personales', defaultOwner: 'Fati',  syncTaskId: 'lkn_personales',  kind: 'design' },
-  { key: 'paid_pmax',       label: 'Paid media PMAX (imagen)',      defaultOwner: 'Delfi', syncTaskId: 'geo_paid',        kind: 'design' },
-  { key: 'fotos_evento',    label: 'Fotos del evento',              defaultOwner: 'Delfi', syncTaskId: 'fotos',           kind: 'design' },
-  { key: 'lkn_recap',       label: 'LKN post "recap del evento"',   defaultOwner: 'Fati',  syncTaskId: 'lkn_post',        kind: 'design' },
+  { key: 'landing',         label: 'Landing',                       defaultOwner: 'Victoria Colombo', syncTaskId: 'landing',         kind: 'design' },
+  { key: 'formulario',      label: 'Formulario',                    defaultOwner: 'Victoria Colombo', syncTaskId: 'formulario',      kind: 'mixed' },
+  { key: 'ppt',             label: 'PPT',                           defaultOwner: 'Agustina Ball',  syncTaskId: 'presentacion',    kind: 'mixed' },
+  { key: 'one_pager',       label: 'One pager',                     defaultOwner: 'Agustina Ball',  syncTaskId: 'one_pager',       kind: 'mixed' },
+  { key: 'stand',           label: 'Stand',                         defaultOwner: 'Victoria Colombo', syncTaskId: 'stand',           kind: 'design' },
+  { key: 'qrs',             label: 'QRs',                           defaultOwner: 'Victoria Colombo', syncTaskId: 'qrs',             kind: 'design' },
+  { key: 'lkn_anuncio',     label: 'LKN post "anuncio"',            defaultOwner: 'Fatima Lacroze',  syncTaskId: 'lkn_anuncio',     kind: 'design' },
+  { key: 'lkn_personales',  label: 'LKN post a cuentas personales', defaultOwner: 'Fatima Lacroze',  syncTaskId: 'lkn_personales',  kind: 'design' },
+  { key: 'paid_pmax',       label: 'Paid media PMAX (imagen)',      defaultOwner: 'Delfina Palmero', syncTaskId: 'geo_paid',        kind: 'design' },
+  { key: 'fotos_evento',    label: 'Fotos del evento',              defaultOwner: 'Delfina Palmero', syncTaskId: 'fotos',           kind: 'design' },
+  { key: 'lkn_recap',       label: 'LKN post "recap del evento"',   defaultOwner: 'Fatima Lacroze',  syncTaskId: 'lkn_post',        kind: 'design' },
 ];
