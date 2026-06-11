@@ -18,7 +18,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2,
   ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard,
-  LogOut, Mail, MoreVertical, Receipt, Search, Sparkles, User,
+  LogOut, Mail, MoreVertical, Receipt, Search, Sparkles, Trophy, User,
   UserCheck, Video, X, Zap,
 } from 'lucide-react';
 
@@ -37,6 +37,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useAssignedTasks } from '@/hooks/useAssignedTasks';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
+import { useSuccessCases } from '@/hooks/useSuccessCases';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
@@ -53,6 +54,7 @@ import FacturacionApp from '@/components/facturacion/FacturacionApp';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import CountryDetail from '@/components/country/CountryDetail';
+import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 
 // Claves de localStorage. Versionadas → si cambia el shape, subir el sufijo.
 const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
@@ -154,6 +156,15 @@ export default function App() {
   if (webinarsMeta.error)  console.error('Webinars Supabase error:',  webinarsMeta.error);
   if (campaignsMeta.error) console.error('Campaigns Supabase error:', campaignsMeta.error);
   if (eventsMeta.error)    console.error('Events Supabase error:',    eventsMeta.error);
+
+  // ─── Casos de éxito: Supabase + realtime ───
+  const {
+    data: successCases,
+    loading: successCasesLoading,
+    error: successCasesError,
+    create: createSuccessCase,
+    remove: removeSuccessCase,
+  } = useSuccessCases();
 
   // ─── Pedidos / Standalone requests: conectado a Supabase (tabla `requests`) ───
   // El hook maneja fetch inicial, realtime, create/update/delete y un overlay
@@ -292,6 +303,7 @@ export default function App() {
     { id: 'content', title: 'Content Hub', description: 'Mesa de contenido y diseño: Agus, Vicky, Fati, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
+    { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
     { id: 'client_portal', title: 'Portal Cliente', description: 'Vista que ve cada país de sus servicios.', icon: <User className="w-8 h-8 text-teal-600" />, stats: 'Público', color: 'bg-teal-50' }
   ];
 
@@ -588,6 +600,22 @@ export default function App() {
              removeRequestFile={removeRequestFile}
              updateRequestContent={updateRequestContent}
            />
+        </div>
+      );
+    }
+
+    if (currentSection === 'success_cases') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+          <SuccessCasesApp
+            onBack={() => setCurrentSection('main')}
+            currentUser={currentUser}
+            cases={successCases}
+            loading={successCasesLoading}
+            error={successCasesError}
+            createCase={createSuccessCase}
+            removeCase={removeSuccessCase}
+          />
         </div>
       );
     }

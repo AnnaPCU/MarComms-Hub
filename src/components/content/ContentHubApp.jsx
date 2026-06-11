@@ -42,6 +42,7 @@ import { calcProgress } from '@/utils/progress';
 
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import MailchimpReportTool from './MailchimpReportTool';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function ContentHubApp({
   onBack,
@@ -65,6 +66,7 @@ export default function ContentHubApp({
   removeRequestFile,
   updateRequestContent,
 }) {
+  const confirm = useConfirm();
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
   const [mainTab, setMainTab] = useState('pedidos'); // pedidos | herramientas
   const [activeTool, setActiveTool] = useState('utm'); // utm | mailchimp | newsletter
@@ -351,7 +353,16 @@ export default function ContentHubApp({
     setShowNewRequest(false);
   };
 
-  const updateStandaloneStatus = (reqId, newStatus) => {
+  const updateStandaloneStatus = async (reqId, newStatus) => {
+    // Confirmación al marcar el pedido como entregado/done
+    if (newStatus === 'done') {
+      const ok = await confirm({
+        title: '¿Pedido concretado?',
+        message: 'Vas a marcar este pedido como entregado. ¿Confirmás que ya está listo?',
+        confirmText: 'Sí, entregado', cancelText: 'Todavía no', tone: 'success',
+      });
+      if (!ok) return;
+    }
     // El hook se encarga del completedAt automáticamente
     if (setRequestStatus) setRequestStatus(reqId, newStatus);
   };
@@ -360,7 +371,13 @@ export default function ContentHubApp({
     if (setRequestOwner) setRequestOwner(reqId, newOwner);
   };
 
-  const deleteStandalone = (reqId) => {
+  const deleteStandalone = async (reqId) => {
+    const ok = await confirm({
+      title: '¿Eliminar pedido?',
+      message: 'Vas a eliminar este pedido del Content Hub. Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     if (removeRequest) removeRequest(reqId);
   };
 
@@ -369,7 +386,13 @@ export default function ContentHubApp({
     if (addRequestComment) addRequestComment(reqId, text, author);
   };
 
-  const removeStandaloneComment = (reqId, commentId) => {
+  const removeStandaloneComment = async (reqId, commentId) => {
+    const ok = await confirm({
+      title: '¿Eliminar comentario?',
+      message: 'Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     if (removeRequestComment) removeRequestComment(reqId, commentId);
   };
 
@@ -377,7 +400,13 @@ export default function ContentHubApp({
     if (addRequestFile) addRequestFile(reqId, file, category);
   };
 
-  const removeStandaloneFile = (reqId, fileId, category = 'design') => {
+  const removeStandaloneFile = async (reqId, fileId, category = 'design') => {
+    const ok = await confirm({
+      title: '¿Eliminar archivo?',
+      message: 'Vas a quitar este archivo del pedido.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     if (removeRequestFile) removeRequestFile(reqId, fileId, category);
   };
 

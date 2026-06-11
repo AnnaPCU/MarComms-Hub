@@ -26,12 +26,15 @@ import {
 import { MARKETS } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
+import { getCampaignChecklist } from '@/constants/campaigns';
 import { parseMailchimpReport, parseMailchimpSubscribers } from '@/utils/csv';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
 import SimpleStep from '@/components/shared/SimpleStep';
 import CommentsSection from '@/components/shared/CommentsSection';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
+import QuotationBadge from '@/components/shared/QuotationBadge';
+import { useConfirm } from '@/hooks/useConfirm';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
 const campaignId = () => {
@@ -44,7 +47,8 @@ const campaignId = () => {
 };
 
 export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser }) {
-  const [activeView, setActiveView] = useState(null); 
+  const confirm = useConfirm();
+  const [activeView, setActiveView] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
 
@@ -129,7 +133,13 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     setNewComment({ ...newComment, [campaignId]: "" });
   };
 
-  const removeComment = (campaignId, commentId) => {
+  const removeComment = async (campaignId, commentId) => {
+    const ok = await confirm({
+      title: '¿Eliminar comentario?',
+      message: 'Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     setCampaigns(campaigns.map(c => {
       if (c.id !== campaignId) return c;
       return { ...c, comments: (c.comments || []).filter(cm => cm.id !== commentId) };
@@ -254,14 +264,26 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       (content.banner || "").trim() !== "";
   };
 
-  const toggleStep = (campaign, stepId, condition = true) => {
-    let willBeDone = false;
+  const toggleStep = async (campaign, stepId, condition = true) => {
+    const steps = campaign.completedSteps || [];
+    const isDone = steps.includes(stepId);
+    if (!condition && !isDone) return;
+
+    // Confirmación al COMPLETAR un paso (no al desmarcar)
+    if (!isDone) {
+      const ok = await confirm({
+        title: '¿Paso concretado?',
+        message: 'Vas a marcar este paso de la campaña como completado. ¿Confirmás que ya está hecho?',
+        confirmText: 'Sí, completar',
+        cancelText: 'Todavía no',
+        tone: 'success',
+      });
+      if (!ok) return;
+    }
+
+    const willBeDone = !isDone;
     setCampaigns(campaigns.map(c => {
       if (c.id === campaign.id) {
-        const steps = c.completedSteps || [];
-        const isDone = steps.includes(stepId);
-        if (!condition && !isDone) return c;
-        willBeDone = !isDone;
         return { ...c, completedSteps: isDone ? steps.filter(s => s !== stepId) : [...steps, stepId] };
       }
       return c;
@@ -270,6 +292,10 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     if (campaign.linkedWebinarId && STEP_TO_WEBINAR_MAIL[stepId] && onCampaignWebinarStepToggled) {
       onCampaignWebinarStepToggled(campaign.id, stepId, willBeDone);
     }
+  };
+
+  const toggleQuotation = (campaignId, next) => {
+    setCampaigns(campaigns.map(c => c.id === campaignId ? { ...c, quotationValidated: next } : c));
   };
 
   const handleBulkFileUpload = (campaignId, files) => {
@@ -437,6 +463,14 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                           <div className="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg shrink-0">
                             <DollarSign className="w-3 h-3 text-slate-400" />
                             <span className="text-xs font-black text-slate-700 tracking-widest">{(campaign.budget || 0).toLocaleString()}</span>
+                          </div>
+
+                          {/* Cotización validada */}
+                          <div className="hidden lg:block shrink-0">
+                            <QuotationBadge
+                              validated={!!campaign.quotationValidated}
+                              onToggle={(next) => toggleQuotation(campaign.id, next)}
+                            />
                           </div>
 
                           {/* Responsable general */}
@@ -2130,6 +2164,12 @@ td a { color: #2563eb; text-decoration: none; }
 
                           <h4 className="font-black text-slate-800 text-sm uppercase mb-1 leading-tight">{c.name}</h4>
                           <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{c.businessUnit} · {c.country}</p>
+                          <div className="mb-2">
+                            <QuotationBadge
+                              validated={!!c.quotationValidated}
+                              onToggle={(next) => toggleQuotation(c.id, next)}
+                            />
+                          </div>
                           {c.completedAt && (
                             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
                               <CheckCircle2 className="w-3 h-3" /> Completada: {new Date(c.completedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -2154,6 +2194,38 @@ td a { color: #2563eb; text-decoration: none; }
                               </>
                             )}
                           </div>
+
+                          {/* Desglose read-only — toggle "Ver desglose" */}
+                          {(() => {
+                            const isOpen = expandedCampaigns.has(c.id);
+                            const checklist = getCampaignChecklist(c);
+                            return (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleExpand(c.id); }}
+                                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg py-2 transition-all"
+                                >
+                                  {isOpen ? <ChevronRight className="w-3 h-3 rotate-90 transition-transform" /> : <ChevronRight className="w-3 h-3 transition-transform" />}
+                                  {isOpen ? 'Ocultar desglose' : 'Ver desglose'}
+                                </button>
+                                {isOpen && (
+                                  <div className="mt-3 space-y-1.5 bg-slate-50/60 border border-slate-100 rounded-xl p-3">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                                      Pasos completados ({checklist.filter(t => t.done).length}/{checklist.length})
+                                    </p>
+                                    {checklist.map((t, i) => (
+                                      <div key={i} className="flex items-center gap-2">
+                                        {t.done
+                                          ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                          : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+                                        <span className={`text-[10px] font-bold ${t.done ? 'text-slate-600' : 'text-slate-400'}`}>{t.label}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       );
                     })}
@@ -2298,23 +2370,37 @@ td a { color: #2563eb; text-decoration: none; }
                           </select>
                        </div>
                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidad</label>
-                          <select 
-                            className={`w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 disabled:opacity-50 outline-none ${
-                              newCampData.type === "paid" ? "focus:ring-2 focus:ring-amber-400" :
-                              newCampData.type === "database" ? "focus:ring-2 focus:ring-emerald-400" :
-                              newCampData.type === "research" ? "focus:ring-2 focus:ring-purple-400" :
-                              "focus:ring-2 focus:ring-blue-400"
-                            }`}
-                            value={newCampData.unit}
-                            onChange={(e) => setNewCampData({...newCampData, unit: e.target.value})}
-                            disabled={!newCampData.country}
-                          >
-                             <option value="">Unidad...</option>
-                             {newCampData.country && MARKETS[newCampData.country].map(u => (
-                                <option key={u} value={u}>{u}</option>
-                             ))}
-                          </select>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            {newCampData.type === "database" ? "Organización" : "Unidad"}
+                          </label>
+                          {newCampData.type === "database" ? (
+                            /* Para BBDD: selector CU / PS, disponible para TODOS los países */
+                            <select
+                              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400"
+                              value={newCampData.unit}
+                              onChange={(e) => setNewCampData({...newCampData, unit: e.target.value})}
+                            >
+                              <option value="">Organización...</option>
+                              <option value="Control Union">Control Union (CU)</option>
+                              <option value="Peterson">Peterson (PS)</option>
+                            </select>
+                          ) : (
+                            <select
+                              className={`w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 disabled:opacity-50 outline-none ${
+                                newCampData.type === "paid" ? "focus:ring-2 focus:ring-amber-400" :
+                                newCampData.type === "research" ? "focus:ring-2 focus:ring-purple-400" :
+                                "focus:ring-2 focus:ring-blue-400"
+                              }`}
+                              value={newCampData.unit}
+                              onChange={(e) => setNewCampData({...newCampData, unit: e.target.value})}
+                              disabled={!newCampData.country}
+                            >
+                               <option value="">Unidad...</option>
+                               {newCampData.country && MARKETS[newCampData.country].map(u => (
+                                  <option key={u} value={u}>{u}</option>
+                               ))}
+                            </select>
+                          )}
                        </div>
                     </div>
 

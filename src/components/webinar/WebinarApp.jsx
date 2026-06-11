@@ -30,8 +30,11 @@ import Ico from '@/components/shared/Ico';
 import OwnerPicker from '@/components/shared/OwnerPicker';
 import TaskEditorRow from '@/components/shared/TaskEditorRow';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
+import QuotationBadge from '@/components/shared/QuotationBadge';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted }) {
+  const confirm = useConfirm();
   const [view,setView]=useState("internal"); 
   const [activeW,setActiveW]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -80,7 +83,21 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
     setShowForm(false);
   };
 
-  const updateField = (id, path, val) => {
+  const updateField = async (id, path, val) => {
+    // Confirmación al COMPLETAR una tarea (path tipo "mailPre1.done" → true)
+    const partsCheck = path.split('.');
+    const isCompletingTask = partsCheck.length === 2 && partsCheck[1] === 'done' && val === true;
+    if (isCompletingTask) {
+      const ok = await confirm({
+        title: '¿Tarea concretada?',
+        message: 'Vas a marcar esta tarea como completada. ¿Confirmás que ya está hecha?',
+        confirmText: 'Sí, completar',
+        cancelText: 'Todavía no',
+        tone: 'success',
+      });
+      if (!ok) return;
+    }
+
     setWebinars(webinars.map(w => {
       if(w.id !== id) return w;
       let clone = JSON.parse(JSON.stringify(w));
@@ -172,10 +189,16 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <h3 className={`text-lg font-black text-slate-900 uppercase leading-tight mb-2 transition-colors ${isCompleted ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`}>{w.name}</h3>
                 <p className="text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><Ico name="Calendar" size={12}/> {w.mainDate || "Sin Fecha"}</p>
                 {w.monto && Number(w.monto) > 0 && (
-                  <p className={`text-[11px] font-black uppercase mb-3 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
+                  <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
                     <DollarSign className="w-3 h-3" /> Fee: ${Number(w.monto).toLocaleString()}
                   </p>
                 )}
+                <div className="mb-3">
+                  <QuotationBadge
+                    validated={!!w.quotationValidated}
+                    onToggle={(next) => updateField(w.id, 'quotationValidated', next)}
+                  />
+                </div>
                 {/* Responsable general del webinar */}
                 <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 px-2.5 py-1.5 rounded-lg w-fit mb-3">
                   <User className="w-3 h-3 text-purple-600" />

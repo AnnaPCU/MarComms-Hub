@@ -30,6 +30,7 @@ export const fromRow = (row) => {
     completedAt:       row.completed_at || null,
     createdAt:         row.created_at || null,
     updatedAt:         row.updated_at || null,
+    quotationValidated: row.quotation_validated === true,
   };
 };
 
@@ -53,6 +54,7 @@ export const toRow = (obj) => {
   if (obj.report !== undefined)              row.report = obj.report;
   if (obj.comments !== undefined)            row.comments = obj.comments || [];
   if (obj.completedAt !== undefined)         row.completed_at = obj.completedAt;
+  if (obj.quotationValidated !== undefined)  row.quotation_validated = !!obj.quotationValidated;
   return row;
 };
 

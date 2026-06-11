@@ -26,8 +26,11 @@ import { EVENT_PHASES } from '@/constants/events';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
+import QuotationBadge from '@/components/shared/QuotationBadge';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function EventsApp({ onBack, events, setEvents, campaigns }) {
+  const confirm = useConfirm();
   const [activeEvent, setActiveEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -95,7 +98,15 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
     }));
   };
 
-  const updateTaskField = (eventId, taskId, field, value) => {
+  const updateTaskField = async (eventId, taskId, field, value) => {
+    if (field === 'done' && value === true) {
+      const ok = await confirm({
+        title: '¿Tarea concretada?',
+        message: 'Vas a marcar esta tarea del evento como completada. ¿Confirmás que ya está hecha?',
+        confirmText: 'Sí, completar', cancelText: 'Todavía no', tone: 'success',
+      });
+      if (!ok) return;
+    }
     setEvents(events.map(e => {
       if (e.id !== eventId) return e;
       const updated = {
@@ -107,7 +118,15 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
     }));
   };
 
-  const updateCustomTaskField = (eventId, taskIdx, field, value) => {
+  const updateCustomTaskField = async (eventId, taskIdx, field, value) => {
+    if (field === 'done' && value === true) {
+      const ok = await confirm({
+        title: '¿Tarea concretada?',
+        message: 'Vas a marcar esta tarea del evento como completada. ¿Confirmás que ya está hecha?',
+        confirmText: 'Sí, completar', cancelText: 'Todavía no', tone: 'success',
+      });
+      if (!ok) return;
+    }
     setEvents(events.map(e => {
       if (e.id !== eventId) return e;
       const updated = {
@@ -132,7 +151,13 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
     setNewCustomTask({ ...newCustomTask, [`${eventId}_${phaseId}`]: "" });
   };
 
-  const removeCustomTask = (eventId, taskId) => {
+  const removeCustomTask = async (eventId, taskId) => {
+    const ok = await confirm({
+      title: '¿Eliminar tarea?',
+      message: 'Vas a eliminar esta tarea personalizada del evento. Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     setEvents(events.map(e => {
       if (e.id !== eventId) return e;
       const updated = { ...e, customTasks: (e.customTasks || []).filter(t => t.id !== taskId) };
@@ -141,7 +166,13 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
     }));
   };
 
-  const removeDefaultTask = (eventId, taskId) => {
+  const removeDefaultTask = async (eventId, taskId) => {
+    const ok = await confirm({
+      title: '¿Eliminar tarea del workflow?',
+      message: 'Vas a quitar esta tarea estándar del evento. Podés re-agregarla manualmente después si la necesitás.',
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (!ok) return;
     setEvents(events.map(e => {
       if (e.id !== eventId) return e;
       const newTasks = { ...e.tasks };
@@ -173,7 +204,13 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
     setNewParticipant({ ...newParticipant, [`${eventId}_${taskId}`]: "" });
   };
 
-  const removeParticipant = (eventId, taskId, participantId) => {
+  const removeParticipant = async (eventId, taskId, participantId) => {
+    const ok = await confirm({
+      title: '¿Quitar participante?',
+      message: 'Vas a remover este participante de la tarea.',
+      confirmText: 'Quitar', tone: 'danger',
+    });
+    if (!ok) return;
     setEvents(events.map(e => {
       if (e.id !== eventId) return e;
       const task = e.tasks[taskId] || {};
@@ -253,9 +290,15 @@ export default function EventsApp({ onBack, events, setEvents, campaigns }) {
                     <p className="text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5">
                       <Calendar className="w-3 h-3" /> {ev.date || "Sin Fecha"}
                     </p>
-                    <p className={`text-[11px] font-black uppercase mb-3 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-orange-600'}`}>
+                    <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-orange-600'}`}>
                       <DollarSign className="w-3 h-3" /> Fee: ${(ev.fee || 0).toLocaleString()}
                     </p>
+                    <div className="mb-3">
+                      <QuotationBadge
+                        validated={!!ev.quotationValidated}
+                        onToggle={(next) => updateEvent(ev.id, 'quotationValidated', next)}
+                      />
+                    </div>
                     {/* Responsable general del evento */}
                     <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 px-2.5 py-1.5 rounded-lg w-fit mb-3">
                       <User className="w-3 h-3 text-purple-600" />

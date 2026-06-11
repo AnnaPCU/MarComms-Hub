@@ -41,6 +41,7 @@ export const fromRow = (row) => {
     completedAt:      row.completed_at || null,
     createdAt:        row.created_at || null,
     updatedAt:        row.updated_at || null,
+    quotationValidated: row.quotation_validated === true,
     // Sub-tareas top-level (vienen de tasks jsonb)
     ...TASK_KEYS.reduce((acc, k) => {
       acc[k] = tasksJson[k] || { done: false };
@@ -64,6 +65,7 @@ export const toRow = (obj) => {
   if (obj.asistentes !== undefined)       row.asistentes = obj.asistentes;
   if (obj.dealsCreated !== undefined)     row.deals_created = Number(obj.dealsCreated) || 0;
   if (obj.completedAt !== undefined)      row.completed_at = obj.completedAt;
+  if (obj.quotationValidated !== undefined) row.quotation_validated = !!obj.quotationValidated;
 
   // Pack sub-tareas en tasks jsonb (solo las que vengan en el obj)
   const hasAnyTask = TASK_KEYS.some((k) => obj[k] !== undefined);

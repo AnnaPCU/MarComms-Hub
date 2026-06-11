@@ -21,8 +21,10 @@ import {
 import { DESIGNERS, MARCOMMS, PEOPLE, SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { formatDate } from '@/utils/date';
+import { useConfirm } from '@/hooks/useConfirm';
 
 export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, setCampaigns, events, setEvents, standaloneRequests, setRequestStatus, assignedTasks, createAssignedTask, toggleAssignedTaskDone, deleteAssignedTask, currentUser, onNavigate }) {
+  const confirm = useConfirm();
   const [filterPerson, setFilterPerson] = useState(() => {
     // Por defecto, abrir con el usuario logueado si está en la lista
     if (currentUser && PEOPLE.includes(currentUser.name)) return currentUser.name;
@@ -214,7 +216,16 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
   const todayIso = today.toISOString().split('T')[0];
 
   // ─── Acciones: completar tarea + navegar al proyecto ───
-  const toggleTaskDone = (task, newDone) => {
+  const toggleTaskDone = async (task, newDone) => {
+    // Confirmación al COMPLETAR (no al desmarcar)
+    if (newDone) {
+      const ok = await confirm({
+        title: '¿Tarea concretada?',
+        message: 'Vas a marcar esta tarea como completada. ¿Confirmás que ya está hecha?',
+        confirmText: 'Sí, completar', cancelText: 'Todavía no', tone: 'success',
+      });
+      if (!ok) return;
+    }
     if (task.sourceType === 'webinar') {
       setWebinars(prev => prev.map(w => {
         if (w.id !== task.projectId) return w;
