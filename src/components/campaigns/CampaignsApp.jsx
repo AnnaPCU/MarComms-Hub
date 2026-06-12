@@ -2272,8 +2272,15 @@ td a { color: #2563eb; text-decoration: none; }
       {showBudgetModal && (
         <ModalPortal>
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[90] flex items-center justify-center p-4" onClick={() => setShowBudgetModal(false)}>
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 space-y-6">
+          <div className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowBudgetModal(false)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors"
+              title="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="p-8 space-y-6 max-h-[90vh] overflow-y-auto">
               <div className="text-center space-y-2">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 ${
                   newCampData.type === "paid" ? "bg-amber-100" :

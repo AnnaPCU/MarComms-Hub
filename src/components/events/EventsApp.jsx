@@ -411,7 +411,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
         {showCreateModal && (
           <ModalPortal>
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] flex items-center justify-center p-6" onClick={() => setShowCreateModal(false)}>
-            <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-orange-50">
                 <h2 className="text-xl font-black uppercase text-slate-900 tracking-tight">Nuevo Evento</h2>
                 <button onClick={() => setShowCreateModal(false)} className="w-8 h-8 rounded-full hover:bg-orange-100 flex items-center justify-center">
