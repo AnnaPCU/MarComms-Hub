@@ -35,6 +35,7 @@ import CommentsSection from '@/components/shared/CommentsSection';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
+import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
@@ -817,6 +818,35 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   </div>
                                 </div>
 
+                                {isDb && (
+                                  <>
+                                    <div>
+                                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Costo de la BBDD (USD)</p>
+                                      <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 font-bold text-sm">$</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          className={`w-full p-2.5 pl-7 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 ${accentClasses.ring}`}
+                                          value={campaign.data?.cost ?? ""}
+                                          placeholder="0"
+                                          onChange={(e) => updateData(campaign.id, 'cost', e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value) || 0))}
+                                        />
+                                      </div>
+                                      <p className="text-[9px] text-slate-400 font-medium mt-1">Costo de adquisición/armado de la base</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Etiquetas de la BBDD</p>
+                                      <TagInput
+                                        tags={campaign.data?.tags || []}
+                                        onChange={(tags) => updateData(campaign.id, 'tags', tags)}
+                                        placeholder="+ etiqueta"
+                                        accent="emerald"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+
                                 <div>
                                   <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">{detailLabel}</p>
                                   <textarea
@@ -1058,6 +1088,15 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               <div>
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Banner (URL imagen con título + fecha)</p>
                                 <input type="url" value={emailData.banner || ""} onChange={e => setField('banner', e.target.value)} placeholder="https://..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 outline-none focus:ring-2 focus:ring-blue-400" />
+                              </div>
+                              <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Etiquetas del email (segmentación)</p>
+                                <TagInput
+                                  tags={emailData.tags || []}
+                                  onChange={(tags) => setField('tags', tags)}
+                                  placeholder="+ etiqueta"
+                                  accent="blue"
+                                />
                               </div>
                             </div>
                           );
