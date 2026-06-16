@@ -80,7 +80,7 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
           sourceType: 'webinar',
           projectId: w.id,
           taskKey: k,
-          navSection: 'webinar'
+          navSection: 'campaigns'
         });
       });
     });
@@ -106,7 +106,7 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
           projectId: ev.id,
           taskKey: tid,
           isCustom: false,
-          navSection: 'events'
+          navSection: 'campaigns'
         });
       });
       (ev.customTasks || []).forEach(ct => {
@@ -126,7 +126,7 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
           projectId: ev.id,
           taskKey: ct.id,
           isCustom: true,
-          navSection: 'events'
+          navSection: 'campaigns'
         });
       });
     });

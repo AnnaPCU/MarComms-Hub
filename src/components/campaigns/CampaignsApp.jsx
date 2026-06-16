@@ -47,7 +47,7 @@ const campaignId = () => {
   });
 };
 
-export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser, focusProjectId, onFocusHandled }) {
+export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser, focusProjectId, onFocusHandled, embedded = false, filterType = null }) {
   const confirm = useConfirm();
   const [activeView, setActiveView] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -377,31 +377,51 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-900 relative">
-      <header className="bg-blue-600 py-6 px-8 shadow-lg sticky top-0 z-40 text-white">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5 text-white" />
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-white p-2 rounded text-blue-600 font-black text-xs">CH</div>
-              <h1 className="text-2xl font-black uppercase tracking-tight">Campaigns Hub</h1>
-            </div>
-          </div>
-          <button 
+    <div className={embedded ? 'w-full font-sans text-slate-900 relative' : 'min-h-screen bg-slate-50 pb-20 font-sans text-slate-900 relative'}>
+      {embedded ? (
+        // Embebido en Campañas: solo el botón "Nueva Campaña" (el header lo da CampanasApp)
+        <div className="max-w-7xl mx-auto px-6 pt-6 flex justify-end">
+          <button
             onClick={handleStartNewCampaign}
             className="bg-sky-400 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 hover:bg-sky-500 transition-all shadow-md active:scale-95"
           >
             <Plus className="w-5 h-5" /> Nueva Campaña
           </button>
         </div>
-      </header>
+      ) : (
+        <header className="bg-blue-600 py-6 px-8 shadow-lg sticky top-0 z-40 text-white">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="bg-white p-2 rounded text-blue-600 font-black text-xs">CH</div>
+                <h1 className="text-2xl font-black uppercase tracking-tight">Campaigns Hub</h1>
+              </div>
+            </div>
+            <button
+              onClick={handleStartNewCampaign}
+              className="bg-sky-400 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 hover:bg-sky-500 transition-all shadow-md active:scale-95"
+            >
+              <Plus className="w-5 h-5" /> Nueva Campaña
+            </button>
+          </div>
+        </header>
+      )}
 
       <main className="max-w-7xl mx-auto px-6 mt-10 space-y-12">
         {(() => {
-          const campaignsActivas = campaigns.filter(c => getProgress(c) < 100);
-          const campaignsCompletadas = campaigns.filter(c => getProgress(c) === 100);
+          // Filtro por pilar (cuando viene de CampanasApp). Excluye las
+          // campañas variant 'webinar' (mailings auto del webinar — se ven
+          // dentro del propio webinar).
+          const matchesPilar = (c) => {
+            if (!filterType) return true;
+            if (c.variant === 'webinar') return false;
+            return c.type === filterType;
+          };
+          const campaignsActivas = campaigns.filter(c => matchesPilar(c) && getProgress(c) < 100);
+          const campaignsCompletadas = campaigns.filter(c => matchesPilar(c) && getProgress(c) === 100);
           const totalAFacturar = campaignsCompletadas.reduce((acc, c) => {
             const fee = Number(c.budget || 0);
             const platform = Number(c.platformInvestment || 0);

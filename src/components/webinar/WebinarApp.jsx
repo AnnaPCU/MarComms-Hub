@@ -34,7 +34,7 @@ import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 
-export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, focusProjectId, onFocusHandled }) {
+export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
   const [view,setView]=useState("internal"); 
   const [activeW,setActiveW]=useState(null);
@@ -151,21 +151,30 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
   };
 
   if(view === "internal") return (
-    <div className="min-h-screen bg-slate-50 flex flex-col w-full">
-      <header className="bg-slate-900 text-white p-6 sticky top-0 z-30 shadow-xl">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-             <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><Ico name="ArrowLeft" size={20} color="#fff"/></button>
-             <div>
-               <h1 className="text-xl font-black uppercase tracking-tight m-0">Webinars Hub</h1>
-               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Panel Marcomms</p>
-             </div>
-          </div>
+    <div className={embedded ? 'w-full' : 'min-h-screen bg-slate-50 flex flex-col w-full'}>
+      {embedded ? (
+        // Embebido en Campañas: solo el botón "Nuevo Webinar" (el header lo da CampanasApp)
+        <div className="max-w-6xl mx-auto w-full px-6 pt-6 flex justify-end">
           <button onClick={()=>setShowForm(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20">
             <Ico name="Plus" size={16}/> Nuevo Webinar
           </button>
         </div>
-      </header>
+      ) : (
+        <header className="bg-slate-900 text-white p-6 sticky top-0 z-30 shadow-xl">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+               <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><Ico name="ArrowLeft" size={20} color="#fff"/></button>
+               <div>
+                 <h1 className="text-xl font-black uppercase tracking-tight m-0">Webinars Hub</h1>
+                 <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Panel Marcomms</p>
+               </div>
+            </div>
+            <button onClick={()=>setShowForm(true)} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20">
+              <Ico name="Plus" size={16}/> Nuevo Webinar
+            </button>
+          </div>
+        </header>
+      )}
 
       <main className="max-w-6xl mx-auto w-full p-6">
         {(() => {

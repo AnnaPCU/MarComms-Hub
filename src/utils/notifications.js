@@ -103,14 +103,14 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         notifs.push({
           id: `overdue-w-${w.id}-${k}`, type: 'overdue', icon: AlertCircle, color: 'red',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar',
+          project: w.name, source: 'Webinar', date: t.date, navTo: 'campaigns',
         });
       } else if (d <= in3Days) {
         const m = templates.soon_task(label, w.name);
         notifs.push({
           id: `soon-w-${w.id}-${k}`, type: 'soon', icon: Clock, color: 'amber',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: w.name, source: 'Webinar', date: t.date, navTo: 'webinar',
+          project: w.name, source: 'Webinar', date: t.date, navTo: 'campaigns',
         });
       }
     });
@@ -131,14 +131,14 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         notifs.push({
           id: `overdue-e-${ev.id}-${tid}`, type: 'overdue', icon: AlertCircle, color: 'red',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: t.date, navTo: 'events',
+          project: ev.name, source: 'Evento', date: t.date, navTo: 'campaigns',
         });
       } else if (d <= in3Days) {
         const m = templates.soon_task(label, ev.name);
         notifs.push({
           id: `soon-e-${ev.id}-${tid}`, type: 'soon', icon: Clock, color: 'amber',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: t.date, navTo: 'events',
+          project: ev.name, source: 'Evento', date: t.date, navTo: 'campaigns',
         });
       }
     });
@@ -150,7 +150,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         notifs.push({
           id: `overdue-ec-${ev.id}-${ct.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: ct.date, navTo: 'events',
+          project: ev.name, source: 'Evento', date: ct.date, navTo: 'campaigns',
         });
       }
     });
@@ -171,7 +171,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       notifs.push({
         id: `resp-w-${w.id}`, type: 'responsible', icon: User, color: 'purple',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-        project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar',
+        project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'campaigns',
       });
     }
   });
@@ -188,7 +188,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       notifs.push({
         id: `resp-e-${ev.id}`, type: 'responsible', icon: User, color: 'purple',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-        project: ev.name, source: 'Evento', date: ev.date, navTo: 'events',
+        project: ev.name, source: 'Evento', date: ev.date, navTo: 'campaigns',
       });
     }
   });
@@ -237,7 +237,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         id: `team-overdue-w-${w.id}`, type: 'responsible', icon: AlertCircle, color: 'purple',
         title: `Tu proyecto "${w.name}" tiene ${n} tarea${n > 1 ? 's' : ''} atrasada${n > 1 ? 's' : ''}`,
         shortTitle: `⚠️ ${n} atrasada${n > 1 ? 's' : ''} en ${w.name}`,
-        emoji: '⚠️', project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'webinar',
+        emoji: '⚠️', project: w.name, source: 'Webinar', date: w.mainDate, navTo: 'campaigns',
       });
     }
   });
@@ -251,7 +251,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         id: `team-overdue-e-${ev.id}`, type: 'responsible', icon: AlertCircle, color: 'purple',
         title: `Tu evento "${ev.name}" tiene ${n} tarea${n > 1 ? 's' : ''} atrasada${n > 1 ? 's' : ''}`,
         shortTitle: `⚠️ ${n} atrasada${n > 1 ? 's' : ''} en ${ev.name}`,
-        emoji: '⚠️', project: ev.name, source: 'Evento', date: ev.date, navTo: 'events',
+        emoji: '⚠️', project: ev.name, source: 'Evento', date: ev.date, navTo: 'campaigns',
       });
     }
   });
@@ -372,7 +372,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       id: `new-project-w-${w.id}`, type: 'new', icon: Calendar, color: 'pink',
       title: `Nuevo webinar bajo tu responsabilidad: "${w.name}"`,
       shortTitle: `📅 Nuevo: ${w.name}`,
-      emoji: '📅', project: w.name, source: 'Webinar', date: w.createdAt, navTo: 'webinar',
+      emoji: '📅', project: w.name, source: 'Webinar', date: w.createdAt, navTo: 'campaigns',
     });
   });
   events.forEach((ev) => {
@@ -383,7 +383,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       id: `new-project-e-${ev.id}`, type: 'new', icon: Calendar, color: 'pink',
       title: `Nuevo evento bajo tu responsabilidad: "${ev.name}"`,
       shortTitle: `📅 Nuevo: ${ev.name}`,
-      emoji: '📅', project: ev.name, source: 'Evento', date: ev.createdAt, navTo: 'events',
+      emoji: '📅', project: ev.name, source: 'Evento', date: ev.createdAt, navTo: 'campaigns',
     });
   });
   campaigns.forEach((c) => {

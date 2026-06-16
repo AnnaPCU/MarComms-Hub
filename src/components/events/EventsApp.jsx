@@ -30,7 +30,7 @@ import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 
-export default function EventsApp({ onBack, events, setEvents, campaigns, focusProjectId, onFocusHandled }) {
+export default function EventsApp({ onBack, events, setEvents, campaigns, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
   const [activeEvent, setActiveEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -243,26 +243,37 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
   // ── Vista Lista ──
   if (!activeEvent) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col w-full">
-        <header className="bg-orange-600 text-white p-6 sticky top-0 z-30 shadow-lg">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-              <div className="flex items-center gap-3">
-                <div className="bg-white p-2 rounded text-orange-600 font-black text-xs">EV</div>
-                <h1 className="text-2xl font-black uppercase tracking-tight">Events Hub</h1>
-              </div>
-            </div>
+      <div className={embedded ? 'w-full' : 'min-h-screen bg-slate-50 flex flex-col w-full'}>
+        {embedded ? (
+          <div className="max-w-7xl mx-auto w-full px-6 pt-6 flex justify-end">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-white text-orange-600 hover:bg-orange-50 px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
+              className="bg-orange-600 text-white hover:bg-orange-700 px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
             >
               <Plus className="w-4 h-4" /> Nuevo Evento
             </button>
           </div>
-        </header>
+        ) : (
+          <header className="bg-orange-600 text-white p-6 sticky top-0 z-30 shadow-lg">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="bg-white p-2 rounded text-orange-600 font-black text-xs">EV</div>
+                  <h1 className="text-2xl font-black uppercase tracking-tight">Events Hub</h1>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-white text-orange-600 hover:bg-orange-50 px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
+              >
+                <Plus className="w-4 h-4" /> Nuevo Evento
+              </button>
+            </div>
+          </header>
+        )}
 
         <main className="max-w-7xl mx-auto w-full p-6">
           {(() => {

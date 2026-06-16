@@ -46,9 +46,7 @@ import { buildNotifications } from '@/utils/notifications';
 
 // Components
 import LoginScreen from '@/components/login/LoginScreen';
-import WebinarApp from '@/components/webinar/WebinarApp';
-import CampaignsApp from '@/components/campaigns/CampaignsApp';
-import EventsApp from '@/components/events/EventsApp';
+import CampanasApp from '@/components/campanas/CampanasApp';
 import ContentHubApp from '@/components/content/ContentHubApp';
 import FacturacionApp from '@/components/facturacion/FacturacionApp';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
@@ -317,9 +315,7 @@ export default function App() {
 
   const sections = [
     { id: 'paises', title: 'Países', description: 'Gestión de mercados globales y entidades.', icon: <Globe2 className="w-8 h-8 text-blue-600" />, stats: '15 Países', color: 'bg-blue-50' },
-    { id: 'webinar', title: 'Webinar', description: 'Eventos virtuales y transmisiones.', icon: <Video className="w-8 h-8 text-indigo-600" />, stats: `${globalWebinars.length} Programados`, color: 'bg-indigo-50' },
-    { id: 'campaigns', title: 'Campaigns', description: 'Automatización y seguimiento de leads.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalCampaigns.length} Activas`, color: 'bg-purple-50' },
-    { id: 'events', title: 'Events', description: 'Logística de eventos presenciales.', icon: <Calendar className="w-8 h-8 text-orange-600" />, stats: `${globalEvents.length} Activos`, color: 'bg-orange-50' },
+    { id: 'campaigns', title: 'Campañas', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activas`, color: 'bg-purple-50' },
     { id: 'content', title: 'Content Hub', description: 'Mesa de contenido y diseño: Agus, Vicky, Fati, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
@@ -543,44 +539,26 @@ export default function App() {
       );
     }
     
-    if (currentSection === 'webinar') {
-      return (
-        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-100 min-h-[calc(100vh-80px)]">
-           <WebinarApp
-             webinars={globalWebinars}
-             setWebinars={setGlobalWebinars}
-             onBack={() => setCurrentSection('main')}
-             onWebinarCreated={onWebinarCreated}
-             onWebinarMailToggled={onWebinarMailToggled}
-             onWebinarDeleted={onWebinarDeleted}
-             focusProjectId={focusProjectId}
-             onFocusHandled={() => setFocusProjectId(null)}
-           />
-        </div>
-      );
-    }
-
     if (currentSection === 'campaigns') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-           <CampaignsApp
+           <CampanasApp
              onBack={() => setCurrentSection('main')}
+             webinars={globalWebinars}
+             setWebinars={setGlobalWebinars}
+             onWebinarCreated={onWebinarCreated}
+             onWebinarMailToggled={onWebinarMailToggled}
+             onWebinarDeleted={onWebinarDeleted}
              campaigns={globalCampaigns}
              setCampaigns={setGlobalCampaigns}
              onCampaignWebinarStepToggled={onCampaignWebinarStepToggled}
              onCampaignDeleted={onCampaignDeleted}
+             events={globalEvents}
+             setEvents={setGlobalEvents}
              currentUser={currentUser}
              focusProjectId={focusProjectId}
              onFocusHandled={() => setFocusProjectId(null)}
            />
-        </div>
-      );
-    }
-
-    if (currentSection === 'events') {
-      return (
-        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-           <EventsApp onBack={() => setCurrentSection('main')} events={globalEvents} setEvents={setGlobalEvents} campaigns={globalCampaigns} focusProjectId={focusProjectId} onFocusHandled={() => setFocusProjectId(null)} />
         </div>
       );
     }
@@ -738,7 +716,7 @@ export default function App() {
           title: w.name,
           subtitle: `${w.client || '—'} · ${w.pais || '—'} · ${w.unidadNegocio || '—'}`,
           extra: w.mainDate ? new Date(w.mainDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
-          navTo: 'webinar'
+          navTo: 'campaigns'
         });
       }
     });
@@ -768,7 +746,7 @@ export default function App() {
           title: ev.name,
           subtitle: `${ev.client || '—'} · ${ev.country || '—'} · ${ev.businessUnit || '—'}`,
           extra: ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
-          navTo: 'events'
+          navTo: 'campaigns'
         });
       }
     });
@@ -1109,9 +1087,9 @@ export default function App() {
                     </div>
                     <div className="p-2">
                       {[
-                        { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'webinar' },
+                        { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'campaigns' },
                         { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
-                        { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'events' },
+                        { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
                         { id: 'pedido',   label: 'Nuevo pedido Content',  icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
                         { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week', divider: true },
                         { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises' },
