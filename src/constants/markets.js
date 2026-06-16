@@ -45,6 +45,13 @@ export const MARCOMMS_BUSINESS_UNITS = [
   'BELE',
 ];
 
+// Organización macro (columna "Peterson o Control Union" del Excel de UTMs).
+// Es un dato de clasificación del UTM — NO va dentro del string utm_campaign.
+export const ORGANIZATIONS = [
+  'Control Union',
+  'Peterson',
+];
+
 // ── Display names para países con nombres "raros" (RD, Ptech, etc.) ──
 const COUNTRY_DISPLAY = {
   RD:    'Rep. Dominicana',

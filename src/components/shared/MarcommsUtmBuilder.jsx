@@ -4,17 +4,21 @@
 // Componente reusable en 4 contextos: webinar, evento, campaña, content hub.
 // Cada contexto pasa `accentColor` distinto.
 //
-// Estructura del utm_campaign:
+// Estructura del utm_campaign (igual al Excel del equipo):
 //   [unidad_negocio]_[país]_[servicio]_marcomms_[nombre_campaña]
 //
 // Campo "Identificador" = MARCOMMS FIJO (icono candado, no editable)
 // Servicio dropdown solo "Certificaciones"
+//
+// "Organización" (Peterson o Control Union) es un dato de clasificación
+// del UTM (para filtrar en el repositorio); NO va dentro del utm_campaign,
+// porque ninguno de los UTMs históricos lo incluye como segmento.
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect } from 'react';
 import { Link, Zap, Lock, AlertCircle, CheckCircle2, Copy, Save, Trash2, Search, ChevronDown, Database } from 'lucide-react';
 import { slugifyUtm } from '@/utils/slugify';
-import { MARKETS, MARCOMMS_BUSINESS_UNITS } from '@/constants/markets';
+import { MARKETS, MARCOMMS_BUSINESS_UNITS, ORGANIZATIONS } from '@/constants/markets';
 import { MARCOMMS_SERVICES } from '@/constants/services';
 import { UTM_SOURCES, UTM_MEDIUMS } from '@/constants/campaigns';
 import { useUtmLinks } from '@/hooks/useUtmLinks';
@@ -43,6 +47,7 @@ export default function MarcommsUtmBuilder({
   const [url, setUrl] = useState('');
   const [source, setSource] = useState('');
   const [medium, setMedium] = useState('');
+  const [organization, setOrganization] = useState('Control Union');
   const [businessUnit, setBusinessUnit] = useState(defaultBusinessUnit || 'MARCOMMS');
   const [country, setCountry] = useState(defaultCountry || '');
   const [service, setService] = useState('');
@@ -118,6 +123,7 @@ export default function MarcommsUtmBuilder({
     setUrl('');
     setSource('');
     setMedium('');
+    setOrganization('Control Union');
     setBusinessUnit(defaultBusinessUnit || 'MARCOMMS');
     setCountry(defaultCountry || '');
     setService('');
@@ -133,7 +139,7 @@ export default function MarcommsUtmBuilder({
       await saveLink({
         label: [campaignName, medium].filter(Boolean).join(' · ') || 'UTM',
         url: generated,
-        source, medium, businessUnit, country, service,
+        source, medium, businessUnit, organization, country, service,
         campaignName,
         utmCampaign: buildUtmCampaign(),
         createdBy: currentUser?.name || '',
@@ -162,6 +168,7 @@ export default function MarcommsUtmBuilder({
     setUrl(link.url.split('?')[0] || link.url);
     setSource(link.source || '');
     setMedium(link.medium || '');
+    setOrganization(link.organization || 'Control Union');
     setBusinessUnit(link.businessUnit || 'MARCOMMS');
     setCountry(link.country || '');
     setService(link.service || '');
@@ -183,7 +190,7 @@ export default function MarcommsUtmBuilder({
   const filteredSaved = (savedLinks || []).filter((l) => {
     if (!repoQuery.trim()) return true;
     const q = repoQuery.toLowerCase();
-    return [l.label, l.url, l.campaignName, l.country, l.businessUnit, l.medium, l.utmCampaign]
+    return [l.label, l.url, l.campaignName, l.country, l.businessUnit, l.organization, l.medium, l.utmCampaign]
       .some((f) => (f || '').toLowerCase().includes(q));
   });
 
@@ -216,6 +223,23 @@ export default function MarcommsUtmBuilder({
             placeholder="https://argentina.controlunion.com/service/logistica/"
             className={`w-full p-2.5 bg-slate-50 border-2 border-slate-100 rounded-lg text-xs font-bold text-slate-700 outline-none ${accent.ring}`}
           />
+        </div>
+
+        {/* Organización (clasificación — NO va en el string del utm_campaign) */}
+        <div>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block">
+            Organización (Peterson o Control Union)
+          </label>
+          <select
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
+            className={`w-full p-2.5 bg-slate-50 border-2 border-slate-100 rounded-lg text-xs font-bold text-slate-700 outline-none ${accent.ring}`}
+          >
+            {ORGANIZATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+          <p className="text-[9px] font-medium text-slate-400 mt-0.5">
+            Sirve para clasificar/filtrar el UTM. No forma parte del <code className="font-mono">utm_campaign</code>.
+          </p>
         </div>
 
         {/* Fuente y Medio */}
@@ -421,7 +445,7 @@ export default function MarcommsUtmBuilder({
                         </button>
                       </div>
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                        {[l.country, l.businessUnit, l.medium].filter(Boolean).join(' · ')}
+                        {[l.country, l.organization, l.businessUnit, l.medium].filter(Boolean).join(' · ')}
                       </p>
                       <code className="text-[9px] text-slate-500 font-mono break-all block mb-2 leading-tight line-clamp-2">{l.url}</code>
                       <div className="flex gap-1.5">

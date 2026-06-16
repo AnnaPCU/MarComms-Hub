@@ -15,6 +15,7 @@ export const fromRow = (row) => {
     source:       row.source || '',
     medium:       row.medium || '',
     businessUnit: row.business_unit || '',
+    organization: row.organization || '',
     country:      row.country || '',
     service:      row.service || '',
     campaignName: row.campaign_name || '',
@@ -31,6 +32,7 @@ export const toRow = (obj) => {
   if (obj.source !== undefined)       row.source = obj.source;
   if (obj.medium !== undefined)       row.medium = obj.medium;
   if (obj.businessUnit !== undefined) row.business_unit = obj.businessUnit;
+  if (obj.organization !== undefined) row.organization = obj.organization;
   if (obj.country !== undefined)      row.country = obj.country;
   if (obj.service !== undefined)      row.service = obj.service;
   if (obj.campaignName !== undefined) row.campaign_name = obj.campaignName;

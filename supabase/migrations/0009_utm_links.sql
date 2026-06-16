@@ -16,6 +16,7 @@ create table if not exists public.utm_links (
   source         text,            -- utm_source
   medium         text,            -- utm_medium
   business_unit  text,
+  organization   text,            -- "Peterson o Control Union" (clasificación)
   country        text,
   service        text,
   campaign_name  text,
