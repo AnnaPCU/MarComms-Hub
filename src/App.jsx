@@ -55,6 +55,7 @@ import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import CountryDetail from '@/components/country/CountryDetail';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
+import ExtrasApp from '@/components/extras/ExtrasApp';
 
 // Claves de localStorage. Versionadas → si cambia el shape, subir el sufijo.
 const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
@@ -323,6 +324,7 @@ export default function App() {
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
+    { id: 'extras', title: 'Extras', description: 'Mini-soluciones: UTM Repository y más.', icon: <Sparkles className="w-8 h-8 text-slate-600" />, stats: 'Herramientas', color: 'bg-slate-100' },
     { id: 'client_portal', title: 'Portal Cliente', description: 'Vista que ve cada país de sus servicios.', icon: <User className="w-8 h-8 text-teal-600" />, stats: 'Público', color: 'bg-teal-50' }
   ];
 
@@ -625,6 +627,14 @@ export default function App() {
              autoNew={contentAutoNew}
              onAutoNewDone={() => setContentAutoNew(false)}
            />
+        </div>
+      );
+    }
+
+    if (currentSection === 'extras') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+          <ExtrasApp onBack={() => setCurrentSection('main')} currentUser={currentUser} />
         </div>
       );
     }

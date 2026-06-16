@@ -361,7 +361,11 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
                 <select value={newW.unidadNegocio} onChange={e=>setNewW({...newW, unidadNegocio: e.target.value})} disabled={!newW.pais} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors disabled:opacity-50">
                   <option value="">SELECCIONAR...</option>
-                  {(COUNTRY_BU_MAPPING_WEBINAR[newW.pais]||[]).map(b=><option key={b} value={b}>{b}</option>)}
+                  {(() => {
+                    const base = COUNTRY_BU_MAPPING_WEBINAR[newW.pais] || [];
+                    const opts = base.includes('Peterson Solutions') ? base : [...base, 'Peterson Solutions'];
+                    return opts.map(b=><option key={b} value={b}>{b}</option>);
+                  })()}
                 </select>
               </div>
               <div className="pt-4">
@@ -452,7 +456,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <div className="bg-slate-50 px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Operativas</div>
                 <TaskEditorRow title="Equipos (Teams/Zoom)" data={activeW.teamsGroup} field="teamsGroup" wId={activeW.id} updateField={updateField} />
                 <TaskEditorRow title="Test Day (Simulacro)" data={activeW.testDay} field="testDay" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
-                <TaskEditorRow title="Base de Datos" data={activeW.bbdd} field="bbdd" wId={activeW.id} updateField={updateField} customDropdown={["PROPIA","COMPRADA","CLIENTE"]} />
+                <TaskEditorRow title="Base de Datos" data={activeW.bbdd} field="bbdd" wId={activeW.id} updateField={updateField} customDropdown={["PROPIA","COMPRADA","CLIENTE"]} hasCost hasTags />
                 <TaskEditorRow title="Hubspot (Deals/Sync)" data={activeW.hubspot} field="hubspot" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
 
                 {/* ── CONTENIDO (alineado con Content Hub) ── */}
