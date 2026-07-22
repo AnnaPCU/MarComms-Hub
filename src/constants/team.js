@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // TEAM MEMBERS — Equipo de Marketing & Comunicaciones
 // ════════════════════════════════════════════════════════════════════
-// 9 miembros totales: 4 Comunicación + 5 Marketing
+// 8 miembros totales: 3 Comunicación + 5 Marketing
 // Cada uno tiene un gradient único para sus avatars/cards.
 // ════════════════════════════════════════════════════════════════════
 
@@ -14,7 +14,6 @@ export const TEAM_MEMBERS = [
   { name: 'Agustina Ball',              short: 'Agus',  team: 'Comunicación', role: 'Content & Design', color: 'from-pink-500 to-rose-500' },
   { name: 'Victoria Colombo',           short: 'Vicky', team: 'Comunicación', role: 'Content & Design', color: 'from-purple-500 to-pink-500' },
   { name: 'Delfina Palmero',            short: 'Delfi', team: 'Comunicación', role: 'Content & Design', color: 'from-fuchsia-500 to-purple-500' },
-  { name: 'Fatima Lacroze',             short: 'Fati',  team: 'Comunicación', role: 'Content & Design', color: 'from-rose-500 to-orange-500' },
   // ── Marketing (MARCOMMS) ──
   { name: 'Alejandro Juan Sanguinetti', short: 'Ale',   team: 'Marketing',    role: 'Marketing',        color: 'from-blue-500 to-cyan-500' },
   { name: 'Felipe Señorans',            short: 'Felo',  team: 'Marketing',    role: 'Marketing',        color: 'from-cyan-500 to-teal-500' },
@@ -24,7 +23,7 @@ export const TEAM_MEMBERS = [
 ];
 
 // ── Derivados ──
-// DESIGNERS: los 4 de Comunicación (asignan/diseñan piezas de contenido)
+// DESIGNERS: los 3 de Comunicación (asignan/diseñan piezas de contenido)
 export const DESIGNERS = TEAM_MEMBERS.filter(m => m.team === 'Comunicación').map(m => m.name);
 
 // MARCOMMS: los 5 de Marketing

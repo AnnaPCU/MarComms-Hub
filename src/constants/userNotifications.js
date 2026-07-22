@@ -90,7 +90,6 @@ export const USER_GREETINGS = {
   'Agustina Ball':              '¡Hola Agustina! 👋 Acá están tus piezas de contenido',
   'Victoria Colombo':          '¡Hola Victoria! 👋 Mirá los webinars y eventos del día',
   'Delfina Palmero':           '¡Hola Delfina! 👋 Tus diseños están aquí',
-  'Fatima Lacroze':            '¡Hola Fátima! 👋 Que siga la creatividad',
   'Alejandro Juan Sanguinetti':'¡Hola Alejandro! 📊 Mirá el pipeline de campañas',
   'Felipe Señorans':           '¡Hola Felipe! 📈 Acá están tus responsabilidades',
   'Francisco Capoulat':        '¡Hola Francisco! 🎯 Venga con las estrategias',
@@ -104,7 +103,6 @@ export const USER_NOTIFICATION_ACCENT = {
   'Agustina Ball':    { color: 'pink', emoji: '🎨', vibe: 'creativa' },
   'Victoria Colombo': { color: 'purple', emoji: '✨', vibe: 'lideresa' },
   'Delfina Palmero':  { color: 'fuchsia', emoji: '🖌️', vibe: 'metódica' },
-  'Fatima Lacroze':   { color: 'rose', emoji: '💫', vibe: 'energética' },
 
   // Marketing
   'Alejandro Juan Sanguinetti': { color: 'blue', emoji: '📊', vibe: 'analítica' },

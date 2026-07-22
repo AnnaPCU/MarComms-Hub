@@ -8,7 +8,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 **Marcomms Hub** — plataforma web interna para el equipo de Marketing & Comunicaciones de **Control Union LATAM**.
 
-- ~9 usuarios internos (no exposición pública)
+- ~8 usuarios internos (no exposición pública)
 - Idioma: **100% Español argentino**
 - Maneja: webinars, campañas, eventos, pedidos de contenido, facturación, reportes por país
 - Stack: **React 18 + Vite + Tailwind**
@@ -175,7 +175,7 @@ Mantené consistencia con esta paleta al agregar features.
 | Archivo | Para qué sirve |
 |---|---|
 | `src/App.jsx` | Routing por state, login gate, callbacks de sync |
-| `src/constants/team.js` | Equipo (9 miembros), DESIGNERS, MARCOMMS, PEOPLE |
+| `src/constants/team.js` | Equipo (8 miembros), DESIGNERS, MARCOMMS, PEOPLE |
 | `src/constants/markets.js` | 17 países, 7 unidades de negocio |
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |

@@ -74,7 +74,7 @@ describe('buildNotifications', () => {
     it('NO genera notif si el owner no soy yo', () => {
       const webinar = {
         id: 'w1', name: 'X',
-        ppt: { done: false, owner: 'Fatima Lacroze', date: YESTERDAY },
+        ppt: { done: false, owner: 'Delfina Palmero', date: YESTERDAY },
       };
       const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
       expect(notifs).toHaveLength(0);

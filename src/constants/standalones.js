@@ -36,7 +36,7 @@ export const STANDALONE_CATEGORIES = [
   {
     id: 'branding',
     label: 'Branding',
-    defaultOwner: 'Fatima Lacroze',
+    defaultOwner: 'Agustina Ball',
     color: 'bg-pink-50 text-pink-700 border-pink-200',
     dot: 'bg-pink-500',
     kind: 'design',
