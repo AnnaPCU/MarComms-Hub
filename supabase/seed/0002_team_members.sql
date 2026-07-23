@@ -2,8 +2,9 @@
 -- Seed 0002 — team_members
 -- ════════════════════════════════════════════════════════════════════
 -- ⚠️ Tu tabla team_members en Supabase YA está poblada. Este archivo
--- es solo referencia / para otras instancias. (8 miembros desde
--- julio 2026 — Fatima Lacroze eliminada, ver migration 0011.)
+-- es solo referencia / para otras instancias. (Fatima Lacroze está
+-- inactiva desde julio 2026 — ver migration 0011. Se siembra con
+-- active=false para conservar el historial de sus tareas.)
 --
 -- Schema actual de team_members (según tu Dashboard):
 --   id (uuid PK), profile_key, name, initials, role, active,
@@ -35,6 +36,11 @@ values
    array[]::text[],
    '¡Hola Delfi! 👋 Tus diseños están aquí',
    'fuchsia', '🖌️', 'metódica'),
+
+  ('fati',  'Fatima Lacroze', 'F', 'Comms', false,
+   array[]::text[],
+   '¡Hola Fati! 👋 Que siga la creatividad',
+   'rose', '💫', 'energética'),
 
   ('ale',   'Ale',   'A', 'MKT', true,
    array[]::text[],
