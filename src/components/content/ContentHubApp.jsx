@@ -41,6 +41,7 @@ import { CAMPAIGN_CONTENT_PIECES } from '@/constants/campaigns';
 import { calcProgress } from '@/utils/progress';
 
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
+import ProjectLinks from '@/components/shared/ProjectLinks';
 import MailchimpReportTool from './MailchimpReportTool';
 import MentionTextarea from '@/components/shared/MentionTextarea';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -1146,6 +1147,25 @@ export default function ContentHubApp({
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+                {/* Sección Links (Planner + ticket HubSpot) — solo pedidos standalone */}
+                {refreshed.sourceType === 'standalone' && (() => {
+                  const req = (standaloneRequests || []).find(r => r.id === refreshed.projectId);
+                  if (!req) return null;
+                  return (
+                    <div>
+                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Link className="w-3.5 h-3.5" /> Links del pedido
+                      </h3>
+                      <ProjectLinks
+                        columns
+                        plannerLink={req.plannerLink}
+                        hubspotLink={req.hubspotLink}
+                        onChange={(field, v) => updateRequest(req.id, { [field]: v })}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Sección Archivos — dual cuando es mixed, sólo diseño cuando es design */}
                 {(() => {

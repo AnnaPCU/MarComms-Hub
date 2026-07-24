@@ -25,6 +25,7 @@ import { SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
+import ProjectLinks from '@/components/shared/ProjectLinks';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
@@ -620,6 +621,14 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
               </div>
               <p className="text-[9px] text-purple-600 font-bold mt-1">Líder del servicio</p>
             </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-slate-50">
+            <ProjectLinks
+              columns
+              plannerLink={ev.plannerLink}
+              hubspotLink={ev.hubspotLink}
+              onChange={(field, v) => updateEvent(ev.id, field, v)}
+            />
           </div>
         </div>
 

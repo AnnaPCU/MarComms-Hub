@@ -66,6 +66,9 @@ export const fromRow = (row) => {
     createdAt:    row.created_at || null,
     updatedAt:    row.updated_at || null,
     completedAt:  row.completed_at || null,
+    // Links externos (migration 0012) — solo si la columna ya existe en la DB
+    ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
+    ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
     // Stub local — todavía no hay columna content en la DB
     content:      { comments: [], files: [] },
   };
@@ -87,6 +90,8 @@ export const toRow = (obj) => {
   if (obj.detail       !== undefined) row.details = obj.detail;
   if (obj.deadline     !== undefined) row.deadline = obj.deadline || null;
   if (obj.completedAt  !== undefined) row.completed_at = obj.completedAt;
+  if (obj.plannerLink  !== undefined) row.planner_link = obj.plannerLink || null;
+  if (obj.hubspotLink  !== undefined) row.hubspot_link = obj.hubspotLink || null;
   return row;
 };
 

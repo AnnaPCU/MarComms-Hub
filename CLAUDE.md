@@ -103,10 +103,10 @@ Mantené consistencia con esta paleta al agregar features.
    - **Solución**: integrar Supabase según `BACKEND_PLAN.md`
    - **Workaround temporal**: `useLocalStorage` hook (no implementado, esperar Supabase)
 
-2. **Reporte Mailchimp con IA no funciona en producción**
-   - Hace llamadas directas a `https://api.anthropic.com/v1/messages` desde el cliente
-   - **Problema**: expone la API key + CORS bloquea desde browser
-   - **Solución**: edge function de Supabase (ver `BACKEND_PLAN.md` sección "Edge functions")
+2. ~~**Reporte Mailchimp con IA no funciona en producción**~~ ✅ RESUELTO (jul 2026)
+   - Ahora llama a `/api/anthropic` (función serverless de Vercel en `api/anthropic.js`)
+   - Requiere `ANTHROPIC_API_KEY` configurada en Vercel → Settings → Environment Variables
+   - En dev local (`npm run dev`) el endpoint no existe — la IA solo funciona en producción o con `vercel dev`
 
 ### 🟡 Media prioridad
 

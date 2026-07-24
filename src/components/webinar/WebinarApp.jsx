@@ -28,6 +28,7 @@ import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
 import Ico from '@/components/shared/Ico';
 import OwnerPicker from '@/components/shared/OwnerPicker';
+import ProjectLinks from '@/components/shared/ProjectLinks';
 import TaskEditorRow from '@/components/shared/TaskEditorRow';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
@@ -442,6 +443,11 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                     />
                   </div>
                 </div>
+                <ProjectLinks
+                  plannerLink={activeW.plannerLink}
+                  hubspotLink={activeW.hubspotLink}
+                  onChange={(field, v) => updateField(activeW.id, field, v)}
+                />
                 <div className="p-4 bg-slate-900 rounded-2xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Pin de Acceso Cliente</span>

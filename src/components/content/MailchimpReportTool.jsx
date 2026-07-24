@@ -8,7 +8,7 @@
 //   EMAIL_LABELS → MAILCHIMP_EMAIL_LABELS
 //   helpers mc* (parsePercentage, safeInt, etc.)
 //
-// IA con Claude API: hace fetch directo a api.anthropic.com.
+// IA con Claude API: via /api/anthropic (proxy serverless en Vercel).
 // ⚠️ NO funciona en producción (CORS + API key exposure).
 // Ver BACKEND_PLAN.md "Edge functions" para solución con Supabase.
 // ════════════════════════════════════════════════════════════════════
@@ -238,11 +238,10 @@ export default function MailchimpReportTool() {
       try {
         const base64 = await mcReadPDFasText(email.pdf);
         if (base64) {
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
+          const response = await fetch('/api/anthropic', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
               max_tokens: 1000,
               messages: [{
                 role: 'user',
@@ -282,6 +281,7 @@ Devuelve SOLO el JSON, nada más.`
             })
           });
           const data = await response.json();
+          if (!response.ok) throw new Error(data.error || `Error ${response.status} del proxy de IA`);
           const text = data.content?.map(c => c.text || '').join('') || '';
           try {
             const clean = text.replace(/```json|```/g, '').trim();
@@ -334,11 +334,10 @@ Devuelve SOLO el JSON, nada más.`
         }));
 
         if (summaryData.length > 0) {
-          const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          const resp = await fetch('/api/anthropic', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
               max_tokens: 1000,
               messages: [{
                 role: 'user',
@@ -359,6 +358,7 @@ Responde SOLO con este JSON:
             })
           });
           const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || `Error ${resp.status} del proxy de IA`);
           const text = data.content?.map(c => c.text || '').join('') || '';
           try {
             const clean = text.replace(/```json|```/g, '').trim();

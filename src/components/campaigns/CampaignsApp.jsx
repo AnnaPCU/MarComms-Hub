@@ -30,6 +30,7 @@ import { CAMPAIGN_STEPS, getCampaignChecklist } from '@/constants/campaigns';
 import { parseMailchimpReport, parseMailchimpSubscribers } from '@/utils/csv';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
+import ProjectLinks from '@/components/shared/ProjectLinks';
 import SimpleStep from '@/components/shared/SimpleStep';
 import CommentsSection from '@/components/shared/CommentsSection';
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
@@ -602,6 +603,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               <p className="text-[9px] text-purple-600 font-bold mt-1">Líder del servicio</p>
                             </div>
 
+                            <ProjectLinks
+                              plannerLink={campaign.plannerLink}
+                              hubspotLink={campaign.hubspotLink}
+                              onChange={(field, v) => updateCampaign(campaign.id, field, v)}
+                            />
+
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Plataformas</p>
                               <div className="grid grid-cols-3 gap-2">
@@ -873,6 +880,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   </div>
                                   <p className="text-[9px] text-purple-600 font-bold mt-1">Líder del servicio</p>
                                 </div>
+
+                                <ProjectLinks
+                                  plannerLink={campaign.plannerLink}
+                                  hubspotLink={campaign.hubspotLink}
+                                  onChange={(field, v) => updateCampaign(campaign.id, field, v)}
+                                />
                               </div>
                             </div>
 
@@ -1149,6 +1162,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   </div>
                                   <p className="text-[9px] text-purple-600 font-bold mt-1">Líder del servicio</p>
                                 </div>
+
+                                <ProjectLinks
+                                  plannerLink={campaign.plannerLink}
+                                  hubspotLink={campaign.hubspotLink}
+                                  onChange={(field, v) => updateCampaign(campaign.id, field, v)}
+                                />
                               </div>
 
                               {/* ── DEADLINES (entrega final + auto-cálculo) ── */}
