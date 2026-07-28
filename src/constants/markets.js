@@ -8,23 +8,23 @@
 
 // Mapping general: país → unidades de negocio disponibles
 export const MARKETS = {
-  Argentina:  ['Control Union', 'CU Barcos', 'CU Warrants', 'CU Certificaciones', 'CU Norte', 'Peterson'],
-  Brasil:     ['Control Union', 'CU Barcos', 'CU Warrants', 'CU Certificaciones', 'Peterson'],
+  Argentina:  ['Control Union', 'CU Barcos', 'CU Warrants', 'CU Certificaciones', 'CU Norte', 'Peterson Solutions'],
+  Brasil:     ['Control Union', 'CU Barcos', 'CU Warrants', 'CU Certificaciones', 'Peterson Solutions'],
   Canada:     ['Control Union'],
-  Chile:      ['CU Certificaciones', 'Peterson'],
+  Chile:      ['CU Certificaciones', 'Peterson Solutions'],
   Colombia:   ['Control Union'],
   Ecuador:    ['Control Union'],
   España:     ['Control Union'],
   Guatemala:  ['Control Union'],
-  Iberia:     ['Peterson'],
-  Mexico:     ['Control Union', 'Peterson'],
-  Paraguay:   ['Control Union', 'Peterson'],
+  Iberia:     ['Peterson Solutions'],
+  Mexico:     ['Control Union', 'Peterson Solutions'],
+  Paraguay:   ['Control Union', 'Peterson Solutions'],
   Peru:       ['Control Union'],
   Portugal:   ['Control Union'],
-  Ptech:      ['Peterson'],
+  Ptech:      ['Peterson Solutions'],
   RD:         ['Control Union'],
-  Uruguay:    ['Control Union', 'Peterson'],
-  USA:        ['Control Union', 'Peterson', 'BELE'],
+  Uruguay:    ['Control Union', 'Peterson Solutions'],
+  USA:        ['Control Union', 'Peterson Solutions', 'BELE'],
 };
 
 // Mapping específico para webinars (subset que usa el módulo webinar)
@@ -38,6 +38,8 @@ export const COUNTRY_BU_MAPPING_WEBINAR = { ...MARKETS };
 // para no mostrar un duplicado.
 export const BASE_UNITS = ['Control Union', 'Peterson Solutions'];
 export const unitsForCountry = (country) => {
+  // Excepción: Ptech es sí o sí Peterson Solutions (no opera Control Union)
+  if (country === 'Ptech') return ['Peterson Solutions'];
   const extras = (MARKETS[country] || []).filter(
     (u) => u !== 'Control Union' && u !== 'Peterson' && u !== 'Peterson Solutions',
   );
