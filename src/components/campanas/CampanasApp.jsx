@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// CampanasApp — Hub unificado de Campañas (incluye Webinars como pilar)
+// CampanasApp — Sección "Pilares" (hub unificado: webinars, eventos, campañas)
 // ════════════════════════════════════════════════════════════════════
 // Contenedor con barra de filtro por pilar. Reusa WebinarApp y
 // CampaignsApp embebidos (sin su header propio).
@@ -77,9 +77,9 @@ export default function CampanasApp({
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="bg-white text-purple-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest">CAMPAÑAS</div>
+            <div className="bg-white text-purple-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest">PILARES</div>
             <div>
-              <h1 className="text-2xl font-black uppercase tracking-tight leading-none">Campañas</h1>
+              <h1 className="text-2xl font-black uppercase tracking-tight leading-none">Pilares</h1>
               <p className="text-[10px] text-pink-100 font-bold uppercase tracking-widest mt-0.5">Todos los pilares de Marcomms</p>
             </div>
           </div>

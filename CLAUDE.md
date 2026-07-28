@@ -83,7 +83,7 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Módulo | Color principal | Tailwind class |
 |---|---|---|
 | Webinars | Índigo / Púrpura | `from-indigo-500 to-purple-500` |
-| Campañas | Violeta / Rosa | `from-purple-600 to-pink-600` |
+| Pilares (ex Campañas) | Violeta / Rosa | `from-purple-600 to-pink-600` |
 | Eventos | Naranja / Rojo | `from-orange-500 to-red-500` |
 | Content Hub | Rosa / Rose | `from-pink-500 to-rose-500` |
 | Facturación | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
