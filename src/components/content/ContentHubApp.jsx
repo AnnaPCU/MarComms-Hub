@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 
 import { DESIGNERS, PEOPLE } from '@/constants/team';
-import { MARKETS } from '@/constants/markets';
+import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { STANDALONE_CATEGORIES } from '@/constants/standalones';
 import { WEBINAR_CONTENT_PIECES } from '@/constants/webinar';
 import { EVENT_CONTENT_PIECES } from '@/constants/events';
@@ -1036,7 +1036,7 @@ export default function ContentHubApp({
                     className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-pink-400 font-bold text-slate-700 text-sm disabled:opacity-50"
                   >
                     <option value="">Seleccionar...</option>
-                    {(MARKETS[newRequest.country] || []).map(b => <option key={b} value={b}>{b}</option>)}
+                    {newRequest.country && unitsForCountry(newRequest.country).map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
               </div>

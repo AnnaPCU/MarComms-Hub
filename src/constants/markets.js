@@ -30,6 +30,20 @@ export const MARKETS = {
 // Mapping específico para webinars (subset que usa el módulo webinar)
 export const COUNTRY_BU_MAPPING_WEBINAR = { ...MARKETS };
 
+// ── Unidades para selects de proyectos/pedidos ──
+// Regla (jul 2026): "Control Union" y "Peterson Solutions" aparecen SIEMPRE
+// como opciones de Unidad, sin importar el país elegido. Las unidades
+// específicas del país (CU Barcos, BELE, etc.) se suman después.
+// "Peterson" (alias legacy de Peterson Solutions en MARKETS) se filtra
+// para no mostrar un duplicado.
+export const BASE_UNITS = ['Control Union', 'Peterson Solutions'];
+export const unitsForCountry = (country) => {
+  const extras = (MARKETS[country] || []).filter(
+    (u) => u !== 'Control Union' && u !== 'Peterson' && u !== 'Peterson Solutions',
+  );
+  return [...BASE_UNITS, ...extras];
+};
+
 // Lista plana de países (orden alfabético)
 export const COUNTRIES = Object.keys(MARKETS).sort();
 

@@ -23,7 +23,7 @@ import {
   TrendingUp, Upload, User, Users, Video, X, Zap,
 } from 'lucide-react';
 
-import { MARKETS } from '@/constants/markets';
+import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { CAMPAIGN_STEPS, getCampaignChecklist } from '@/constants/campaigns';
@@ -574,7 +574,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)}
                                 >
                                   <option value="">Unidad de Negocio...</option>
-                                  {campaign.country && MARKETS[campaign.country].map(u => <option key={u} value={u}>{u}</option>)}
+                                  {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
                                 </select>
                               </div>
                             </div>
@@ -833,7 +833,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                       onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)}
                                     >
                                       <option value="">Unidad de Negocio...</option>
-                                      {campaign.country && MARKETS[campaign.country].map(u => <option key={u} value={u}>{u}</option>)}
+                                      {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
                                     </select>
                                   </div>
                                 </div>
@@ -1161,7 +1161,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Unidad</p>
                                     <select value={campaign.businessUnit} disabled={!campaign.country} onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none disabled:opacity-50 focus:ring-2 focus:ring-blue-400">
                                       <option value="">Unidad de Negocio...</option>
-                                      {campaign.country && MARKETS[campaign.country].map(u => <option key={u} value={u}>{u}</option>)}
+                                      {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
                                     </select>
                                   </div>
                                 </div>
@@ -2535,7 +2535,7 @@ td a { color: #2563eb; text-decoration: none; }
                               disabled={!newCampData.country}
                             >
                                <option value="">Unidad...</option>
-                               {newCampData.country && MARKETS[newCampData.country].map(u => (
+                               {newCampData.country && unitsForCountry(newCampData.country).map(u => (
                                   <option key={u} value={u}>{u}</option>
                                ))}
                             </select>

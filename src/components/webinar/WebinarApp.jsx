@@ -22,7 +22,7 @@ import {
 
 import { calcProgress } from '@/utils/progress';
 import { makeWebinar, autoCalcDates } from '@/utils/webinar';
-import { COUNTRY_BU_MAPPING_WEBINAR } from '@/constants/markets';
+import { COUNTRY_BU_MAPPING_WEBINAR, unitsForCountry } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
@@ -371,11 +371,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
                 <select value={newW.unidadNegocio} onChange={e=>setNewW({...newW, unidadNegocio: e.target.value})} disabled={!newW.pais} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors disabled:opacity-50">
                   <option value="">SELECCIONAR...</option>
-                  {(() => {
-                    const base = COUNTRY_BU_MAPPING_WEBINAR[newW.pais] || [];
-                    const opts = base.includes('Peterson Solutions') ? base : [...base, 'Peterson Solutions'];
-                    return opts.map(b=><option key={b} value={b}>{b}</option>);
-                  })()}
+                  {newW.pais && unitsForCountry(newW.pais).map(b=><option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
               <div className="pt-4">

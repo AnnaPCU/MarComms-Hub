@@ -20,7 +20,7 @@ import {
 
 import { calcEventProgress } from '@/utils/progress';
 import { makeEvent, recalcEventDates } from '@/utils/events';
-import { MARKETS } from '@/constants/markets';
+import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 
@@ -453,7 +453,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
                     <select value={newEvent.businessUnit} onChange={e => setNewEvent({...newEvent, businessUnit: e.target.value})} disabled={!newEvent.country} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700 disabled:opacity-50">
                       <option value="">SELECCIONAR...</option>
-                      {(MARKETS[newEvent.country] || []).map(b => <option key={b} value={b}>{b}</option>)}
+                      {newEvent.country && unitsForCountry(newEvent.country).map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -574,7 +574,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Unidad de Negocio</label>
               <select value={ev.businessUnit} onChange={e => updateEvent(ev.id, "businessUnit", e.target.value)} disabled={!ev.country} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm disabled:opacity-50">
                 <option value="">—</option>
-                {(MARKETS[ev.country] || []).map(b => <option key={b} value={b}>{b}</option>)}
+                {ev.country && unitsForCountry(ev.country).map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             <div>

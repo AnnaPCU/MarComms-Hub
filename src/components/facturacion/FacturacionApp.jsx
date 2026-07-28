@@ -17,7 +17,7 @@ import {
   LayoutDashboard, Plus, Receipt, Tag, Trash2, TrendingUp, Video, X,
 } from 'lucide-react';
 
-import { MARKETS } from '@/constants/markets';
+import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { STANDALONE_TO_CATEGORY } from '@/constants/standalones';
 
 export default function FacturacionApp({ onBack, webinars, campaigns, events, standaloneRequests, onNavigate }) {
@@ -618,7 +618,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
                   <select value={newManual.businessUnit} onChange={e => setNewManual({...newManual, businessUnit: e.target.value})} disabled={!newManual.country} className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-emerald-400 font-bold text-slate-700 text-sm disabled:opacity-50">
                     <option value="">Seleccionar...</option>
-                    {(MARKETS[newManual.country] || []).map(b => <option key={b} value={b}>{b}</option>)}
+                    {newManual.country && unitsForCountry(newManual.country).map(b => <option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
               </div>
