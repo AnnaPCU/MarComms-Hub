@@ -13,7 +13,6 @@
     "lint": "echo 'Lint configurado más adelante. Por ahora, no rompe nada.'"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.114.0",
     "@supabase/supabase-js": "^2.106.2",
     "lucide-react": "^0.400.0",
     "papaparse": "^5.4.1",

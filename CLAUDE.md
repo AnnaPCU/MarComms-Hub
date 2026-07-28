@@ -89,7 +89,6 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Facturación | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
 | Países | Cyan / Teal | `from-cyan-500 to-teal-500` |
 | Mi Semana | Naranja / Ámbar | `from-orange-500 to-amber-500` |
-| Mailchimp Tool | Azul / Índigo | `from-blue-600 to-indigo-600` |
 
 Mantené consistencia con esta paleta al agregar features.
 
@@ -103,10 +102,10 @@ Mantené consistencia con esta paleta al agregar features.
    - **Solución**: integrar Supabase según `BACKEND_PLAN.md`
    - **Workaround temporal**: `useLocalStorage` hook (no implementado, esperar Supabase)
 
-2. ~~**Reporte Mailchimp con IA no funciona en producción**~~ ✅ RESUELTO (jul 2026)
-   - Ahora llama a `/api/anthropic` (función serverless de Vercel en `api/anthropic.js`)
-   - Requiere `ANTHROPIC_API_KEY` configurada en Vercel → Settings → Environment Variables
-   - En dev local (`npm run dev`) el endpoint no existe — la IA solo funciona en producción o con `vercel dev`
+2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
+   - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
+   - Se borró `MailchimpReportTool.jsx`, el proxy `api/anthropic.js` y la dependencia `@anthropic-ai/sdk`
+   - El import de CSV Mailchimp del **paso 12 de Campañas** (Reporte al Cliente) NO se tocó — sigue funcionando
 
 ### 🟡 Media prioridad
 
@@ -142,7 +141,7 @@ Mantené consistencia con esta paleta al agregar features.
 - ❌ No exponer `ANTHROPIC_API_KEY` en código cliente
 - ❌ No agregar dependencias sin justificación (mantener el bundle chico)
 - ❌ No rediseñar UI sin pedirle al usuario primero
-- ❌ No tocar `src/components/content/MailchimpReportTool.jsx` sin avisar — es un componente del usuario importado tal cual con muchas adaptaciones
+- ❌ No recrear el Reporte Mailchimp en el Hub — esa herramienta vive en el sitio de reportes de Anna (proyecto aparte)
 - ❌ No usar `localStorage` directamente sin un hook que lo wrappee (cuando exista)
 
 ---

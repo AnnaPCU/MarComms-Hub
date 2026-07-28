@@ -8,10 +8,10 @@
 //   - 3 vistas (por responsable, estado, proyecto)
 //   - Filtros (designer, status, project)
 //
-// Tab Herramientas (3 sub-tabs):
+// Tab Herramientas (2 sub-tabs):
 //   - UTM Builder Marcomms (rosa)
-//   - Reporte Mailchimp (azul, con IA)
 //   - Generador Newsletter (placeholder)
+// (El Reporte Mailchimp se movió al sitio de reportes — jul 2026)
 //
 // Props:
 //   onBack — volver al hub
@@ -27,7 +27,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, BarChart3, Briefcase, Calendar, CheckSquare, Clock,
+  ArrowLeft, Briefcase, Calendar, CheckSquare, Clock,
   ExternalLink, FileText, Files, Filter, Link, Mail, Plus,
   Send, Sparkles, Trash2, User, Video, X, Zap,
 } from 'lucide-react';
@@ -42,7 +42,6 @@ import { calcProgress } from '@/utils/progress';
 
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import ProjectLinks from '@/components/shared/ProjectLinks';
-import MailchimpReportTool from './MailchimpReportTool';
 import MentionTextarea from '@/components/shared/MentionTextarea';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -764,7 +763,6 @@ export default function ContentHubApp({
             <div className="flex items-center gap-2 border-b border-slate-200 flex-wrap">
               {[
                 { id: 'utm',        label: 'UTM Builder',         icon: Link,      activeClass: 'text-pink-600 border-pink-500' },
-                { id: 'mailchimp',  label: 'Reporte Mailchimp',   icon: BarChart3, activeClass: 'text-blue-600 border-blue-500' },
                 { id: 'newsletter', label: 'Generador Newsletter', icon: Mail,     activeClass: 'text-purple-600 border-purple-500' }
               ].map(tool => {
                 const ToolIcon = tool.icon;
@@ -791,11 +789,6 @@ export default function ContentHubApp({
               <div className="bg-white border-2 border-slate-100 rounded-2xl p-1">
                 <MarcommsUtmBuilder accentColor="pink" />
               </div>
-            )}
-
-            {/* Mailchimp Tool */}
-            {activeTool === 'mailchimp' && (
-              <MailchimpReportTool />
             )}
 
             {/* Newsletter Tool (placeholder) */}
