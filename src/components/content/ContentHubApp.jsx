@@ -853,17 +853,16 @@ export default function ContentHubApp({
 
         {/* Vista por responsable */}
         {viewMode === 'responsable' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${DESIGNERS.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {DESIGNERS.map(designer => {
               const designerPieces = filtered.filter(p => p.owner === designer);
               const colorMap = {
-                Agus: 'border-t-blue-500 bg-blue-50/30',
-                Vicky: 'border-t-purple-500 bg-purple-50/30',
-                Fati: 'border-t-orange-500 bg-orange-50/30',
-                Delfi: 'border-t-emerald-500 bg-emerald-50/30'
+                'Agustina Ball':    'border-t-blue-500 bg-blue-50/30',
+                'Victoria Colombo': 'border-t-purple-500 bg-purple-50/30',
+                'Delfina Palmero':  'border-t-emerald-500 bg-emerald-50/30'
               };
               return (
-                <div key={designer} className={`bg-white rounded-2xl border border-slate-200 border-t-4 ${colorMap[designer]} overflow-hidden`}>
+                <div key={designer} className={`bg-white rounded-2xl border border-slate-200 border-t-4 ${colorMap[designer] || 'border-t-slate-400 bg-slate-50/30'} overflow-hidden`}>
                   <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="font-black text-slate-800 uppercase">{designer}</h3>
                     <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2 py-1 rounded-full">{designerPieces.length}</span>
@@ -1141,21 +1140,45 @@ export default function ContentHubApp({
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-                {/* Sección Links (Planner + ticket HubSpot) — solo pedidos standalone */}
-                {refreshed.sourceType === 'standalone' && (() => {
-                  const req = (standaloneRequests || []).find(r => r.id === refreshed.projectId);
-                  if (!req) return null;
+                {/* Sección Links (Planner + ticket HubSpot) — a nivel proyecto/pedido */}
+                {(() => {
+                  const { sourceType, projectId } = refreshed;
+                  let proj = null;
+                  if (sourceType === 'standalone')    proj = (standaloneRequests || []).find(r => r.id === projectId);
+                  else if (sourceType === 'webinar')  proj = (webinars || []).find(p => p.id === projectId);
+                  else if (sourceType === 'event')    proj = (events || []).find(p => p.id === projectId);
+                  else                                proj = (campaigns || []).find(p => p.id === projectId);
+                  if (!proj) return null;
+
+                  const saveLink = (field, v) => {
+                    if (sourceType === 'standalone') {
+                      updateRequest(proj.id, { [field]: v });
+                      return;
+                    }
+                    const setter = sourceType === 'webinar' ? setWebinars : sourceType === 'event' ? setEvents : setCampaigns;
+                    setter(prev => prev.map(p => (
+                      p.id === proj.id ? { ...p, [field]: v, updatedAt: new Date().toISOString() } : p
+                    )));
+                  };
+
                   return (
                     <div>
-                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <Link className="w-3.5 h-3.5" /> Links del pedido
+                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2">
+                        <Link className="w-3.5 h-3.5" /> {sourceType === 'standalone' ? 'Links del pedido' : 'Links del proyecto'}
                       </h3>
-                      <ProjectLinks
-                        columns
-                        plannerLink={req.plannerLink}
-                        hubspotLink={req.hubspotLink}
-                        onChange={(field, v) => updateRequest(req.id, { [field]: v })}
-                      />
+                      {sourceType !== 'standalone' && (
+                        <p className="text-[9px] text-slate-400 font-medium mb-3">
+                          Compartidos con todas las piezas de {refreshed.projectName}
+                        </p>
+                      )}
+                      <div className={sourceType === 'standalone' ? 'mt-2' : ''}>
+                        <ProjectLinks
+                          columns
+                          plannerLink={proj.plannerLink}
+                          hubspotLink={proj.hubspotLink}
+                          onChange={saveLink}
+                        />
+                      </div>
                     </div>
                   );
                 })()}
