@@ -34,6 +34,14 @@ export const fromRow = (row) => {
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
+    // Overlay de piezas del Content Hub (migration 0013)
+    ...(row.content !== undefined ? { content: row.content || {} } : {}),
+    // Campos sueltos que viven dentro del jsonb `data` (Paid Media y otros)
+    platforms: (row.data && row.data.platforms) || [],
+    paidMode:  (row.data && row.data.paidMode) || '',
+    duration:  (row.data && row.data.duration) || '',
+    objective: (row.data && row.data.objective) || '',
+    detail:    (row.data && row.data.detail) || '',
   };
 };
 
@@ -53,13 +61,23 @@ export const toRow = (obj) => {
   if (obj.dealsCreated !== undefined)        row.deals_created = Number(obj.dealsCreated) || 0;
   if (obj.completedSteps !== undefined)      row.completed_steps = obj.completedSteps || [];
   if (obj.deadlines !== undefined)           row.deadlines = obj.deadlines || {};
-  if (obj.data !== undefined)                row.data = obj.data || {};
+  // Campos sueltos (platforms, paidMode, duration, objective, detail) se
+  // empaquetan dentro del jsonb `data` para no requerir columnas nuevas.
+  const DATA_KEYS = ['platforms', 'paidMode', 'duration', 'objective', 'detail'];
+  if (obj.data !== undefined || DATA_KEYS.some((k) => obj[k] !== undefined)) {
+    const data = { ...(obj.data || {}) };
+    DATA_KEYS.forEach((k) => {
+      if (obj[k] !== undefined) data[k] = obj[k] ?? null;
+    });
+    row.data = data;
+  }
   if (obj.report !== undefined)              row.report = obj.report;
   if (obj.comments !== undefined)            row.comments = obj.comments || [];
   if (obj.completedAt !== undefined)         row.completed_at = obj.completedAt;
   if (obj.quotationValidated !== undefined)  row.quotation_validated = !!obj.quotationValidated;
   if (obj.plannerLink !== undefined)         row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)         row.hubspot_link = obj.hubspotLink || null;
+  if (obj.content !== undefined)             row.content = obj.content || {};
   return row;
 };
 

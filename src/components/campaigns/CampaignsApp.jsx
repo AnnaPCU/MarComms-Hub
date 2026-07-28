@@ -488,6 +488,11 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   {campaign.objective === "posicionamiento" ? "Posicionamiento" : "Conversión"}
                                 </span>
                               )}
+                              {campaign.type === "paid" && campaign.paidMode && (
+                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                                  {campaign.paidMode === "always_on" ? "Always On" : "One Shot"}
+                                </span>
+                              )}
                             </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               {campaign.businessUnit || "—"} · {campaign.country || "—"}
@@ -633,6 +638,28 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   );
                                 })}
                               </div>
+                            </div>
+
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Modalidad (opcional)</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {[
+                                  { id: 'always_on', label: 'Always On' },
+                                  { id: 'one_shot',  label: 'One Shot' }
+                                ].map(mode => {
+                                  const isSelected = campaign.paidMode === mode.id;
+                                  return (
+                                    <button
+                                      key={mode.id}
+                                      onClick={() => updateCampaign(campaign.id, 'paidMode', isSelected ? '' : mode.id)}
+                                      className={`p-2.5 rounded-lg text-[9px] font-black uppercase tracking-wider border-2 transition-all ${isSelected ? "bg-amber-500 border-amber-500 text-white shadow-md" : "bg-white border-slate-200 text-slate-500 hover:border-amber-300"}`}
+                                    >
+                                      {mode.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[9px] text-slate-400 font-medium mt-1">Click de nuevo para deseleccionar</p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">

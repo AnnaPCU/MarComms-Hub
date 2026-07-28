@@ -105,7 +105,12 @@ export default function ContentHubApp({
   const getPieceState = (project, piece, sourceType) => {
     const content = project.content || {};
     let stored = content[piece.key];
-    let owner = stored?.owner || piece.defaultOwner;
+    // El owner canónico vive en la tarea del proyecto (persiste en Supabase
+    // y es lo que lee Mi Semana). El overlay content queda como fallback.
+    let canonicalOwner = null;
+    if (sourceType === 'webinar' && piece.syncTask) canonicalOwner = project[piece.syncTask]?.owner;
+    if (sourceType === 'event' && piece.syncTaskId) canonicalOwner = project.tasks?.[piece.syncTaskId]?.owner;
+    let owner = canonicalOwner || stored?.owner || piece.defaultOwner;
     let status = stored?.status || 'pending';
     const comments = stored?.comments || [];
     // Soporte legacy: si había `files`, los tratamos como designFiles
@@ -204,7 +209,20 @@ export default function ContentHubApp({
       const content = { ...(p.content || {}) };
       const cur = content[piece.key] || {};
       content[piece.key] = { ...cur, owner: newOwner };
-      return { ...p, content };
+      let updated = { ...p, content };
+      // Sincronizar con la tarea canónica del proyecto — es la que persiste
+      // en Supabase y la que lee Mi Semana para armar las tareas por persona.
+      if (sourceType === 'webinar' && piece.syncTask) {
+        const taskCur = updated[piece.syncTask] || {};
+        updated[piece.syncTask] = { ...taskCur, owner: newOwner };
+      }
+      if (sourceType === 'event' && piece.syncTaskId && updated.tasks?.[piece.syncTaskId]) {
+        updated.tasks = {
+          ...updated.tasks,
+          [piece.syncTaskId]: { ...updated.tasks[piece.syncTaskId], owner: newOwner },
+        };
+      }
+      return updated;
     }));
   };
 

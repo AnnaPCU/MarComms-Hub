@@ -45,6 +45,8 @@ export const fromRow = (row) => {
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
+    // Overlay de piezas del Content Hub (migration 0013)
+    ...(row.content !== undefined ? { content: row.content || {} } : {}),
     // Sub-tareas top-level (vienen de tasks jsonb)
     ...TASK_KEYS.reduce((acc, k) => {
       acc[k] = tasksJson[k] || { done: false };
@@ -71,6 +73,7 @@ export const toRow = (obj) => {
   if (obj.quotationValidated !== undefined) row.quotation_validated = !!obj.quotationValidated;
   if (obj.plannerLink !== undefined)      row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)      row.hubspot_link = obj.hubspotLink || null;
+  if (obj.content !== undefined)          row.content = obj.content || {};
 
   // Pack sub-tareas en tasks jsonb (solo las que vengan en el obj)
   const hasAnyTask = TASK_KEYS.some((k) => obj[k] !== undefined);

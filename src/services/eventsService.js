@@ -30,6 +30,8 @@ export const fromRow = (row) => {
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
+    // Overlay de piezas del Content Hub (migration 0013)
+    ...(row.content !== undefined ? { content: row.content || {} } : {}),
   };
 };
 
@@ -52,6 +54,7 @@ export const toRow = (obj) => {
   if (obj.quotationValidated !== undefined) row.quotation_validated = !!obj.quotationValidated;
   if (obj.plannerLink !== undefined)      row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)      row.hubspot_link = obj.hubspotLink || null;
+  if (obj.content !== undefined)          row.content = obj.content || {};
   return row;
 };
 
