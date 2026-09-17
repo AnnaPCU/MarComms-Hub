@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// REQUESTS SERVICE — Pedidos internos / Standalone Requests
+// REQUESTS SERVICE — Pedidos internos / Standalone Requests (Social Media)
 // ════════════════════════════════════════════════════════════════════
 // Conectado a Supabase (tabla `public.requests`).
 // La UI sigue usando shape camelCase. Los mappers traducen DB↔UI.
@@ -45,6 +45,7 @@ const TABLE = 'requests';
 //   created_at        ↔ createdAt
 //   updated_at        ↔ updatedAt
 //   completed_at      ↔ completedAt
+//   theme             ↔ theme         (migration 0015, opcional)
 // ════════════════════════════════════════════════════════════════════
 
 export const fromRow = (row) => {
@@ -69,6 +70,8 @@ export const fromRow = (row) => {
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
+    // Temática (migration 0015) — solo si la columna ya existe en la DB
+    ...(row.theme !== undefined ? { theme: row.theme || '' } : {}),
     // Stub local — todavía no hay columna content en la DB
     content:      { comments: [], files: [] },
   };
@@ -92,6 +95,7 @@ export const toRow = (obj) => {
   if (obj.completedAt  !== undefined) row.completed_at = obj.completedAt;
   if (obj.plannerLink  !== undefined) row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink  !== undefined) row.hubspot_link = obj.hubspotLink || null;
+  if (obj.theme        !== undefined) row.theme = obj.theme || null;
   return row;
 };
 

@@ -37,7 +37,7 @@ export const SERVICE_OWNERS = {
   webinar: 'Victoria Colombo',
   event: 'Victoria Colombo',
   campaign: 'Felipe Señorans',
-  standalone: 'Agustina Ball', // pedidos del Content Hub
+  standalone: 'Agustina Ball', // pedidos de Social Media (ex Content Hub)
 };
 
 // ── Mapeo alias histórico (corto) → nombre completo ──

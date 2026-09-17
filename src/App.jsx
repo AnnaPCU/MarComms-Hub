@@ -47,7 +47,7 @@ import { buildNotifications } from '@/utils/notifications';
 // Components
 import LoginScreen from '@/components/login/LoginScreen';
 import CampanasApp from '@/components/campanas/CampanasApp';
-import ContentHubApp from '@/components/content/ContentHubApp';
+import SocialMediaApp from '@/components/social/SocialMediaApp';
 import FacturacionApp from '@/components/facturacion/FacturacionApp';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
@@ -132,6 +132,7 @@ export default function App() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showFastAction, setShowFastAction] = useState(false);
   const [contentAutoNew, setContentAutoNew] = useState(false); // abre "nuevo pedido" al entrar desde acción rápida
+  const [contentAutoTab, setContentAutoTab] = useState(null);   // abre una tab de Social Media al entrar (ej. 'calendario')
   const [focusProjectId, setFocusProjectId] = useState(null);  // deep-link: card a abrir al navegar desde Mi Semana
 
   // Navega a una sección y opcionalmente enfoca un proyecto específico (abre su card/detalle)
@@ -316,7 +317,7 @@ export default function App() {
   const sections = [
     { id: 'paises', title: 'Países', description: 'Gestión de mercados globales y entidades.', icon: <Globe2 className="w-8 h-8 text-blue-600" />, stats: '15 Países', color: 'bg-blue-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
-    { id: 'content', title: 'Content Hub', description: 'Mesa de contenido y diseño: Agus, Vicky, Fati, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
+    { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
@@ -581,7 +582,7 @@ export default function App() {
     if (currentSection === 'content') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-           <ContentHubApp
+           <SocialMediaApp
              onBack={() => setCurrentSection('main')}
              webinars={globalWebinars}
              setWebinars={setGlobalWebinars}
@@ -604,6 +605,8 @@ export default function App() {
              updateRequestContent={updateRequestContent}
              autoNew={contentAutoNew}
              onAutoNewDone={() => setContentAutoNew(false)}
+             autoTab={contentAutoTab}
+             onAutoTabDone={() => setContentAutoTab(null)}
            />
         </div>
       );
@@ -1029,6 +1032,7 @@ export default function App() {
                                 setReadNotifications(prev => new Set([...prev, n.id]));
                                 setShowNotifications(false);
                                 if (n.navTo) setCurrentSection(n.navTo);
+                                if (n.navTab) setContentAutoTab(n.navTab);
                               }}
                               className={`w-full p-3 hover:bg-slate-50 text-left flex items-start gap-3 transition-colors ${isRead ? 'opacity-60' : ''}`}
                             >
@@ -1090,7 +1094,7 @@ export default function App() {
                         { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'campaigns' },
                         { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
                         { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
-                        { id: 'pedido',   label: 'Nuevo pedido Content',  icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
+                        { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
                         { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week', divider: true },
                         { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises' },
                         { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }

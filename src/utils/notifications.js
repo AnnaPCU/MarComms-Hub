@@ -11,13 +11,15 @@
 //   2. soon                       — tu tarea individual ≤ 3 días
 //   3. responsible                — sos service owner, deadline ≤ 3 días + progress < 80%
 //   4. team_overdue               — sos service owner, hay tareas atrasadas en tu proyecto
-//   5. new                        — pedido del Content Hub creado ≤ 3 días + sos owner
+//   5. new                        — pedido de Social Media creado ≤ 3 días + sos owner
 //   6. assigned                   — te asignaron una tarea
 //   7. task_done_for_assigner     — la tarea que VOS asignaste fue completada (últimos 3 días)
-//   8. request_done_for_owner     — tu pedido del Content Hub fue marcado done (últimos 3 días)
+//   8. request_done_for_owner     — tu pedido de Social Media fue marcado done (últimos 3 días)
 //   9. project_created_for_owner  — se creó un proyecto bajo tu responsabilidad (últimos 3 días)
 //  10. new_comment                — comentario nuevo en tu campaña (últimos 3 días, NO escrito por vos)
 //  11. daily_summary              — al primer login del día, resumen de tareas de la semana
+//  12. world_day                  — día mundial próximo: aviso a la responsable de Social Media
+//                                   desde 3 días hábiles antes hasta el día mismo
 // ════════════════════════════════════════════════════════════════════
 
 import { AlertCircle, Clock, MessageCircle, Sparkles, User, UserCheck, CheckCircle2, Calendar } from 'lucide-react';
@@ -25,6 +27,9 @@ import { SERVICE_OWNERS as DEFAULT_SERVICE_OWNERS, PEOPLE } from '@/constants/te
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 import { calcProgress } from './progress';
+import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
+import { activeWorldDayNotices } from './worldDays';
+import { formatDate, toIsoDate } from './date';
 
 // Labels legibles de las 21 sub-tareas del webinar
 const WEBINAR_TASK_KEYS = [
@@ -257,7 +262,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // 5. NEW — Pedido del Content Hub asignado, creado en últimos 3 días
+  // 5. NEW — Pedido de Social Media asignado, creado en últimos 3 días
   //    + overdue/soon de deadline del pedido
   // ────────────────────────────────────────────────────────────────
   requests.forEach((r) => {
@@ -269,7 +274,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       notifs.push({
         id: `new-s-${r.id}`, type: 'new', icon: Sparkles, color: 'pink',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-        project: r.name, source: 'Content Hub', date: r.deadline || '', navTo: 'content',
+        project: r.name, source: 'Social Media', date: r.deadline || '', navTo: 'content',
       });
     }
     if (r.deadline) {
@@ -279,14 +284,14 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         notifs.push({
           id: `overdue-s-${r.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content',
+          project: r.name, source: 'Social Media', date: r.deadline, navTo: 'content',
         });
       } else if (d <= in3Days) {
         const m = templates.soon_task('Pedido', r.name);
         notifs.push({
           id: `soon-s-${r.id}`, type: 'soon', icon: Clock, color: 'amber',
           title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: r.name, source: 'Content Hub', date: r.deadline, navTo: 'content',
+          project: r.name, source: 'Social Media', date: r.deadline, navTo: 'content',
         });
       }
     }
@@ -341,7 +346,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // 8. NUEVO — Tu pedido del Content Hub fue marcado como done (3 días)
+  // 8. NUEVO — Tu pedido de Social Media fue marcado como done (3 días)
   // ────────────────────────────────────────────────────────────────
   requests.forEach((r) => {
     if (r.status !== 'done') return;
@@ -352,7 +357,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       id: `request-done-${r.id}`, type: 'new', icon: CheckCircle2, color: 'emerald',
       title: `Pedido entregado: "${r.name}"`,
       shortTitle: `✅ "${r.name}" listo`,
-      emoji: '✅', project: r.name, source: 'Content Hub', date: r.completedAt, navTo: 'content',
+      emoji: '✅', project: r.name, source: 'Social Media', date: r.completedAt, navTo: 'content',
     });
   });
 
@@ -458,7 +463,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         id: `mention-r-${r.id}-${cm.id || cm.timestamp || cm.date}`, type: 'assigned', icon: MessageCircle, color: 'cyan',
         title: `${cm.author || 'Alguien'} te etiquetó en "${r.name}"`,
         shortTitle: `💬 Te etiquetaron en ${r.name}`,
-        emoji: '💬', project: r.name, source: 'Content Hub', date: cm.timestamp || cm.date, navTo: 'content',
+        emoji: '💬', project: r.name, source: 'Social Media', date: cm.timestamp || cm.date, navTo: 'content',
       });
     });
   });
@@ -496,6 +501,27 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       title: `Tenés ${tasksThisWeek} tarea${tasksThisWeek > 1 ? 's' : ''} esta semana`,
       shortTitle: `📋 ${tasksThisWeek} tarea${tasksThisWeek > 1 ? 's' : ''} esta semana`,
       emoji: '📋', project: 'Resumen', source: 'Diario', date: todayKey, navTo: 'my_week',
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 12. WORLD_DAY — día mundial próximo (calendario de Social Media)
+  //     Solo para la responsable configurada en WORLD_DAYS_NOTIFY_USER.
+  //     Aparece desde 3 días hábiles antes hasta el día mismo.
+  // ────────────────────────────────────────────────────────────────
+  const notifyUser = options.worldDaysNotifyUser || WORLD_DAYS_NOTIFY_USER;
+  if (sameName(notifyUser)) {
+    const todayIso = toIsoDate(today);
+    activeWorldDayNotices(todayIso, options.worldDays).forEach((d) => {
+      const when = d.daysLeft === 0 ? 'es hoy' : d.daysLeft === 1 ? 'es mañana' : `es en ${d.daysLeft} días`;
+      const themeLabel = d.themeInfo?.label || d.theme;
+      notifs.push({
+        id: `world-day-${d.id}-${d.date}`, type: 'world_day', icon: Calendar, color: 'pink',
+        title: `${d.name} ${when} (${formatDate(d.date)}). Preparar contenido para redes.`,
+        shortTitle: `📅 ${d.name}`,
+        emoji: '📅', project: `Temática: ${themeLabel}`, source: 'Social Media', date: d.date,
+        navTo: 'content', navTab: 'calendario',
+      });
     });
   }
 

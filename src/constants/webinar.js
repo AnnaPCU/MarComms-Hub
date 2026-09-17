@@ -2,7 +2,7 @@
 // WEBINAR — Constantes específicas del módulo
 // ════════════════════════════════════════════════════════════════════
 // Mappings para sync bidireccional Webinar ↔ Campaign linkeada.
-// Piezas de contenido que aparecen en el Content Hub.
+// Piezas de contenido que aparecen en Social Media.
 // ════════════════════════════════════════════════════════════════════
 
 // ── Mappings webinar ↔ campaign ──
@@ -21,7 +21,7 @@ export const STEP_TO_WEBINAR_MAIL = Object.fromEntries(
   Object.entries(WEBINAR_MAIL_TO_STEP).map(([k, v]) => [v, k])
 );
 
-// ── Piezas de contenido del webinar (Content Hub) ──
+// ── Piezas de contenido del webinar (Social Media) ──
 // kind='mixed' = pieza con copy + diseño / 'design' = solo diseño
 export const WEBINAR_CONTENT_PIECES = [
   { key: 'landingLivestorm', label: 'Landing Livestorm',            defaultOwner: 'Victoria Colombo', syncTask: 'landingLivestorm', kind: 'mixed' },

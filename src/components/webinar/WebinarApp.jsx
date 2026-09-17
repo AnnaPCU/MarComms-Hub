@@ -45,7 +45,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   // ─── Sync activeW con cambios externos al array webinars ───
-  // Cuando Content Hub o cualquier otro módulo actualiza un webinar,
+  // Cuando Social Media o cualquier otro módulo actualiza un webinar,
   // necesitamos refrescar la copia local activeW.
   useEffect(() => {
     if (activeW) {
@@ -470,7 +470,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <TaskEditorRow title="Base de Datos" data={activeW.bbdd} field="bbdd" wId={activeW.id} updateField={updateField} customDropdown={["PROPIA","COMPRADA","CLIENTE"]} hasCost hasTags />
                 <TaskEditorRow title="Hubspot (Deals/Sync)" data={activeW.hubspot} field="hubspot" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
 
-                {/* ── CONTENIDO (alineado con Content Hub) ── */}
+                {/* ── CONTENIDO (alineado con Social Media) ── */}
                 <div className="bg-pink-50 px-4 py-2 text-[10px] font-black text-pink-600 uppercase tracking-widest border-t-2 border-pink-100">Contenido — Mesa de Contenido y Diseño</div>
                 <TaskEditorRow title="Landing Livestorm" data={activeW.landingLivestorm} field="landingLivestorm" wId={activeW.id} updateField={updateField} hasDate={true} />
                 <TaskEditorRow title='LKN post "anuncio"' data={activeW.lknAnuncio} field="lknAnuncio" wId={activeW.id} updateField={updateField} hasDate={true} />

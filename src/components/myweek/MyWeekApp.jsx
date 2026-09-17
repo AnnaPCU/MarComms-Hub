@@ -166,11 +166,11 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
       });
     });
 
-    // ── Pedidos standalone (Content Hub)
+    // ── Pedidos standalone (Social Media)
     (standaloneRequests || []).forEach(r => {
       tasks.push({
         id: `s-${r.id}`,
-        source: 'Content Hub',
+        source: 'Social Media',
         sourceColor: 'bg-pink-50 text-pink-700 border-pink-200',
         sourceIcon: Sparkles,
         projectName: r.name,

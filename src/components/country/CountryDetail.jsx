@@ -37,7 +37,7 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
     ev.country === country.pais && (!selectedBU || ev.businessUnit === selectedBU)
   );
 
-  // Pedidos standalone (Content Hub) — solo los cobrados (done con presupuesto)
+  // Pedidos standalone (Social Media) — solo los cobrados (done con presupuesto)
   const activeStandalones = (standalones || []).filter(r =>
     r.status === 'done' &&
     r.country === country.pais &&
@@ -152,7 +152,7 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
                 <span className="text-white font-bold">${totalEvents.toLocaleString()}</span>
               </li>
               <li className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-slate-400 flex items-center gap-2"><Sparkles size={14}/> Content Hub</span>
+                <span className="text-slate-400 flex items-center gap-2"><Sparkles size={14}/> Social Media</span>
                 <span className="text-white font-bold">${totalStandalones.toLocaleString()}</span>
               </li>
               <li className="flex items-center justify-between">
@@ -346,7 +346,7 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
 
         </div>
 
-        {/* Pedidos Content Hub cobrados */}
+        {/* Pedidos Social Media cobrados */}
         <div className="bg-white rounded-3xl border border-slate-200 p-6 lg:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -354,7 +354,7 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
                 <Sparkles className="w-5 h-5 text-pink-600" />
               </div>
               <div>
-                <h3 className="font-black text-slate-800 text-lg">Pedidos Content Hub Cobrados</h3>
+                <h3 className="font-black text-slate-800 text-lg">Pedidos Social Media Cobrados</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pedidos standalone facturables a este {selectedBU ? 'unidad' : 'país'}</p>
               </div>
             </div>
@@ -397,7 +397,7 @@ export default function CountryDetail({ country, webinars, campaigns, events, st
             </div>
           ) : (
             <div className="p-4 border border-dashed border-slate-200 rounded-2xl text-center text-xs font-bold text-slate-400 bg-slate-50 uppercase tracking-widest">
-              No hay pedidos del Content Hub cobrados para este país
+              No hay pedidos de Social Media cobrados para este país
             </div>
           )}
         </div>

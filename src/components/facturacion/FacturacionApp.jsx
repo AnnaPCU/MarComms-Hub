@@ -123,7 +123,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
       });
     });
 
-    // Pedidos standalone (Content Hub) — solo los completados en el mes
+    // Pedidos standalone (Social Media) — solo los completados en el mes
     const STANDALONE_TO_CATEGORY = {
       one_pager:  'content',
       ppt:        'content',
@@ -154,7 +154,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
         category: cat,
         detail: `${catLabel}: ${r.name}`,
         price: fee,
-        cc: "Content Hub",
+        cc: "Social Media",
         completedAt: r.completedAt,
         linkTo: 'content'
       });

@@ -75,7 +75,7 @@ export const EVENT_PHASES = [
   },
 ];
 
-// ── Piezas de contenido del evento (Content Hub) ──
+// ── Piezas de contenido del evento (Social Media) ──
 export const EVENT_CONTENT_PIECES = [
   { key: 'landing',         label: 'Landing',                       defaultOwner: 'Victoria Colombo', syncTaskId: 'landing',         kind: 'design' },
   { key: 'formulario',      label: 'Formulario',                    defaultOwner: 'Victoria Colombo', syncTaskId: 'formulario',      kind: 'mixed' },

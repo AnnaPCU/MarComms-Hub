@@ -122,7 +122,7 @@ marcomms-hub/
 │   │   ├── webinar/      # WebinarApp
 │   │   ├── campaigns/    # CampaignsApp + CampaignReportClient
 │   │   ├── events/       # EventsApp
-│   │   ├── content/      # ContentHubApp + MailchimpReportTool
+│   │   ├── social/       # SocialMediaApp (ex Content Hub) + WorldDaysCalendar
 │   │   ├── facturacion/  # FacturacionApp
 │   │   ├── country/      # CountryDetail
 │   │   ├── myweek/       # MyWeekApp
@@ -184,7 +184,7 @@ src/hooks/       — useRequests, useTasks, useAuth, useFilters
 **Estado actual de conexiones:**
 | Servicio | Modo | Tabla |
 |---|---|---|
-| `requestsService` (Content Hub) | ✅ **Supabase** (CRUD + realtime) | `public.requests` |
+| `requestsService` (Social Media) | ✅ **Supabase** (CRUD + realtime) | `public.requests` |
 | Resto (tasks, campaigns, webinars, events, ...) | 🚧 Mock (in-memory) | — |
 
 El módulo de pedidos persiste todo en Supabase: al crear, editar o borrar un pedido, el cambio impacta la DB y se propaga a los demás navegadores via realtime (`postgres_changes` sobre `public.requests`).

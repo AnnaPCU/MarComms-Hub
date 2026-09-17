@@ -1,12 +1,19 @@
 // ════════════════════════════════════════════════════════════════════
-// ContentHubApp — Mesa de Contenido y Diseño
+// SocialMediaApp — Social Media (ex Content Hub): mesa de contenido y diseño
 // ════════════════════════════════════════════════════════════════════
-// 2 tabs principales: Pedidos | Herramientas
+// 3 tabs principales: Pedidos | Calendario | Herramientas
 //
 // Tab Pedidos:
 //   - 6 categorías (one_pager, ppt, formulario, branding, landing, video)
 //   - 3 vistas (por responsable, estado, proyecto)
-//   - Filtros (designer, status, project)
+//   - Filtros (designer, kind, temática, status, project)
+//   - Cada pedido puede llevar una temática (WORLD_DAY_THEMES) — se
+//     persiste en `requests.theme` (migration 0015)
+//
+// Tab Calendario:
+//   - Días mundiales de sustentabilidad / certificación (WorldDaysCalendar)
+//   - Filtro por temática; aviso a Delfi 3 días hábiles antes (ver
+//     utils/notifications.js tipo 12)
 //
 // Tab Herramientas (2 sub-tabs):
 //   - UTM Builder Marcomms (rosa)
@@ -23,11 +30,13 @@
 //   addRequestComment / removeRequestComment              — overlay local
 //   addRequestFile / removeRequestFile                    — overlay local
 //   updateRequestContent                                  — overlay local genérico
+//   autoNew / onAutoNewDone      — abrir "nuevo pedido" al entrar (acción rápida)
+//   autoTab / onAutoTabDone      — abrir una tab puntual al entrar (ej. desde una notificación)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, Briefcase, Calendar, CheckSquare, Clock,
+  ArrowLeft, Briefcase, Calendar, CalendarDays, CheckSquare, Clock,
   ExternalLink, FileText, Files, Filter, Link, Mail, Plus,
   Send, Sparkles, Trash2, User, Video, X, Zap,
 } from 'lucide-react';
@@ -38,14 +47,16 @@ import { STANDALONE_CATEGORIES } from '@/constants/standalones';
 import { WEBINAR_CONTENT_PIECES } from '@/constants/webinar';
 import { EVENT_CONTENT_PIECES } from '@/constants/events';
 import { CAMPAIGN_CONTENT_PIECES } from '@/constants/campaigns';
+import { WORLD_DAY_THEMES, WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
 import { calcProgress } from '@/utils/progress';
 
 import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import ProjectLinks from '@/components/shared/ProjectLinks';
 import MentionTextarea from '@/components/shared/MentionTextarea';
+import WorldDaysCalendar from './WorldDaysCalendar';
 import { useConfirm } from '@/hooks/useConfirm';
 
-export default function ContentHubApp({
+export default function SocialMediaApp({
   onBack,
   webinars,
   setWebinars,
@@ -68,15 +79,19 @@ export default function ContentHubApp({
   updateRequestContent,
   autoNew,
   onAutoNewDone,
+  autoTab,
+  onAutoTabDone,
 }) {
   const confirm = useConfirm();
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
-  const [mainTab, setMainTab] = useState('pedidos'); // pedidos | herramientas
+  const [mainTab, setMainTab] = useState('pedidos'); // pedidos | calendario | herramientas
   const [activeTool, setActiveTool] = useState('utm'); // utm | mailchimp | newsletter
   const [filterDesigner, setFilterDesigner] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterProject, setFilterProject] = useState('all');
   const [filterKind, setFilterKind] = useState('all'); // all | wording | design
+  const [filterTheme, setFilterTheme] = useState('all'); // all | id de WORLD_DAY_THEMES (pedidos)
+  const [calendarTheme, setCalendarTheme] = useState('all'); // filtro de temática del calendario
   const [showCampaignDetail, setShowCampaignDetail] = useState(null); // campaign object cuando se abre el modal de detalle email
   const [showPieceDetail, setShowPieceDetail] = useState(null); // {item} -> abre modal comments + files
   const [newCommentText, setNewCommentText] = useState('');
@@ -86,7 +101,7 @@ export default function ContentHubApp({
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [newRequest, setNewRequest] = useState({
     name: '', category: 'one_pager', country: '', businessUnit: '',
-    requester: '', budget: '', detail: '', deadline: ''
+    requester: '', budget: '', detail: '', deadline: '', theme: ''
   });
 
   // Abre el modal de "nuevo pedido" cuando se entra desde Acción Rápida
@@ -98,6 +113,15 @@ export default function ContentHubApp({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoNew]);
+
+  // Abre una tab puntual (ej. 'calendario' desde una notificación de día mundial)
+  useEffect(() => {
+    if (autoTab) {
+      setMainTab(autoTab);
+      if (onAutoTabDone) onAutoTabDone();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTab]);
 
   // Helper: leer una pieza de un proyecto
   // El proyecto guarda content[piece.key] = { owner, status }
@@ -372,6 +396,8 @@ export default function ContentHubApp({
       deadline: newRequest.deadline || null,
       owner: cat?.defaultOwner || 'Agus',
       status: 'pending',
+      // Solo mandamos theme si se eligió una (la columna llega con migration 0015)
+      ...(newRequest.theme ? { theme: newRequest.theme } : {}),
     };
     try {
       if (createRequest) await createRequest(payload);
@@ -380,7 +406,7 @@ export default function ContentHubApp({
       alert('No se pudo crear el pedido. Revisá la consola.');
       return;
     }
-    setNewRequest({ name: '', category: 'one_pager', country: '', businessUnit: '', requester: '', budget: '', detail: '', deadline: '' });
+    setNewRequest({ name: '', category: 'one_pager', country: '', businessUnit: '', requester: '', budget: '', detail: '', deadline: '', theme: '' });
     setShowNewRequest(false);
   };
 
@@ -405,7 +431,7 @@ export default function ContentHubApp({
   const deleteStandalone = async (reqId) => {
     const ok = await confirm({
       title: '¿Eliminar pedido?',
-      message: 'Vas a eliminar este pedido del Content Hub. Esta acción no se puede deshacer.',
+      message: 'Vas a eliminar este pedido de Social Media. Esta acción no se puede deshacer.',
       confirmText: 'Eliminar', tone: 'danger',
     });
     if (!ok) return;
@@ -538,6 +564,7 @@ export default function ContentHubApp({
         piece: { key: 'main', label: cat.label, defaultOwner: cat.defaultOwner },
         owner: r.owner,
         status: r.status,
+        theme: r.theme || '',
         comments: r.content?.comments || [],
         files: r.content?.files || [],
         standaloneData: r // referencia al request original
@@ -555,6 +582,9 @@ export default function ContentHubApp({
     if (filterStatus !== 'all' && p.status !== filterStatus) return false;
     if (filterProject !== 'all' && `${p.sourceType}-${p.projectId}` !== filterProject) return false;
     if (filterKind !== 'all' && (p.piece.kind || 'design') !== filterKind && (p.piece.kind !== 'mixed')) return false;
+    // Temática: solo los pedidos standalone la tienen; las piezas de
+    // webinar/evento/campaña quedan afuera cuando se filtra por una.
+    if (filterTheme !== 'all' && (p.theme || '') !== filterTheme) return false;
     return true;
   });
 
@@ -610,6 +640,11 @@ export default function ContentHubApp({
             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${kindBadge.cls}`}>
               {kindBadge.label}
             </span>
+            {item.theme && WORLD_DAY_THEME_BY_ID[item.theme] && (
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${WORLD_DAY_THEME_BY_ID[item.theme].color}`}>
+                {WORLD_DAY_THEME_BY_ID[item.theme].label}
+              </span>
+            )}
           </div>
         </div>
         <h4 className="font-black text-sm text-slate-800 mb-1 leading-tight">{item.piece.label}</h4>
@@ -723,7 +758,7 @@ export default function ContentHubApp({
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
             <div className="flex items-center gap-3">
-              <div className="bg-white text-pink-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest">CONTENT HUB</div>
+              <div className="bg-white text-pink-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest">SOCIAL MEDIA</div>
               <div>
                 <h1 className="text-2xl font-black uppercase tracking-tight">Mesa de Contenido y Diseño</h1>
                 <p className="text-[10px] text-pink-100 font-bold uppercase tracking-widest">{filtered.length} piezas en pipeline</p>
@@ -753,6 +788,7 @@ export default function ContentHubApp({
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-1.5 inline-flex gap-1 shadow-sm">
           {[
             { id: 'pedidos',      label: 'Pedidos',      icon: Briefcase },
+            { id: 'calendario',   label: 'Calendario',   icon: CalendarDays },
             { id: 'herramientas', label: 'Herramientas', icon: Zap }
           ].map(tab => {
             const TabIcon = tab.icon;
@@ -773,6 +809,11 @@ export default function ContentHubApp({
             );
           })}
         </div>
+
+        {/* ── CONTENIDO TAB: CALENDARIO (días mundiales) ── */}
+        {mainTab === 'calendario' && (
+          <WorldDaysCalendar theme={calendarTheme} onThemeChange={setCalendarTheme} />
+        )}
 
         {/* ── CONTENIDO TAB: HERRAMIENTAS ── */}
         {mainTab === 'herramientas' && (
@@ -855,6 +896,10 @@ export default function ContentHubApp({
               <option value="all">Wording + Diseño</option>
               <option value="wording">Solo Wording</option>
               <option value="design">Solo Diseño</option>
+            </select>
+            <select value={filterTheme} onChange={e => setFilterTheme(e.target.value)} className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none">
+              <option value="all">Todas las temáticas</option>
+              {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none">
               <option value="all">Todos los estados</option>
@@ -1081,6 +1126,21 @@ export default function ContentHubApp({
                 />
               </div>
 
+              {/* Temática (opcional) — misma lista que el calendario de días mundiales */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+                  <CalendarDays className="w-3 h-3" /> Temática (opcional)
+                </label>
+                <select
+                  value={newRequest.theme}
+                  onChange={e => setNewRequest({ ...newRequest, theme: e.target.value })}
+                  className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-pink-400 font-bold text-slate-700 text-sm"
+                >
+                  <option value="">Sin temática</option>
+                  {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+
               {/* Brief */}
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Brief / Detalle del pedido</label>
@@ -1197,6 +1257,23 @@ export default function ContentHubApp({
                           onChange={saveLink}
                         />
                       </div>
+
+                      {/* Temática del pedido (persiste en requests.theme) */}
+                      {sourceType === 'standalone' && (
+                        <div className="mt-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
+                            <CalendarDays className="w-3.5 h-3.5" /> Temática
+                          </label>
+                          <select
+                            value={proj.theme || ''}
+                            onChange={e => updateRequest && updateRequest(proj.id, { theme: e.target.value })}
+                            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400 uppercase tracking-wider"
+                          >
+                            <option value="">Sin temática</option>
+                            {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

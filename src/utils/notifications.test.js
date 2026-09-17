@@ -153,7 +153,7 @@ describe('buildNotifications', () => {
     });
   });
 
-  describe('5. new — pedido del Content Hub creado en últimos 3 días', () => {
+  describe('5. new — pedido de Social Media creado en últimos 3 días', () => {
     it('genera notif new cuando el pedido es reciente y soy owner', () => {
       const request = {
         id: 'r1', name: 'Banner X', owner: 'Agustina Ball', status: 'pending',
@@ -376,5 +376,54 @@ describe('buildNotifications', () => {
       expect(idxOverdue).toBeLessThan(idxSoon);
       expect(idxSoon).toBeLessThan(idxNew);
     });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// 12. world_day — día mundial próximo (aviso a la responsable de Social Media)
+// ════════════════════════════════════════════════════════════════════
+// NOW = mar 02/06/2026. Día Mundial del Medio Ambiente = vie 05/06
+// → aviso 3 hábiles antes = mar 02/06 (hoy). Océanos = lun 08/06 → aviso mié 03/06.
+describe('12. world_day — aviso 3 días hábiles antes', () => {
+  const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
+
+  it('Delfi recibe el aviso del Día del Medio Ambiente el día del aviso', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, opts);
+    const n = notifs.find(x => x.id === 'world-day-medio-ambiente-2026-06-05');
+    expect(n).toBeTruthy();
+    expect(n.type).toBe('world_day');
+    expect(n.source).toBe('Social Media');
+    expect(n.navTo).toBe('content');
+    expect(n.navTab).toBe('calendario');
+    expect(n.title).toContain('es en 3 días');
+  });
+
+  it('todavía no avisa Océanos (aviso recién el 03/06)', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, opts);
+    expect(notifs.find(x => x.id.startsWith('world-day-oceanos'))).toBeUndefined();
+  });
+
+  it('el aviso sigue vigente el día mismo y dice "es hoy"', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, { now: new Date('2026-06-05T10:00:00Z') });
+    const n = notifs.find(x => x.id === 'world-day-medio-ambiente-2026-06-05');
+    expect(n).toBeTruthy();
+    expect(n.title).toContain('es hoy');
+  });
+
+  it('desaparece una vez pasado el día', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, { now: new Date('2026-06-06T10:00:00Z') });
+    expect(notifs.find(x => x.id === 'world-day-medio-ambiente-2026-06-05')).toBeUndefined();
+  });
+
+  it('nadie más del equipo recibe el aviso', () => {
+    [AGUS, VICKY, FELO].forEach(u => {
+      const notifs = buildNotifications(u, EMPTY_DATA, opts);
+      expect(notifs.some(x => x.type === 'world_day')).toBe(false);
+    });
+  });
+
+  it('la persona a avisar se puede sobreescribir por opciones', () => {
+    const notifs = buildNotifications(AGUS, EMPTY_DATA, { ...opts, worldDaysNotifyUser: 'Agustina Ball' });
+    expect(notifs.some(x => x.type === 'world_day')).toBe(true);
   });
 });

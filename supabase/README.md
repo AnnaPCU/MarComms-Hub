@@ -6,7 +6,7 @@ Esta carpeta contiene los SQL para crear las tablas del proyecto.
 
 | Tabla | Migration | En la app |
 |---|---|---|
-| `requests` (Content Hub) | ✅ Ya existe en tu Supabase | ✅ Conectada |
+| `requests` (Social Media) | ✅ Ya existe en tu Supabase | ✅ Conectada |
 | `tasks` (assigned) | ✅ Ya existe en tu Supabase | 🚧 Por conectar |
 | `comments` | ✅ Ya existe en tu Supabase | 🚧 Por conectar |
 | `files` | ✅ Ya existe en tu Supabase | 🚧 Por conectar |

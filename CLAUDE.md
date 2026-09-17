@@ -85,7 +85,7 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Webinars | Índigo / Púrpura | `from-indigo-500 to-purple-500` |
 | Pilares (ex Campañas) | Violeta / Rosa | `from-purple-600 to-pink-600` |
 | Eventos | Naranja / Rojo | `from-orange-500 to-red-500` |
-| Content Hub | Rosa / Rose | `from-pink-500 to-rose-500` |
+| Social Media (ex Content Hub) | Rosa / Rose | `from-pink-500 to-rose-500` |
 | Facturación | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
 | Países | Cyan / Teal | `from-cyan-500 to-teal-500` |
 | Mi Semana | Naranja / Ámbar | `from-orange-500 to-amber-500` |
@@ -178,6 +178,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/markets.js` | 17 países, 7 unidades de negocio |
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
+| `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). Lógica en `src/utils/worldDays.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |
 | `src/utils/pdf.js` | `generateProjectPDF` con jsPDF nativo |
 | `src/services/auth.js` | Login compartido (futuro: Supabase Auth) |

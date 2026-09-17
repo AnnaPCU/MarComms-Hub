@@ -51,3 +51,46 @@ export const daysBetween = (iso1, iso2) => {
   if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return null;
   return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
 };
+
+// Convierte un Date a ISO local (YYYY-MM-DD) sin pasar por UTC
+// (toISOString corre la fecha un día en zonas horarias positivas).
+export const toIsoDate = (d) => {
+  if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// ISO de hoy (local)
+export const todayIso = () => toIsoDate(new Date());
+
+// Devuelve true si la fecha ISO cae de lunes a viernes.
+// No contempla feriados: el equipo trabaja en varios países y no hay
+// un calendario único de feriados.
+export const isBusinessDay = (iso) => {
+  if (!iso) return false;
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return false;
+  const dow = d.getDay();
+  return dow !== 0 && dow !== 6;
+};
+
+// Suma N días hábiles (lun–vie) a una fecha ISO. N negativo resta.
+// Los fines de semana no cuentan: restar 3 hábiles a un lunes da el
+// miércoles anterior.
+export const addBusinessDays = (dateStr, n) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  const step = n < 0 ? -1 : 1;
+  let remaining = Math.abs(n);
+  while (remaining > 0) {
+    d.setDate(d.getDate() + step);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) remaining -= 1;
+  }
+  return toIsoDate(d);
+};
+
+export const subtractBusinessDays = (dateStr, n) => addBusinessDays(dateStr, -Math.abs(n));

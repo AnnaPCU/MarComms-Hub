@@ -45,7 +45,7 @@ export const fromRow = (row) => {
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
-    // Overlay de piezas del Content Hub (migration 0013)
+    // Overlay de piezas de Social Media (migration 0013)
     ...(row.content !== undefined ? { content: row.content || {} } : {}),
     // Sub-tareas top-level (vienen de tasks jsonb)
     ...TASK_KEYS.reduce((acc, k) => {

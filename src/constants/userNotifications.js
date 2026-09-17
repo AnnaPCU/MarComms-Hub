@@ -114,6 +114,6 @@ export const USER_NOTIFICATION_ACCENT = {
 
 // ── Orden de prioridad de notificaciones por equipo ──
 export const NOTIFICATION_PRIORITY = {
-  comunicacion: ['assigned', 'overdue', 'soon', 'new', 'responsible'],
-  marketing: ['assigned', 'overdue', 'soon', 'responsible', 'new'],
+  comunicacion: ['assigned', 'overdue', 'soon', 'world_day', 'new', 'responsible'],
+  marketing: ['assigned', 'overdue', 'soon', 'world_day', 'responsible', 'new'],
 };

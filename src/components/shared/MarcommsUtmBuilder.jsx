@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // MarcommsUtmBuilder — Generador de UTMs con estructura unificada
 // ════════════════════════════════════════════════════════════════════
-// Componente reusable en 4 contextos: webinar, evento, campaña, content hub.
+// Componente reusable en 4 contextos: webinar, evento, campaña, social media.
 // Cada contexto pasa `accentColor` distinto.
 //
 // Estructura del utm_campaign (igual al Excel del equipo):

@@ -2,7 +2,7 @@
 // ProjectLinks — Links externos del proyecto (Planner + ticket HubSpot)
 // ════════════════════════════════════════════════════════════════════
 // Dos inputs de URL con botón para abrir en pestaña nueva cuando el
-// link es válido. Se usa en Webinars, Eventos, Campañas y Content Hub.
+// link es válido. Se usa en Webinars, Eventos, Campañas y Social Media.
 //
 // El valor se edita en un borrador local y se guarda al salir del campo
 // (blur o Enter) — así no disparamos un update a Supabase por cada tecla.

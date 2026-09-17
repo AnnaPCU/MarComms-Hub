@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// STANDALONE CATEGORIES — Pedidos del Content Hub
+// STANDALONE CATEGORIES — Pedidos de Social Media (ex Content Hub)
 // ════════════════════════════════════════════════════════════════════
 // Categorías de pedidos standalone (independientes de webinar/evento/campaña).
 // Cada categoría define su owner default y su paleta de colores.
