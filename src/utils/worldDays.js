@@ -105,3 +105,51 @@ export const groupByMonth = (list) => {
   });
   return groups;
 };
+
+// ────────────────────────────────────────────────────────────────────
+// Vista de calendario (grilla mensual)
+// ────────────────────────────────────────────────────────────────────
+
+// Días mundiales que caen en un mes dado (año concreto), decorados
+// respecto de `todayIso` (aviso, días restantes, ventana activa).
+export const worldDaysInMonth = (year, month, todayIso, opts = {}) => {
+  const { theme = 'all', days = WORLD_DAYS } = opts;
+  return days
+    .filter((d) => d.month === month && (theme === 'all' || d.theme === theme))
+    .map((d) => {
+      const date = resolveWorldDayDate(d, year);
+      if (!date) return null;
+      const noticeDate = noticeDateFor(date);
+      return {
+        ...d,
+        themeInfo: WORLD_DAY_THEME_BY_ID[d.theme] || null,
+        date,
+        noticeDate,
+        daysLeft: daysBetween(todayIso, date),
+        noticeActive: noticeDate <= todayIso && todayIso <= date,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.name.localeCompare(b.name)));
+};
+
+// Grilla de semanas (lunes a domingo) que cubre el mes completo.
+// Devuelve [[{ iso, day, inMonth }, ...7], ...]. Siempre 6 filas para que
+// el alto de la grilla no salte al cambiar de mes.
+export const monthGrid = (year, month) => {
+  const first = new Date(year, month - 1, 1);
+  // getDay(): 0 = domingo → queremos que la semana arranque en lunes
+  const offset = (first.getDay() + 6) % 7;
+  const start = new Date(year, month - 1, 1 - offset);
+  const weeks = [];
+  for (let w = 0; w < 6; w++) {
+    const row = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + w * 7 + i);
+      row.push({ iso: toIsoDate(d), day: d.getDate(), inMonth: d.getMonth() === month - 1 });
+    }
+    weeks.push(row);
+  }
+  return weeks;
+};

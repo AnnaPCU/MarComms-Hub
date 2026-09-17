@@ -15,6 +15,8 @@ import {
   upcomingWorldDays,
   activeWorldDayNotices,
   groupByMonth,
+  worldDaysInMonth,
+  monthGrid,
 } from './worldDays';
 import { WORLD_DAYS, WORLD_DAY_THEMES, WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
 
@@ -58,6 +60,10 @@ describe('worldDays — constantes', () => {
       expect(WORLD_DAY_THEME_BY_ID[d.theme], `temática de ${d.id}`).toBeTruthy();
       expect(resolveWorldDayDate(d, 2026), `fecha de ${d.id}`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
+  });
+
+  it('todos los días tienen nombre corto para la grilla', () => {
+    WORLD_DAYS.forEach((d) => expect(typeof d.short === 'string' && d.short.length > 0, d.id).toBe(true));
   });
 
   it('los ids son únicos', () => {
@@ -135,5 +141,46 @@ describe('worldDays — fechas', () => {
     const groups = groupByMonth(upcomingWorldDays('2026-06-01', { months: 2 }));
     expect(groups[0].key).toBe('2026-06');
     expect(groups.every((g) => g.items.length > 0)).toBe(true);
+  });
+});
+
+describe('worldDays — grilla mensual', () => {
+  it('worldDaysInMonth devuelve las fechas del mes en ese año, ordenadas', () => {
+    const list = worldDaysInMonth(2026, 6, '2026-06-02');
+    expect(list.map((d) => d.id)).toContain('medio-ambiente');
+    expect(list.every((d) => d.date.startsWith('2026-06'))).toBe(true);
+    for (let i = 1; i < list.length; i++) expect(list[i].date >= list[i - 1].date).toBe(true);
+    const amb = list.find((d) => d.id === 'medio-ambiente');
+    expect(amb.noticeDate).toBe('2026-06-02');
+    expect(amb.noticeActive).toBe(true);
+  });
+
+  it('worldDaysInMonth incluye fechas ya pasadas del mes (es una vista, no una agenda)', () => {
+    const list = worldDaysInMonth(2026, 6, '2026-06-20');
+    const amb = list.find((d) => d.id === 'medio-ambiente');
+    expect(amb).toBeTruthy();
+    expect(amb.daysLeft).toBeLessThan(0);
+    expect(amb.noticeActive).toBe(false);
+  });
+
+  it('worldDaysInMonth filtra por temática y resuelve reglas', () => {
+    const nov = worldDaysInMonth(2026, 11, '2026-01-01', { theme: 'calidad' });
+    expect(nov.map((d) => d.id)).toEqual(['calidad']);
+    expect(nov[0].date).toBe('2026-11-12');
+  });
+
+  it('monthGrid arranca en lunes y cubre el mes en 6 filas', () => {
+    const grid = monthGrid(2026, 6); // junio 2026 empieza lunes
+    expect(grid.length).toBe(6);
+    expect(grid[0][0]).toEqual({ iso: '2026-06-01', day: 1, inMonth: true });
+    expect(grid[4][1].iso).toBe('2026-06-30');
+    expect(grid[4][2].inMonth).toBe(false); // 1 de julio
+  });
+
+  it('monthGrid rellena con días del mes anterior cuando no empieza en lunes', () => {
+    const grid = monthGrid(2026, 9); // septiembre 2026 empieza martes
+    expect(grid[0][0].iso).toBe('2026-08-31');
+    expect(grid[0][0].inMonth).toBe(false);
+    expect(grid[0][1].iso).toBe('2026-09-01');
   });
 });

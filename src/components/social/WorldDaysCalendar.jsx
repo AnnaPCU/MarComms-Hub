@@ -1,10 +1,11 @@
 // ════════════════════════════════════════════════════════════════════
 // WorldDaysCalendar — Calendario de días mundiales (módulo Social Media)
 // ════════════════════════════════════════════════════════════════════
-// Lista los próximos 12 meses de días mundiales relacionados a
-// sustentabilidad y certificación, agrupados por mes, con filtro por
-// temática. Muestra para cada día la fecha del aviso a la responsable
-// (3 días hábiles antes) y resalta los que ya están en ventana de aviso.
+// Grilla mensual (lunes a domingo) con los días mundiales de
+// sustentabilidad y certificación. Se navega mes a mes, se filtra por
+// temática con un desplegable y, al cliquear una fecha, el panel lateral
+// muestra el detalle (temática, nota, día del aviso a la responsable).
+// Sin selección, el panel lista las próximas fechas.
 //
 // Props:
 //   todayIso   — YYYY-MM-DD (default: hoy). Se pasa para tests/preview.
@@ -12,8 +13,8 @@
 //   onThemeChange(themeId)
 // ════════════════════════════════════════════════════════════════════
 
-import React, { useMemo } from 'react';
-import { Bell, CalendarDays, Sparkles } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Bell, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import {
   WORLD_DAY_THEMES,
@@ -21,165 +22,212 @@ import {
   WORLD_DAYS_NOTICE_BUSINESS_DAYS,
 } from '@/constants/worldDays';
 import { TEAM_MEMBERS } from '@/constants/team';
-import { upcomingWorldDays, groupByMonth } from '@/utils/worldDays';
+import { worldDaysInMonth, monthGrid, upcomingWorldDays } from '@/utils/worldDays';
 import { formatDate, todayIso as getTodayIso } from '@/utils/date';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const MAX_PILLS = 2; // pills visibles por celda antes del "+n"
 
-const monthLabel = (key) => {
-  const [y, m] = key.split('-');
-  return `${MONTHS[Number(m) - 1]} ${y}`;
-};
-
-const countdownLabel = (daysLeft) => {
+const countdown = (daysLeft) => {
   if (daysLeft === 0) return 'Es hoy';
-  if (daysLeft === 1) return 'Mañana';
-  return `En ${daysLeft} días`;
+  if (daysLeft === 1) return 'Es mañana';
+  if (daysLeft > 1) return `En ${daysLeft} días`;
+  return 'Ya pasó';
 };
 
 export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChange }) {
   const today = todayIso || getTodayIso();
   const notifyShort = TEAM_MEMBERS.find(m => m.name === WORLD_DAYS_NOTIFY_USER)?.short || WORLD_DAYS_NOTIFY_USER;
 
-  const all = useMemo(() => upcomingWorldDays(today), [today]);
-  const filtered = useMemo(() => (theme === 'all' ? all : all.filter(d => d.theme === theme)), [all, theme]);
-  const groups = useMemo(() => groupByMonth(filtered), [filtered]);
-  const active = useMemo(() => all.filter(d => d.noticeActive), [all]);
+  const [cursor, setCursor] = useState({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
+  const [selected, setSelected] = useState(null); // día mundial decorado
 
-  // Conteo por temática (para los chips)
-  const countByTheme = useMemo(() => {
+  const isCurrentMonth = cursor.year === Number(today.slice(0, 4)) && cursor.month === Number(today.slice(5, 7));
+
+  const goMonth = (delta) => {
+    setCursor(({ year, month }) => {
+      const d = new Date(year, month - 1 + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+    setSelected(null);
+  };
+  const goToday = () => {
+    setCursor({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
+    setSelected(null);
+  };
+
+  const weeks = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
+  const monthDays = useMemo(() => worldDaysInMonth(cursor.year, cursor.month, today, { theme }), [cursor, today, theme]);
+  const byDate = useMemo(() => {
     const acc = {};
-    all.forEach(d => { acc[d.theme] = (acc[d.theme] || 0) + 1; });
+    monthDays.forEach(d => { (acc[d.date] = acc[d.date] || []).push(d); });
     return acc;
-  }, [all]);
+  }, [monthDays]);
+
+  // Próximas fechas (independiente del mes que se está mirando)
+  const upcoming = useMemo(() => upcomingWorldDays(today, { theme }).slice(0, 6), [today, theme]);
+
+  const renderPill = (d, compact = true) => {
+    const t = d.themeInfo;
+    const isSel = selected && selected.id === d.id && selected.date === d.date;
+    return (
+      <button
+        key={`${d.id}-${d.date}`}
+        onClick={(e) => { e.stopPropagation(); setSelected(isSel ? null : d); }}
+        title={d.name}
+        className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate transition-all ${t ? t.color : 'bg-slate-50 text-slate-600 border-slate-200'} ${isSel ? 'ring-2 ring-pink-400' : 'hover:brightness-95'}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${t ? t.dot : 'bg-slate-400'}`} />
+        <span className="truncate">{compact ? (d.short || d.name) : d.name}</span>
+        {d.noticeActive && <Bell className="w-2.5 h-2.5 shrink-0 ml-auto text-pink-600" />}
+      </button>
+    );
+  };
 
   return (
-    <div className="space-y-5">
-      {/* Cabecera + regla del aviso */}
-      <div className="bg-white border-2 border-slate-100 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center shadow-md">
-            <CalendarDays className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">Calendario de días mundiales</h2>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              {filtered.length} fechas en los próximos 12 meses
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-pink-50 border border-pink-100 text-pink-700 px-3 py-2 rounded-xl">
-          <Bell className="w-3.5 h-3.5 shrink-0" />
-          <p className="text-[10px] font-black uppercase tracking-wider">
-            Aviso a {notifyShort} {WORLD_DAYS_NOTICE_BUSINESS_DAYS} días hábiles antes de cada fecha
-          </p>
-        </div>
-      </div>
-
-      {/* Avisos activos hoy */}
-      {active.length > 0 && (
-        <div className="bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-200 rounded-2xl p-4">
-          <p className="text-[10px] font-black text-pink-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" /> En ventana de aviso ahora
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {active.map(d => (
-              <span key={d.id} className="bg-white border border-pink-200 text-slate-800 text-[11px] font-black px-3 py-1.5 rounded-lg flex items-center gap-2">
-                {d.name}
-                <span className="text-[9px] font-black uppercase tracking-wider text-pink-600">{countdownLabel(d.daysLeft)}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Filtro por temática */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => onThemeChange && onThemeChange('all')}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${
-            theme === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-          }`}
-        >
-          Todas las temáticas · {all.length}
-        </button>
-        {WORLD_DAY_THEMES.map(t => {
-          const isActive = theme === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => onThemeChange && onThemeChange(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5 ${
-                isActive ? `${t.color} ring-2 ring-offset-1 ring-slate-300` : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
-              {t.label} · {countByTheme[t.id] || 0}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
+      {/* ── Calendario ── */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        {/* Barra superior: mes + navegación + filtro */}
+        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button onClick={() => goMonth(-1)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600" title="Mes anterior">
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          );
-        })}
-      </div>
-
-      {/* Lista por mes */}
-      {groups.length === 0 ? (
-        <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No hay fechas para esta temática</p>
+            <button onClick={() => goMonth(1)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600" title="Mes siguiente">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <h2 className="text-base font-black text-slate-800 tracking-tight">
+            {MONTHS[cursor.month - 1]} <span className="text-slate-400 font-bold">{cursor.year}</span>
+          </h2>
+          {!isCurrentMonth && (
+            <button onClick={goToday} className="text-[10px] font-black uppercase tracking-wider text-pink-600 hover:text-pink-700 px-2 py-1 rounded-md hover:bg-pink-50">
+              Hoy
+            </button>
+          )}
+          <div className="flex-1" />
+          <select
+            value={theme}
+            onChange={e => { onThemeChange && onThemeChange(e.target.value); setSelected(null); }}
+            className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-pink-300"
+          >
+            <option value="all">Todas las temáticas</option>
+            {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {groups.map(g => (
-            <div key={g.key} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                <h3 className="font-black text-slate-800 uppercase tracking-wider text-sm">{monthLabel(g.key)}</h3>
-                <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-full">{g.items.length}</span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {g.items.map(d => {
-                  const t = d.themeInfo;
-                  return (
-                    <div
-                      key={`${d.id}-${d.date}`}
-                      className={`px-4 py-3 flex items-start gap-4 ${d.noticeActive ? 'bg-pink-50/60' : ''}`}
-                    >
-                      {/* Fecha grande */}
-                      <div className="w-14 shrink-0 text-center">
-                        <p className="text-2xl font-black text-slate-800 leading-none font-mono">{d.date.slice(8, 10)}</p>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{MONTHS[Number(d.date.slice(5, 7)) - 1].slice(0, 3)}</p>
-                      </div>
 
-                      {/* Nombre + nota */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-black text-sm text-slate-800 leading-tight">{d.name}</h4>
-                          {t && (
-                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider border ${t.color}`}>
-                              {t.label}
-                            </span>
-                          )}
-                          {d.noticeActive && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-pink-600 text-white">
-                              {countdownLabel(d.daysLeft)}
-                            </span>
-                          )}
-                        </div>
-                        {d.note && <p className="text-[11px] text-slate-500 mt-1 leading-snug">{d.note}</p>}
-                      </div>
-
-                      {/* Aviso */}
-                      <div className="shrink-0 text-right">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-1">
-                          <Bell className="w-3 h-3" /> Aviso a {notifyShort}
-                        </p>
-                        <p className="text-[11px] font-black text-slate-700 font-mono">{formatDate(d.noticeDate)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        {/* Cabecera de días */}
+        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
+          {WEEKDAYS.map(w => (
+            <div key={w} className="py-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">{w}</div>
           ))}
         </div>
-      )}
+
+        {/* Grilla */}
+        <div className="grid grid-cols-7">
+          {weeks.flat().map((cell, idx) => {
+            const items = byDate[cell.iso] || [];
+            const isToday = cell.iso === today;
+            const extra = items.length - MAX_PILLS;
+            return (
+              <div
+                key={cell.iso}
+                onClick={() => setSelected(items.length === 1 ? items[0] : null)}
+                className={`min-h-[92px] p-1.5 border-b border-r border-slate-100 flex flex-col gap-1 ${idx % 7 === 6 ? 'border-r-0' : ''} ${cell.inMonth ? 'bg-white' : 'bg-slate-50/60'} ${isToday ? 'bg-pink-50/50' : ''}`}
+              >
+                <span className={`self-end w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-mono font-bold ${
+                  isToday ? 'bg-pink-600 text-white' : cell.inMonth ? 'text-slate-700' : 'text-slate-300'
+                }`}>
+                  {cell.day}
+                </span>
+                {items.slice(0, MAX_PILLS).map(d => renderPill(d))}
+                {extra > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelected(items[MAX_PILLS]); }}
+                    className="text-[9px] font-black text-slate-400 hover:text-pink-600 text-left px-1"
+                  >
+                    +{extra} más
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Pie: regla del aviso */}
+        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+          <Bell className="w-3 h-3 text-pink-600 shrink-0" />
+          Aviso a {notifyShort} {WORLD_DAYS_NOTICE_BUSINESS_DAYS} días hábiles antes de cada fecha. La campanita marca las que ya están en ventana de aviso.
+        </div>
+      </div>
+
+      {/* ── Panel lateral ── */}
+      <aside className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 lg:sticky lg:top-28">
+        {selected ? (
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-pink-600">{formatDate(selected.date)}</p>
+                <h3 className="text-sm font-black text-slate-800 leading-snug mt-0.5">{selected.name}</h3>
+              </div>
+              <button onClick={() => setSelected(null)} className="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center shrink-0" title="Cerrar">
+                <X className="w-3.5 h-3.5 text-slate-500" />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {selected.themeInfo && (
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider border ${selected.themeInfo.color}`}>
+                  {selected.themeInfo.label}
+                </span>
+              )}
+              <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${selected.daysLeft >= 0 ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                {countdown(selected.daysLeft)}
+              </span>
+            </div>
+            {selected.note && <p className="text-xs text-slate-600 leading-relaxed">{selected.note}</p>}
+            <div className={`rounded-xl border p-3 flex items-center gap-2 ${selected.noticeActive ? 'bg-pink-50 border-pink-200' : 'bg-slate-50 border-slate-100'}`}>
+              <Bell className={`w-4 h-4 shrink-0 ${selected.noticeActive ? 'text-pink-600' : 'text-slate-400'}`} />
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Aviso a {notifyShort}</p>
+                <p className="text-xs font-black text-slate-800 font-mono">{formatDate(selected.noticeDate)}</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Próximas fechas</h3>
+            {upcoming.length === 0 ? (
+              <p className="text-xs text-slate-400">No hay fechas para esta temática.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {upcoming.map(d => (
+                  <li key={`${d.id}-${d.date}`}>
+                    <button
+                      onClick={() => { setCursor({ year: Number(d.date.slice(0, 4)), month: Number(d.date.slice(5, 7)) }); setSelected(d); }}
+                      className="w-full text-left py-2 flex items-start gap-3 hover:bg-slate-50 rounded-lg px-1 transition-colors"
+                    >
+                      <div className="w-9 shrink-0 text-center">
+                        <p className="text-base font-black text-slate-800 leading-none font-mono">{d.date.slice(8, 10)}</p>
+                        <p className="text-[9px] font-black uppercase text-slate-400">{MONTHS[Number(d.date.slice(5, 7)) - 1].slice(0, 3)}</p>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800 leading-snug line-clamp-2">{d.name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full ${d.themeInfo?.dot || 'bg-slate-400'}`} />
+                          {d.themeInfo?.label}
+                          {d.noticeActive && <span className="text-pink-600 font-black">· {countdown(d.daysLeft)}</span>}
+                        </p>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </aside>
     </div>
   );
 }
