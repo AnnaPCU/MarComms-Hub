@@ -43,6 +43,9 @@ import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { calcProgress } from '@/utils/progress';
 import { makeCampaignFromWebinar } from '@/utils/webinar';
 import { buildNotifications } from '@/utils/notifications';
+import { useNotificationAlerts } from '@/hooks/useNotificationAlerts';
+import NotificationToasts from '@/components/shared/NotificationToasts';
+import NotificationsWelcomeModal from '@/components/shared/NotificationsWelcomeModal';
 
 // Components
 import LoginScreen from '@/components/login/LoginScreen';
@@ -703,6 +706,28 @@ export default function App() {
   }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
+  const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));
+
+  // Abrir una notificación desde cualquier canal (campanita, toast, modal,
+  // aviso del navegador): marcarla leída, cerrar paneles y navegar.
+  const openNotification = (n) => {
+    if (!n) return;
+    setReadNotifications(prev => new Set([...prev, n.id]));
+    setShowNotifications(false);
+    if (n.navTo) setCurrentSection(n.navTo);
+    if (n.navTab) setContentAutoTab(n.navTab);
+  };
+
+  // ─── Avisos: modal al loguearse, toasts, título de pestaña, navegador ───
+  // "ready" evita disparar toasts mientras las colecciones todavía cargan.
+  const dataReady = !webinarsMeta.loading && !campaignsMeta.loading && !eventsMeta.loading && !requestsLoading;
+  const {
+    toasts, dismissToast,
+    welcomeOpen, closeWelcome,
+    browserPermission, requestBrowserPermission,
+  } = useNotificationAlerts({
+    currentUser, notifications, unreadCount, ready: dataReady, onOpen: openNotification,
+  });
 
   // ─── Búsqueda global ───
   const buildSearchResults = () => {
@@ -794,6 +819,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900">
+      {/* Avisos: pop-ups de notificaciones nuevas + modal al loguearse */}
+      <NotificationToasts toasts={toasts} onOpen={(n) => { dismissToast(n.id); openNotification(n); }} onDismiss={dismissToast} />
+      <NotificationsWelcomeModal
+        open={welcomeOpen}
+        onClose={closeWelcome}
+        userName={currentUser.name}
+        notifications={unreadNotifications}
+        onOpen={(n) => { closeWelcome(); openNotification(n); }}
+        onMarkAllRead={() => { setReadNotifications(new Set(notifications.map(n => n.id))); closeWelcome(); }}
+        browserPermission={browserPermission}
+        onEnableBrowser={requestBrowserPermission}
+      />
+
       {/* Modal confirmación logout */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[80] flex items-center justify-center p-4">
@@ -997,14 +1035,28 @@ export default function App() {
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                       Para {currentUser.name} · {unreadCount} sin leer
                     </p>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => setReadNotifications(new Set(notifications.map(n => n.id)))}
-                        className="mt-2 text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest"
-                      >
-                        Marcar todas como leídas
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => setReadNotifications(new Set(notifications.map(n => n.id)))}
+                          className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest"
+                        >
+                          Marcar todas como leídas
+                        </button>
+                      )}
+                      {browserPermission === 'default' && (
+                        <button
+                          onClick={requestBrowserPermission}
+                          className="text-[10px] font-black text-slate-500 hover:text-indigo-700 uppercase tracking-widest"
+                          title="Recibir avisos aunque la pestaña esté en segundo plano"
+                        >
+                          Activar avisos del navegador
+                        </button>
+                      )}
+                      {browserPermission === 'granted' && (
+                        <span className="text-[10px] font-bold text-emerald-600">Avisos del navegador activos</span>
+                      )}
+                    </div>
                   </div>
                   <div className="overflow-y-auto flex-1">
                     {notifications.length === 0 ? (
@@ -1028,12 +1080,7 @@ export default function App() {
                           return (
                             <button
                               key={n.id}
-                              onClick={() => {
-                                setReadNotifications(prev => new Set([...prev, n.id]));
-                                setShowNotifications(false);
-                                if (n.navTo) setCurrentSection(n.navTo);
-                                if (n.navTab) setContentAutoTab(n.navTab);
-                              }}
+                              onClick={() => openNotification(n)}
                               className={`w-full p-3 hover:bg-slate-50 text-left flex items-start gap-3 transition-colors ${isRead ? 'opacity-60' : ''}`}
                             >
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${colorMap[n.color]}`}>

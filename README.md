@@ -15,7 +15,7 @@ Maneja webinars, campañas, eventos, pedidos de contenido, facturación, países
 - **papaparse + xlsx** (procesamiento CSV/Excel)
 - **jsPDF** (generación de PDFs nativos, cargado desde CDN)
 
-**Sin backend todavía** — toda la data vive en memoria. La capa de servicios mock + hooks **ya está preparada** para Supabase (ver [`DATA_AUDIT.md`](./DATA_AUDIT.md) y [`SERVICE_LAYER.md`](./SERVICE_LAYER.md)). Plan de migración a Supabase: [`BACKEND_PLAN.md`](./BACKEND_PLAN.md).
+**Backend: Supabase** (Postgres + realtime). Los hooks de `src/hooks/` leen, escriben y se suscriben a cambios en vivo. Migraciones en `supabase/migrations/`. Plan original: [`BACKEND_PLAN.md`](./BACKEND_PLAN.md).
 
 ---
 
@@ -197,7 +197,7 @@ Documentación detallada:
 
 ## ⚠️ Limitaciones actuales (modo demo)
 
-- ❌ **No persiste data** — refresh = pierde todo lo editado
+- ⚠️ **Casi todo persiste en Supabase** (webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs). Quedan en memoria y se pierden al recargar: comentarios/archivos/aprobaciones de los **pedidos** de Social Media, y los **ítems manuales de Facturación**.
 - ❌ **Sin auth real** — password compartida hardcoded
 - ❌ **Reporte Mailchimp con IA** no funciona en producción (necesita edge function)
 - ❌ **PDF generation** funciona ✅ (jsPDF nativo, sin html2canvas)

@@ -98,9 +98,10 @@ Mantené consistencia con esta paleta al agregar features.
 
 ### 🔴 Alta prioridad
 
-1. **Persistencia de datos** — actualmente todo está en memoria, refresh = pierde todo.
-   - **Solución**: integrar Supabase según `BACKEND_PLAN.md`
-   - **Workaround temporal**: `useLocalStorage` hook (no implementado, esperar Supabase)
+1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
+   - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
+   - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
+   - Migraciones pendientes de correr en producción: ver `supabase/migrations/` (0015 temática de pedidos, 0016 realtime de requests/tasks/team_members).
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
@@ -179,6 +180,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). Lógica en `src/utils/worldDays.js` |
+| `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |
 | `src/utils/pdf.js` | `generateProjectPDF` con jsPDF nativo |
 | `src/services/auth.js` | Login compartido (futuro: Supabase Auth) |
