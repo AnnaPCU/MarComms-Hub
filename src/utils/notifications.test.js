@@ -52,52 +52,17 @@ describe('buildNotifications', () => {
     });
   });
 
-  describe('1. overdue — tarea individual de webinar vencida', () => {
-    it('genera notif overdue cuando una sub-tarea del webinar venció', () => {
-      const webinar = {
-        id: 'w1', name: 'Test Webinar', mainDate: IN_10_DAYS,
-        ppt: { done: false, owner: 'Agustina Ball', date: YESTERDAY }, // vencida ayer
-      };
+  describe('sin seguimiento individual (va por el CRM)', () => {
+    it('una sub-tarea de webinar vencida asignada a mí NO genera notificación', () => {
+      const webinar = { id: 'w1', name: 'X', mainDate: IN_10_DAYS, ppt: { done: false, owner: 'Agustina Ball', date: YESTERDAY } };
       const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(hasNotif(notifs, (n) => n.type === 'overdue' && n.source === 'Webinar')).toBe(true);
+      expect(notifs.filter((n) => n.id.startsWith('overdue-w-') || n.id.startsWith('soon-w-'))).toHaveLength(0);
     });
 
-    it('NO genera notif si la tarea está done', () => {
-      const webinar = {
-        id: 'w1', name: 'X',
-        ppt: { done: true, owner: 'Agustina Ball', date: YESTERDAY },
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(notifs.filter((n) => n.type === 'overdue')).toHaveLength(0);
-    });
-
-    it('NO genera notif si el owner no soy yo', () => {
-      const webinar = {
-        id: 'w1', name: 'X',
-        ppt: { done: false, owner: 'Delfina Palmero', date: YESTERDAY },
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
+    it('una tarea asignada a mí NO genera notificación ni resumen diario', () => {
+      const data = { ...EMPTY_DATA, assignedTasks: [{ id: 't1', title: 'Z', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo', done: false, deadline: TOMORROW }] };
+      const notifs = buildNotifications(AGUS, data, opts);
       expect(notifs).toHaveLength(0);
-    });
-  });
-
-  describe('2. soon — tarea individual próxima', () => {
-    it('genera notif soon cuando una sub-tarea vence en próximos 3 días', () => {
-      const webinar = {
-        id: 'w1', name: 'X',
-        ppt: { done: false, owner: 'Agustina Ball', date: TOMORROW },
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(hasNotif(notifs, (n) => n.type === 'soon')).toBe(true);
-    });
-
-    it('NO genera notif si la fecha es lejos en el futuro', () => {
-      const webinar = {
-        id: 'w1', name: 'X',
-        ppt: { done: false, owner: 'Agustina Ball', date: IN_10_DAYS },
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(notifs.filter((n) => n.type === 'soon')).toHaveLength(0);
     });
   });
 
@@ -110,7 +75,9 @@ describe('buildNotifications', () => {
         ppt: { done: true }, // 1/21 = 4%
       };
       const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(hasNotif(notifs, (n) => n.type === 'responsible' && n.id === 'resp-w-w1')).toBe(true);
+      const n = notifs.find((x) => x.type === 'responsible' && x.id === 'resp-w-w1');
+      expect(n).toBeTruthy();
+      expect(n.title).toBe('"Mi Webinar" está al 5% y es mañana');
     });
 
     it('NO genera notif si progress >= 100', () => {
@@ -139,6 +106,18 @@ describe('buildNotifications', () => {
       };
       const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, webinars: [webinar] }, opts);
       expect(hasNotif(notifs, (n) => n.id === 'team-overdue-w-w1')).toBe(true);
+    });
+
+    it('genera notif para el service owner del pilar con pasos atrasados (deadlines.byStep)', () => {
+      const campaign = {
+        id: 'c1', name: 'Campaña EUDR', type: 'email', serviceOwner: 'Felipe Señorans',
+        completedSteps: ['req'],
+        deadlines: { finalDelivery: IN_10_DAYS, byStep: { req: LAST_WEEK, num: LAST_WEEK, dates: YESTERDAY, tag: IN_2_DAYS } },
+      };
+      const notifs = buildNotifications(FELO, { ...EMPTY_DATA, campaigns: [campaign] }, opts);
+      const n = notifs.find((x) => x.id === 'team-overdue-c-c1');
+      expect(n).toBeTruthy();
+      expect(n.title).toBe('Tu campaña "Campaña EUDR" tiene 2 pasos atrasados'); // num + dates (req está done, tag no venció)
     });
 
     it('NO genera notif si no soy service owner', () => {
@@ -170,58 +149,6 @@ describe('buildNotifications', () => {
       };
       const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, requests: [request] }, opts);
       expect(notifs.filter((n) => n.id === 'new-s-r1')).toHaveLength(0);
-    });
-  });
-
-  describe('6. assigned — tarea asignada por otro usuario', () => {
-    it('genera notif assigned cuando me asignan una tarea', () => {
-      const task = {
-        id: 't1', title: 'Revisar copy', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo',
-        done: false,
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      expect(hasNotif(notifs, (n) => n.type === 'assigned')).toBe(true);
-    });
-
-    it('NO se duplica si pasamos la misma tarea dos veces', () => {
-      const task = {
-        id: 't1', title: 'X', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo', done: false,
-      };
-      const notifs = buildNotifications(
-        AGUS, { ...EMPTY_DATA, assignedTasks: [task, task] }, opts,
-      );
-      const assignedCount = notifs.filter((n) => n.id === 'assigned-t1').length;
-      expect(assignedCount).toBe(1);
-    });
-  });
-
-  describe('7. NUEVO — task_done_for_assigner', () => {
-    it('notifica al ASIGNADOR cuando la tarea fue completada (últimos 3 días)', () => {
-      const task = {
-        id: 't1', title: 'Revisar copy',
-        assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo',
-        done: true, completedAt: TWO_DAYS_AGO_ISO,
-      };
-      const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      expect(hasNotif(notifs, (n) => n.id === 'task-done-t1')).toBe(true);
-    });
-
-    it('NO notifica al asignador si la completion es vieja (>3 días)', () => {
-      const task = {
-        id: 't1', title: 'X', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo',
-        done: true, completedAt: TEN_DAYS_AGO_ISO,
-      };
-      const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      expect(notifs.filter((n) => n.id === 'task-done-t1')).toHaveLength(0);
-    });
-
-    it('NO notifica si yo NO soy el asignador', () => {
-      const task = {
-        id: 't1', title: 'X', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo',
-        done: true, completedAt: TWO_DAYS_AGO_ISO,
-      };
-      const notifs = buildNotifications(FELO, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      expect(notifs.filter((n) => n.id === 'task-done-t1')).toHaveLength(0);
     });
   });
 
@@ -309,69 +236,37 @@ describe('buildNotifications', () => {
     });
   });
 
-  describe('11. NUEVO — daily_summary', () => {
-    it('genera resumen diario si hay tareas para esta semana', () => {
-      const webinar = {
-        id: 'w1', name: 'X',
-        ppt: { done: false, owner: 'Agustina Ball', date: IN_2_DAYS },
-      };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [webinar] }, opts);
-      expect(hasNotif(notifs, (n) => n.id.startsWith('daily-summary-'))).toBe(true);
-    });
-
-    it('el ID del resumen es estable por día (mismo día → mismo ID)', () => {
-      const task = {
-        id: 't1', title: 'X', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo',
-        done: false, deadline: IN_2_DAYS,
-      };
-      const a = buildNotifications(AGUS, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      const b = buildNotifications(AGUS, { ...EMPTY_DATA, assignedTasks: [task] }, opts);
-      const idA = a.find((n) => n.id.startsWith('daily-summary'))?.id;
-      const idB = b.find((n) => n.id.startsWith('daily-summary'))?.id;
-      expect(idA).toBeTruthy();
-      expect(idA).toBe(idB);
-    });
-
-    it('NO genera resumen si no hay tareas pendientes esta semana', () => {
-      const notifs = buildNotifications(AGUS, EMPTY_DATA, opts);
-      expect(notifs.filter((n) => n.id.startsWith('daily-summary'))).toHaveLength(0);
-    });
-  });
-
   describe('dedup + orden', () => {
     it('no duplica notifs con el mismo id', () => {
       const w = {
-        id: 'w1', name: 'X',
+        id: 'w1', name: 'X', serviceOwner: 'Victoria Colombo', mainDate: IN_10_DAYS,
         ppt: { done: false, owner: 'Agustina Ball', date: YESTERDAY },
       };
-      const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, webinars: [w, w] }, opts);
-      const overdueIds = notifs.filter((n) => n.id === 'overdue-w-w1-ppt');
-      expect(overdueIds).toHaveLength(1);
+      const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, webinars: [w, w] }, opts);
+      expect(notifs.filter((n) => n.id === 'team-overdue-w-w1')).toHaveLength(1);
     });
 
     it('ordena según prioridad del equipo Comunicación: assigned > overdue > soon > new > responsible', () => {
       const data = {
-        webinars: [{
-          id: 'w1', name: 'X',
-          ppt: { done: false, owner: 'Agustina Ball', date: YESTERDAY },        // overdue
-          onePager: { done: false, owner: 'Agustina Ball', date: TOMORROW },    // soon
+        webinars: [], events: [],
+        campaigns: [{
+          id: 'c1', name: 'Camp', type: 'email', serviceOwner: 'Victoria Colombo',
+          comments: [{ id: 'k1', author: 'Felipe Señorans', text: 'Mirá esto @Agustina Ball', date: TWO_DAYS_AGO_ISO }], // assigned (mención)
         }],
-        campaigns: [], events: [],
-        requests: [{
-          id: 'r1', name: 'Y', owner: 'Agustina Ball', status: 'pending',
-          createdAt: TWO_DAYS_AGO_ISO,                                  // new
-        }],
-        assignedTasks: [{
-          id: 't1', title: 'Z', assignedTo: 'Agustina Ball', assignedBy: 'Victoria Colombo', done: false, // assigned
-        }],
+        requests: [
+          { id: 'r1', name: 'Vencido', owner: 'Agustina Ball', status: 'pending', createdAt: TEN_DAYS_AGO_ISO, deadline: YESTERDAY }, // overdue
+          { id: 'r2', name: 'Pronto',  owner: 'Agustina Ball', status: 'pending', createdAt: TEN_DAYS_AGO_ISO, deadline: TOMORROW },  // soon
+          { id: 'r3', name: 'Nuevo',   owner: 'Agustina Ball', status: 'pending', createdAt: TWO_DAYS_AGO_ISO },                      // new
+        ],
+        assignedTasks: [],
       };
       const notifs = buildNotifications(AGUS, data, opts);
       const types = notifs.map((n) => n.type);
-      // Verifico que assigned aparece antes que overdue, overdue antes que soon, etc.
       const idxAssigned = types.indexOf('assigned');
       const idxOverdue = types.indexOf('overdue');
       const idxSoon = types.indexOf('soon');
       const idxNew = types.indexOf('new');
+      expect(idxAssigned).toBeGreaterThanOrEqual(0);
       expect(idxAssigned).toBeLessThan(idxOverdue);
       expect(idxOverdue).toBeLessThan(idxSoon);
       expect(idxSoon).toBeLessThan(idxNew);

@@ -27,9 +27,9 @@ export const NOTIFICATION_TEMPLATES = {
       emoji: '✨',
       tone: 'info'
     }),
-    responsible: (progress, projectName) => ({
-      title_short: `👁️ Supervisás este proyecto (${progress}%)`,
-      title_long: `Como encargada: revisa el progreso de ${projectName} (${progress}%)`,
+    responsible: (progress, projectName, when = 'es pronto') => ({
+      title_short: `👁️ ${projectName} al ${progress}%`,
+      title_long: `"${projectName}" está al ${progress}% y ${when}`,
       emoji: '👁️',
       tone: 'info'
     }),
@@ -61,9 +61,9 @@ export const NOTIFICATION_TEMPLATES = {
       emoji: '📊',
       tone: 'info'
     }),
-    responsible: (progress, projectName) => ({
-      title_short: `📈 Sos responsable de ${projectName} (${progress}%)`,
-      title_long: `Checkeá el progreso: ${projectName} va ${progress}%`,
+    responsible: (progress, projectName, when = 'es pronto') => ({
+      title_short: `📈 ${projectName} al ${progress}%`,
+      title_long: `"${projectName}" está al ${progress}% y ${when}`,
       emoji: '📈',
       tone: 'info'
     }),

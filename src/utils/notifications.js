@@ -6,23 +6,28 @@
 //
 // Pura → fácil de testear con vitest (ver notifications.test.js).
 //
-// 10 tipos de notificación:
-//   1. overdue                    — tu tarea individual vencida
-//   2. soon                       — tu tarea individual ≤ 3 días
-//   3. responsible                — sos service owner, deadline ≤ 3 días + progress < 80%
-//   4. team_overdue               — sos service owner, hay tareas atrasadas en tu proyecto
-//   5. new                        — pedido de Social Media creado ≤ 3 días + sos owner
-//   6. assigned                   — te asignaron una tarea
-//   7. task_done_for_assigner     — la tarea que VOS asignaste fue completada (últimos 3 días)
-//   8. request_done_for_owner     — tu pedido de Social Media fue marcado done (últimos 3 días)
-//   9. project_created_for_owner  — se creó un proyecto bajo tu responsabilidad (últimos 3 días)
-//  10. new_comment                — comentario nuevo en tu campaña (últimos 3 días, NO escrito por vos)
-//  11. daily_summary              — al primer login del día, resumen de tareas de la semana
+// Enfoque (sep 2026): el Hub es la herramienta de quien COORDINA. El
+// seguimiento persona por persona vive en el CRM, así que acá no hay
+// notificaciones de "tu tarea individual". Lo que sí se avisa:
+//
+//   Nivel proyecto (service owner del webinar / evento / pilar):
+//   3. responsible                — el proyecto está al X% y es en ≤ 3 días
+//   4. team_overdue               — el proyecto tiene tareas / pasos atrasados
+//   9. project_created_for_owner  — se creó un proyecto bajo tu responsabilidad (3 días)
+//  10. new_comment                — comentario nuevo en tu pilar (3 días, no escrito por vos)
+//  10b. mention                   — te etiquetaron con @ en un comentario (pilar o pedido)
+//
+//   Social Media:
+//   5. new                        — pedido creado ≤ 3 días + sos owner (+ deadline vencido / próximo)
+//   8. request_done_for_owner     — tu pedido fue marcado done (3 días)
 //  12. world_day                  — día mundial próximo: aviso a la responsable de Social Media
 //                                   desde 3 días hábiles antes hasta el día mismo
+//
+//   Eliminados (sep 2026, van por el CRM): subtareas individuales de
+//   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
 // ════════════════════════════════════════════════════════════════════
 
-import { AlertCircle, Clock, MessageCircle, Sparkles, User, UserCheck, CheckCircle2, Calendar } from 'lucide-react';
+import { AlertCircle, Clock, MessageCircle, Sparkles, User, CheckCircle2, Calendar } from 'lucide-react';
 import { SERVICE_OWNERS as DEFAULT_SERVICE_OWNERS, PEOPLE } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
@@ -31,7 +36,7 @@ import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
 import { activeWorldDayNotices } from './worldDays';
 import { formatDate, toIsoDate } from './date';
 
-// Labels legibles de las 21 sub-tareas del webinar
+// Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
 const WEBINAR_TASK_KEYS = [
   'teamsGroup', 'testDay', 'bbdd', 'hubspot',
   'landingLivestorm', 'ppt', 'onePager',
@@ -39,15 +44,6 @@ const WEBINAR_TASK_KEYS = [
   'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
   'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte',
 ];
-const WEBINAR_TASK_LABELS = {
-  teamsGroup: 'Equipos', testDay: 'Test Day', bbdd: 'Base de Datos', hubspot: 'HubSpot',
-  landingLivestorm: 'Landing Livestorm', ppt: 'PPT', onePager: 'One pager',
-  lknAnuncio: 'LKN anuncio', lknReminder: 'LKN 1 day to go', lknHoy: 'LKN es hoy', lknPost: 'LKN recap',
-  mailPre1: 'Mail 01', mailPre2: 'Mail 02', mailPre3: 'Mail 03',
-  mailPostAttended: 'Mail Post Asistentes', mailPostNoShow: 'Mail Post No-asistidos',
-  bannerInv1: 'Banner 1', bannerInv2: 'Banner 2', bannerInv3: 'Banner 3', bannerPost: 'Banner Post',
-  reporte: 'Reporte final',
-};
 
 /**
  * Construye las notificaciones para `currentUser` dado el estado de las colecciones.
@@ -75,14 +71,13 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     campaigns = [],
     events = [],
     requests = [],
-    assignedTasks = [],
+    // assignedTasks: ya no genera notificaciones (seguimiento individual → CRM)
   } = data || {};
 
   const now = options.now instanceof Date ? options.now : new Date();
   const today = new Date(now); today.setHours(0, 0, 0, 0);
   const in3Days = new Date(today); in3Days.setDate(in3Days.getDate() + 3);
   const last3Days = new Date(today); last3Days.setDate(last3Days.getDate() - 3);
-  const endOfWeek = new Date(today); endOfWeek.setDate(endOfWeek.getDate() + 7);
 
   const userName = (currentUser.name || '').toUpperCase();
   const matchOwner = (o) => (o || '').toString().trim().toUpperCase() === userName;
@@ -95,75 +90,15 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   const notifs = [];
 
   // ────────────────────────────────────────────────────────────────
-  // 1+2. Sub-tareas de WEBINAR donde sos owner (overdue / soon)
-  // ────────────────────────────────────────────────────────────────
-  webinars.forEach((w) => {
-    WEBINAR_TASK_KEYS.forEach((k) => {
-      const t = w[k];
-      if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-      const d = new Date(t.date + 'T00:00:00');
-      const label = WEBINAR_TASK_LABELS[k] || k;
-      if (d < today) {
-        const m = templates.overdue_task(label, w.name);
-        notifs.push({
-          id: `overdue-w-${w.id}-${k}`, type: 'overdue', icon: AlertCircle, color: 'red',
-          title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: w.name, source: 'Webinar', date: t.date, navTo: 'campaigns',
-        });
-      } else if (d <= in3Days) {
-        const m = templates.soon_task(label, w.name);
-        notifs.push({
-          id: `soon-w-${w.id}-${k}`, type: 'soon', icon: Clock, color: 'amber',
-          title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: w.name, source: 'Webinar', date: t.date, navTo: 'campaigns',
-        });
-      }
-    });
-  });
-
-  // ────────────────────────────────────────────────────────────────
-  // 1+2. Sub-tareas de EVENTO donde sos owner (overdue / soon)
-  // ────────────────────────────────────────────────────────────────
-  events.forEach((ev) => {
-    const phaseLabels = {};
-    EVENT_PHASES.forEach((p) => p.tasks.forEach((t) => { phaseLabels[t.id] = t.label; }));
-    Object.entries(ev.tasks || {}).forEach(([tid, t]) => {
-      if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-      const d = new Date(t.date + 'T00:00:00');
-      const label = phaseLabels[tid] || tid;
-      if (d < today) {
-        const m = templates.overdue_task(label, ev.name);
-        notifs.push({
-          id: `overdue-e-${ev.id}-${tid}`, type: 'overdue', icon: AlertCircle, color: 'red',
-          title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: t.date, navTo: 'campaigns',
-        });
-      } else if (d <= in3Days) {
-        const m = templates.soon_task(label, ev.name);
-        notifs.push({
-          id: `soon-e-${ev.id}-${tid}`, type: 'soon', icon: Clock, color: 'amber',
-          title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: t.date, navTo: 'campaigns',
-        });
-      }
-    });
-    (ev.customTasks || []).forEach((ct) => {
-      if (ct.done || !matchOwner(ct.owner) || !ct.date) return;
-      const d = new Date(ct.date + 'T00:00:00');
-      if (d < today) {
-        const m = templates.overdue_task(ct.label, ev.name);
-        notifs.push({
-          id: `overdue-ec-${ev.id}-${ct.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-          title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-          project: ev.name, source: 'Evento', date: ct.date, navTo: 'campaigns',
-        });
-      }
-    });
-  });
-
-  // ────────────────────────────────────────────────────────────────
   // 3. RESPONSIBLE — service owner con deadline cercano + progreso bajo
+  //    "X está al 40% y es en 2 días"
   // ────────────────────────────────────────────────────────────────
+  const whenLabel = (d) => {
+    const diff = Math.round((d - today) / 86400000);
+    if (diff <= 0) return 'es hoy';
+    if (diff === 1) return 'es mañana';
+    return `es en ${diff} días`;
+  };
   webinars.forEach((w) => {
     const owner = w.serviceOwner || SERVICE_OWNERS.webinar;
     if (!matchOwner(owner)) return;
@@ -172,7 +107,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     if (!w.mainDate) return;
     const d = new Date(w.mainDate + 'T00:00:00');
     if (d >= today && d <= in3Days && prog < 80) {
-      const m = templates.responsible(prog, w.name);
+      const m = templates.responsible(prog, w.name, whenLabel(d));
       notifs.push({
         id: `resp-w-${w.id}`, type: 'responsible', icon: User, color: 'purple',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
@@ -189,7 +124,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     const prog = all.length ? Math.round(all.filter((t) => t.done).length / all.length * 100) : 0;
     if (prog >= 100) return;
     if (d >= today && d <= in3Days && prog < 80) {
-      const m = templates.responsible(prog, ev.name);
+      const m = templates.responsible(prog, ev.name, whenLabel(d));
       notifs.push({
         id: `resp-e-${ev.id}`, type: 'responsible', icon: User, color: 'purple',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
@@ -209,7 +144,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     if (!final) return;
     const d = new Date(final + 'T00:00:00');
     if (d >= today && d <= in3Days && prog < 80) {
-      const m = templates.responsible(prog, c.name);
+      const m = templates.responsible(prog, c.name, whenLabel(d));
       notifs.push({
         id: `resp-c-${c.id}`, type: 'responsible', icon: User, color: 'purple',
         title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
@@ -261,6 +196,28 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     }
   });
 
+  campaigns.forEach((c) => {
+    if (c.variant === 'webinar') return;
+    const owner = c.serviceOwner || SERVICE_OWNERS.campaign;
+    if (!matchOwner(owner)) return;
+    const byStep = c.deadlines?.byStep || {};
+    const done = new Set(c.completedSteps || []);
+    let n = 0;
+    Object.entries(byStep).forEach(([stepId, iso]) => {
+      if (!iso || done.has(stepId)) return;
+      const dd = new Date(iso + 'T00:00:00');
+      if (!isNaN(dd.getTime()) && dd < today) n++;
+    });
+    if (n > 0) {
+      notifs.push({
+        id: `team-overdue-c-${c.id}`, type: 'responsible', icon: AlertCircle, color: 'purple',
+        title: `Tu campaña "${c.name}" tiene ${n} paso${n > 1 ? 's' : ''} atrasado${n > 1 ? 's' : ''}`,
+        shortTitle: `⚠️ ${n} atrasado${n > 1 ? 's' : ''} en ${c.name}`,
+        emoji: '⚠️', project: c.name, source: 'Campaña', date: c.deadlines?.finalDelivery || '', navTo: 'campaigns',
+      });
+    }
+  });
+
   // ────────────────────────────────────────────────────────────────
   // 5. NEW — Pedido de Social Media asignado, creado en últimos 3 días
   //    + overdue/soon de deadline del pedido
@@ -295,54 +252,6 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         });
       }
     }
-  });
-
-  // ────────────────────────────────────────────────────────────────
-  // 6. ASSIGNED — tareas que TE asignaron (no done)
-  // ────────────────────────────────────────────────────────────────
-  assignedTasks.forEach((at) => {
-    if (at.done) return;
-    if (!matchOwner(at.assignedTo)) return;
-    const m = templates.assigned_task(at.assignedBy || 'Alguien', at.title);
-    notifs.push({
-      id: `assigned-${at.id}`, type: 'assigned', icon: UserCheck, color: 'cyan',
-      title: m.title_long, shortTitle: m.title_short, emoji: m.emoji,
-      project: at.title, source: 'Asignada', date: at.deadline || '', navTo: 'my_week',
-    });
-    if (at.deadline) {
-      const d = new Date(at.deadline + 'T00:00:00');
-      if (d < today) {
-        const om = templates.overdue_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
-        notifs.push({
-          id: `overdue-at-${at.id}`, type: 'overdue', icon: AlertCircle, color: 'red',
-          title: om.title_long, shortTitle: om.title_short, emoji: om.emoji,
-          project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week',
-        });
-      } else if (d <= in3Days) {
-        const sm = templates.soon_task(at.title, `Asignada por ${at.assignedBy || '—'}`);
-        notifs.push({
-          id: `soon-at-${at.id}`, type: 'soon', icon: Clock, color: 'amber',
-          title: sm.title_long, shortTitle: sm.title_short, emoji: sm.emoji,
-          project: `Asignada por ${at.assignedBy || '—'}`, source: 'Asignada', date: at.deadline, navTo: 'my_week',
-        });
-      }
-    }
-  });
-
-  // ────────────────────────────────────────────────────────────────
-  // 7. NUEVO — La tarea que VOS asignaste fue completada
-  // ────────────────────────────────────────────────────────────────
-  assignedTasks.forEach((at) => {
-    if (!at.done) return;
-    if (!sameName(at.assignedBy)) return;
-    const completed = at.completedAt ? new Date(at.completedAt) : null;
-    if (!completed || completed < last3Days) return;
-    notifs.push({
-      id: `task-done-${at.id}`, type: 'assigned', icon: CheckCircle2, color: 'emerald',
-      title: `${at.assignedTo} completó: "${at.title}"`,
-      shortTitle: `✅ ${at.assignedTo} terminó tu pedido`,
-      emoji: '✅', project: at.title, source: 'Asignada', date: at.completedAt, navTo: 'my_week',
-    });
   });
 
   // ────────────────────────────────────────────────────────────────
@@ -467,42 +376,6 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       });
     });
   });
-
-  // ────────────────────────────────────────────────────────────────
-  // 11. NUEVO — Resumen diario (al primer login del día)
-  //     El "una vez por día" se hace por ID estable (yyyy-mm-dd) +
-  //     readNotifications persistido en localStorage.
-  // ────────────────────────────────────────────────────────────────
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  let tasksThisWeek = 0;
-  webinars.forEach((w) => {
-    WEBINAR_TASK_KEYS.forEach((k) => {
-      const t = w[k];
-      if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-      const d = new Date(t.date + 'T00:00:00');
-      if (d >= today && d <= endOfWeek) tasksThisWeek++;
-    });
-  });
-  events.forEach((ev) => {
-    Object.values(ev.tasks || {}).forEach((t) => {
-      if (!t || t.done || !matchOwner(t.owner) || !t.date) return;
-      const d = new Date(t.date + 'T00:00:00');
-      if (d >= today && d <= endOfWeek) tasksThisWeek++;
-    });
-  });
-  assignedTasks.forEach((at) => {
-    if (at.done || !matchOwner(at.assignedTo) || !at.deadline) return;
-    const d = new Date(at.deadline + 'T00:00:00');
-    if (d >= today && d <= endOfWeek) tasksThisWeek++;
-  });
-  if (tasksThisWeek > 0) {
-    notifs.push({
-      id: `daily-summary-${userName}-${todayKey}`, type: 'new', icon: Sparkles, color: 'indigo',
-      title: `Tenés ${tasksThisWeek} tarea${tasksThisWeek > 1 ? 's' : ''} esta semana`,
-      shortTitle: `📋 ${tasksThisWeek} tarea${tasksThisWeek > 1 ? 's' : ''} esta semana`,
-      emoji: '📋', project: 'Resumen', source: 'Diario', date: todayKey, navTo: 'my_week',
-    });
-  }
 
   // ────────────────────────────────────────────────────────────────
   // 12. WORLD_DAY — día mundial próximo (calendario de Social Media)
