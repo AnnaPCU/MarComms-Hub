@@ -322,3 +322,46 @@ describe('12. world_day — aviso 3 días hábiles antes', () => {
     expect(notifs.some(x => x.type === 'world_day')).toBe(true);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// 13 + 14. Social Media — posteo faltante y análisis de competencia
+// ════════════════════════════════════════════════════════════════════
+// NOW = mar 02/06/2026. Semanas de mayo (lunes): 04, 11, 18, 25.
+// La del 18–24/05 cierra dom 24/05 → aviso mié 27/05 (ya pasó → avisa).
+// La del 25–31/05 cierra dom 31/05 → aviso mié 03/06 (todavía no).
+describe('13. missing_post — cuenta por debajo del plan', () => {
+  const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
+  const PERU = { id: 'acc-peru', name: 'Peru', group: 'CU Latinoamérica', plan: 'active', active: true };
+
+  it('avisa a Delfi por la semana cerrada y no por la que está en margen', () => {
+    const notifs = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [] }, opts);
+    expect(notifs.find(n => n.id === 'missing-post-acc-peru-2026-05-18')).toBeTruthy();
+    expect(notifs.find(n => n.id === 'missing-post-acc-peru-2026-05-25')).toBeUndefined();
+    const n = notifs.find(n => n.id === 'missing-post-acc-peru-2026-05-18');
+    expect(n.navTab).toBe('posteos');
+    expect(n.title).toContain('Peru');
+  });
+
+  it('no avisa si la cuenta cumple el acumulado', () => {
+    const posts = ['2026-05-04', '2026-05-11', '2026-05-18'].map(w => ({ id: w, accountId: 'acc-peru', weekStart: w, monthKey: '2026-05', status: 'programado' }));
+    const notifs = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: posts }, opts);
+    expect(notifs.some(n => n.type === 'missing_post')).toBe(false);
+  });
+
+  it('solo Delfi recibe estos avisos', () => {
+    const notifs = buildNotifications(AGUS, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [] }, opts);
+    expect(notifs.some(n => n.type === 'missing_post')).toBe(false);
+  });
+});
+
+describe('14. competition_review — recordatorio semanal', () => {
+  const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
+  it('aparece martes (NOW) con id estable por semana', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, opts);
+    expect(notifs.find(n => n.id === 'competition-review-2026-06-01')).toBeTruthy();
+  });
+  it('no aparece un jueves', () => {
+    const notifs = buildNotifications(DELFI, EMPTY_DATA, { now: new Date('2026-06-04T10:00:00Z') });
+    expect(notifs.some(n => n.type === 'competition_review')).toBe(false);
+  });
+});

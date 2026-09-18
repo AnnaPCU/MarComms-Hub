@@ -18,3 +18,9 @@
 export const HIDDEN_SECTIONS = ['my_week', 'facturacion'];
 
 export const isSectionHidden = (id) => HIDDEN_SECTIONS.includes(id);
+
+// Dentro de Social Media, la pestaña "Pedidos" (piezas por persona) se
+// ocultó en sep 2026: la vista principal pasó a ser la hoja de posteos.
+// Poner en true para volver a mostrarla (tab, botón "Nuevo pedido" y la
+// acción rápida).
+export const SHOW_SOCIAL_PEDIDOS = false;

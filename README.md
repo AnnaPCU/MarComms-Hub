@@ -184,6 +184,7 @@ src/hooks/       — useRequests, useTasks, useAuth, useFilters
 **Estado actual de conexiones:**
 | Servicio | Modo | Tabla |
 |---|---|---|
+| `socialPostsService` (Social Media: cuentas y posteos de LinkedIn) | ✅ **Supabase** (CRUD + realtime) | `public.social_accounts`, `public.social_posts` |
 | `requestsService` (Social Media) | ✅ **Supabase** (CRUD + realtime) | `public.requests` |
 | Resto (tasks, campaigns, webinars, events, ...) | 🚧 Mock (in-memory) | — |
 

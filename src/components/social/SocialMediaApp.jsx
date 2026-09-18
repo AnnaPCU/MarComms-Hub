@@ -1,9 +1,15 @@
 // ════════════════════════════════════════════════════════════════════
 // SocialMediaApp — Social Media (ex Content Hub): mesa de contenido y diseño
 // ════════════════════════════════════════════════════════════════════
-// 3 tabs principales: Pedidos | Calendario | Herramientas
+// Tabs: Posteos (principal) | Calendario | Herramientas | Pedidos (oculta,
+// ver SHOW_SOCIAL_PEDIDOS en constants/sections.js)
 //
-// Tab Pedidos:
+// Tab Posteos:
+//   - Hoja de seguimiento de posteos de LinkedIn por cuenta y semana
+//     (PostsSheet). Reemplaza el Excel de Delfi. Datos en Supabase
+//     (migration 0017) vía useSocialPosts en App.jsx.
+//
+// Tab Pedidos (oculta):
 //   - 6 categorías (one_pager, ppt, formulario, branding, landing, video)
 //   - 3 vistas (por responsable, estado, proyecto)
 //   - Filtros (designer, kind, temática, status, project)
@@ -54,6 +60,8 @@ import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import ProjectLinks from '@/components/shared/ProjectLinks';
 import MentionTextarea from '@/components/shared/MentionTextarea';
 import WorldDaysCalendar from './WorldDaysCalendar';
+import PostsSheet from './PostsSheet';
+import { SHOW_SOCIAL_PEDIDOS } from '@/constants/sections';
 import { useConfirm } from '@/hooks/useConfirm';
 
 export default function SocialMediaApp({
@@ -81,10 +89,13 @@ export default function SocialMediaApp({
   onAutoNewDone,
   autoTab,
   onAutoTabDone,
+  currentUser,
+  // Hoja de posteos (useSocialPosts en App.jsx)
+  social,
 }) {
   const confirm = useConfirm();
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
-  const [mainTab, setMainTab] = useState('pedidos'); // pedidos | calendario | herramientas
+  const [mainTab, setMainTab] = useState(SHOW_SOCIAL_PEDIDOS ? 'pedidos' : 'posteos'); // posteos | calendario | herramientas | pedidos
   const [activeTool, setActiveTool] = useState('utm'); // utm | mailchimp | newsletter
   const [filterDesigner, setFilterDesigner] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -760,11 +771,14 @@ export default function SocialMediaApp({
             <div className="flex items-center gap-3">
               <div className="bg-white text-pink-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest">SOCIAL MEDIA</div>
               <div>
-                <h1 className="text-2xl font-black uppercase tracking-tight">Mesa de Contenido y Diseño</h1>
-                <p className="text-[10px] text-pink-100 font-bold uppercase tracking-widest">{filtered.length} piezas en pipeline</p>
+                <h1 className="text-2xl font-black uppercase tracking-tight">Seguimiento de posteos</h1>
+                <p className="text-[10px] text-pink-100 font-bold uppercase tracking-widest">
+                  {SHOW_SOCIAL_PEDIDOS ? `${filtered.length} piezas en pipeline` : 'LinkedIn · una fila por cuenta, una columna por semana'}
+                </p>
               </div>
             </div>
           </div>
+          {SHOW_SOCIAL_PEDIDOS && (
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setShowNewRequest(true)}
@@ -780,6 +794,7 @@ export default function SocialMediaApp({
               </div>
             ))}
           </div>
+          )}
         </div>
       </header>
 
@@ -787,10 +802,11 @@ export default function SocialMediaApp({
         {/* ── Tabs principales: Pedidos / Herramientas ── */}
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-1.5 inline-flex gap-1 shadow-sm">
           {[
-            { id: 'pedidos',      label: 'Pedidos',      icon: Briefcase },
+            { id: 'posteos',      label: 'Posteos',      icon: FileText },
+            { id: 'pedidos',      label: 'Pedidos',      icon: Briefcase, hidden: !SHOW_SOCIAL_PEDIDOS },
             { id: 'calendario',   label: 'Calendario',   icon: CalendarDays },
             { id: 'herramientas', label: 'Herramientas', icon: Zap }
-          ].map(tab => {
+          ].filter(tab => !tab.hidden).map(tab => {
             const TabIcon = tab.icon;
             const isActive = mainTab === tab.id;
             return (
@@ -809,6 +825,23 @@ export default function SocialMediaApp({
             );
           })}
         </div>
+
+        {/* ── CONTENIDO TAB: POSTEOS (hoja de seguimiento) ── */}
+        {mainTab === 'posteos' && (
+          <PostsSheet
+            accounts={social?.accounts || []}
+            posts={social?.posts || []}
+            loading={!!social?.loading}
+            usingFallback={!!social?.usingFallback}
+            currentUser={currentUser}
+            createPost={social?.createPost}
+            updatePost={social?.updatePost}
+            removePost={social?.removePost}
+            createAccount={social?.createAccount}
+            updateAccount={social?.updateAccount}
+            removeAccount={social?.removeAccount}
+          />
+        )}
 
         {/* ── CONTENIDO TAB: CALENDARIO (días mundiales) ── */}
         {mainTab === 'calendario' && (

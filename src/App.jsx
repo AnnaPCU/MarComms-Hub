@@ -38,12 +38,13 @@ import { useAssignedTasks } from '@/hooks/useAssignedTasks';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
+import { useSocialPosts } from '@/hooks/useSocialPosts';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
 import { makeCampaignFromWebinar } from '@/utils/webinar';
 import { buildNotifications } from '@/utils/notifications';
-import { isSectionHidden } from '@/constants/sections';
+import { isSectionHidden, SHOW_SOCIAL_PEDIDOS } from '@/constants/sections';
 import { useNotificationAlerts } from '@/hooks/useNotificationAlerts';
 import NotificationToasts from '@/components/shared/NotificationToasts';
 import NotificationsWelcomeModal from '@/components/shared/NotificationsWelcomeModal';
@@ -214,6 +215,10 @@ export default function App() {
     // eslint-disable-next-line no-console
     console.error('Requests (Supabase) error:', requestsError);
   }
+
+  // ─── Social Media: cuentas y posteos de LinkedIn (Supabase + realtime) ───
+  const social = useSocialPosts();
+  if (social.error) console.error('SocialPosts Supabase error:', social.error);
 
   // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
   const {
@@ -613,6 +618,8 @@ export default function App() {
              onAutoNewDone={() => setContentAutoNew(false)}
              autoTab={contentAutoTab}
              onAutoTabDone={() => setContentAutoTab(null)}
+             currentUser={currentUser}
+             social={social}
            />
         </div>
       );
@@ -702,11 +709,13 @@ export default function App() {
       events:        globalEvents,
       requests:      globalStandaloneRequests,
       assignedTasks: globalAssignedTasks,
+      socialAccounts: social.accounts,
+      socialPosts:    social.posts,
     }, {
       peopleList:    validNames,
       serviceOwners: liveServiceOwners,
     }).filter(n => !n.navTo || !isSectionHidden(n.navTo)); // sin avisos hacia secciones ocultas
-  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
+  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks, social.accounts, social.posts]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
   const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));
@@ -1144,11 +1153,12 @@ export default function App() {
                         { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'campaigns' },
                         { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
                         { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
-                        { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
+                        { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content', hidden: !SHOW_SOCIAL_PEDIDOS },
+                        { id: 'posteos',  label: 'Hoja de posteos',           icon: FileText, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
                         { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week' },
                         { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises', divider: true },
                         { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
-                      ].filter(action => !isSectionHidden(action.section)).map(action => {
+                      ].filter(action => !action.hidden && !isSectionHidden(action.section)).map(action => {
                         const ActionIcon = action.icon;
                         return (
                           <React.Fragment key={action.id}>
@@ -1158,6 +1168,7 @@ export default function App() {
                                 setShowFastAction(false);
                                 setCurrentSection(action.section);
                                 if (action.id === 'pedido') setContentAutoNew(true);
+                                if (action.id === 'posteos') setContentAutoTab('posteos');
                               }}
                               className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition-colors ${action.color}`}
                             >

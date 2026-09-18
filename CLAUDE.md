@@ -10,7 +10,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 - ~8 usuarios internos (no exposición pública)
 - Idioma: **100% Español argentino**
-- Maneja: webinars, campañas, eventos, pedidos de contenido, facturación, reportes por país
+- Maneja: webinars, pilares (campañas), eventos, Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país
 - Stack: **React 18 + Vite + Tailwind**
 - Backend: **pendiente** (plan en `BACKEND_PLAN.md`)
 
@@ -101,7 +101,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones pendientes de correr en producción: ver `supabase/migrations/` (0015 temática de pedidos, 0016 realtime de requests/tasks/team_members).
+   - Migraciones pendientes de correr en producción: ver `supabase/migrations/` (0015 temática de pedidos, 0016 realtime de requests/tasks/team_members, 0017 hoja de posteos + seed opcional en `supabase/seed/0017_social_posts_ago_sep_2026.sql`).
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
@@ -180,6 +180,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
 | `src/constants/sections.js` | `HIDDEN_SECTIONS`: secciones ocultas temporalmente (hoy Mi Semana y Facturación). Sacar el id de la lista para reactivarlas |
+| `src/constants/socialPosts.js` | Hoja de posteos de LinkedIn: estados, planes, cuentas por defecto. Lógica de semanas y avisos en `src/utils/socialPosts.js`. UI en `src/components/social/PostsSheet.jsx` |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). Lógica en `src/utils/worldDays.js` |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |

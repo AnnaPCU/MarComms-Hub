@@ -22,6 +22,10 @@
 //   8. request_done_for_owner     — tu pedido fue marcado done (3 días)
 //  12. world_day                  — día mundial próximo: aviso a la responsable de Social Media
 //                                   desde 3 días hábiles antes hasta el día mismo
+//  13. missing_post               — una cuenta cerró la semana por debajo de su plan de posteos
+//                                   (aviso el miércoles siguiente, últimas 3 semanas)
+//  14. competition_review         — recordatorio semanal (lunes y martes) de analizar posteos
+//                                   de la competencia
 //
 //   Eliminados (sep 2026, van por el CRM): subtareas individuales de
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
@@ -34,6 +38,8 @@ import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userN
 import { calcProgress } from './progress';
 import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
 import { activeWorldDayNotices } from './worldDays';
+import { SOCIAL_MEDIA_OWNER } from '@/constants/socialPosts';
+import { missingPostAlerts, competitionReviewActive, mondayOf } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
@@ -72,6 +78,8 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     events = [],
     requests = [],
     // assignedTasks: ya no genera notificaciones (seguimiento individual → CRM)
+    socialAccounts = [],
+    socialPosts = [],
   } = data || {};
 
   const now = options.now instanceof Date ? options.now : new Date();
@@ -396,6 +404,34 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         navTo: 'content', navTab: 'calendario',
       });
     });
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 13 + 14. SOCIAL MEDIA — posteo faltante por cuenta y análisis semanal
+  //          de competencia. Solo para la responsable (SOCIAL_MEDIA_OWNER).
+  // ────────────────────────────────────────────────────────────────
+  if (sameName(options.socialMediaOwner || SOCIAL_MEDIA_OWNER)) {
+    const todayIso = toIsoDate(today);
+    missingPostAlerts(socialAccounts, socialPosts, todayIso)
+      .filter((a) => a.daysAgo <= 21) // las últimas 3 semanas; lo más viejo se ve en la hoja
+      .forEach((a) => {
+        notifs.push({
+          id: `missing-post-${a.account.id}-${a.week.start}`, type: 'missing_post', icon: AlertCircle, color: 'pink',
+          title: `${a.account.name}: sin posteo la semana ${a.week.label} (${a.actual} de ${a.expected} esperados en el mes)`,
+          shortTitle: `📭 Sin posteo: ${a.account.name}`,
+          emoji: '📭', project: a.account.group, source: 'Social Media', date: a.week.end,
+          navTo: 'content', navTab: 'posteos',
+        });
+      });
+    if (competitionReviewActive(todayIso)) {
+      notifs.push({
+        id: `competition-review-${mondayOf(todayIso)}`, type: 'competition_review', icon: Sparkles, color: 'pink',
+        title: 'Análisis semanal de posteos de la competencia: revisá qué publicaron y anotá lo que sirva para el mes',
+        shortTitle: '🔎 Análisis de competencia semanal',
+        emoji: '🔎', project: 'Rutina semanal', source: 'Social Media', date: mondayOf(todayIso),
+        navTo: 'content', navTab: 'posteos',
+      });
+    }
   }
 
   // ────────────────────────────────────────────────────────────────
