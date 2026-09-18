@@ -8,7 +8,8 @@
 --                     con su plan (active = 4 posteos/mes, semi_active = 2,
 --                     none = sin seguimiento automático).
 --   social_posts    — un posteo por fila: cuenta, semana (lunes), título,
---                     temática, estado, link, notas.
+--                     temática, estado, fecha de publicación (opcional),
+--                     link, notas.
 --
 -- Estados válidos: en_proceso | listo | aprobado | programado
 -- Los ids de temática son los de src/constants/worldDays.js.
@@ -49,6 +50,7 @@ create table if not exists public.social_posts (
   title       text not null default '',
   theme       text,                              -- id de WORLD_DAY_THEMES (opcional)
   status      text not null default 'en_proceso',
+  publish_date date,                             -- fecha pactada de publicación (opcional) → aparece en el calendario
   link        text,
   notes       text,
   created_by  text,

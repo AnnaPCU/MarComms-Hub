@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   mondayOf, monthKeyOfWeek, weeksOfMonth, weekLabel, expectedPostsBy,
-  accountMonthSummary, missingPostAlerts, competitionReviewActive,
+  accountMonthSummary, missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, counterTone,
 } from './socialPosts';
 import { nextPostStatus, DEFAULT_SOCIAL_ACCOUNTS, ACCOUNT_GROUPS } from '@/constants/socialPosts';
 
@@ -111,10 +111,20 @@ describe('avisos de posteo faltante', () => {
 });
 
 describe('otros', () => {
-  it('competitionReviewActive: lunes y martes', () => {
+  it('competitionReviewActive: bloque los martes → aviso lunes (mañana) y martes (hoy)', () => {
     expect(competitionReviewActive('2026-09-14')).toBe(true);  // lunes
     expect(competitionReviewActive('2026-09-15')).toBe(true);  // martes
     expect(competitionReviewActive('2026-09-16')).toBe(false); // miércoles
+    expect(isCompetitionReviewDay('2026-09-15')).toBe(true);
+    expect(isCompetitionReviewDay('2026-09-14')).toBe(false);
+  });
+
+  it('counterTone: identidad de colores del conteo', () => {
+    expect(counterTone(0, 0)).toBe('none');
+    expect(counterTone(4, 4)).toBe('complete');
+    expect(counterTone(2, 4)).toBe('partial');
+    expect(counterTone(0, 4)).toBe('partial');
+    expect(counterTone(5, 4)).toBe('over');
   });
 
   it('nextPostStatus rota los 4 estados', () => {

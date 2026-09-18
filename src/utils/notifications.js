@@ -24,8 +24,8 @@
 //                                   desde 3 días hábiles antes hasta el día mismo
 //  13. missing_post               — una cuenta cerró la semana por debajo de su plan de posteos
 //                                   (aviso el miércoles siguiente, últimas 3 semanas)
-//  14. competition_review         — recordatorio semanal (lunes y martes) de analizar posteos
-//                                   de la competencia
+//  14. competition_review         — bloque semanal de análisis de competencia (martes 16–17 h):
+//                                   aviso el lunes ("es mañana") y el martes ("es hoy")
 //
 //   Eliminados (sep 2026, van por el CRM): subtareas individuales de
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
@@ -38,8 +38,8 @@ import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userN
 import { calcProgress } from './progress';
 import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
 import { activeWorldDayNotices } from './worldDays';
-import { SOCIAL_MEDIA_OWNER } from '@/constants/socialPosts';
-import { missingPostAlerts, competitionReviewActive, mondayOf } from './socialPosts';
+import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
+import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
@@ -426,8 +426,8 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     if (competitionReviewActive(todayIso)) {
       notifs.push({
         id: `competition-review-${mondayOf(todayIso)}`, type: 'competition_review', icon: Sparkles, color: 'pink',
-        title: 'Análisis semanal de posteos de la competencia: revisá qué publicaron y anotá lo que sirva para el mes',
-        shortTitle: '🔎 Análisis de competencia semanal',
+        title: `${COMPETITION_REVIEW.label} ${isCompetitionReviewDay(todayIso) ? 'es hoy' : 'es mañana'} de ${COMPETITION_REVIEW.start} a ${COMPETITION_REVIEW.end}: revisá qué publicaron y anotá lo que sirva`,
+        shortTitle: '🔎 Bloque de competencia',
         emoji: '🔎', project: 'Rutina semanal', source: 'Social Media', date: mondayOf(todayIso),
         navTo: 'content', navTab: 'posteos',
       });

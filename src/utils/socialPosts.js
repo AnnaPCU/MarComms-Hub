@@ -123,10 +123,21 @@ export const missingPostAlerts = (accounts, posts, todayIso) => {
   return alerts.sort((a, b) => (a.week.start < b.week.start ? 1 : -1));
 };
 
-// ¿Hoy toca el recordatorio semanal de análisis de competencia?
-// Se muestra el día configurado y el siguiente (por si el lunes no se entra).
+// ¿Es el día del bloque de análisis de competencia?
+export const isCompetitionReviewDay = (iso) => new Date(iso + 'T00:00:00').getDay() === COMPETITION_REVIEW_WEEKDAY;
+
+// ¿Hoy toca el recordatorio semanal? Se muestra el día anterior (aviso
+// "es mañana") y el día mismo ("es hoy").
 export const competitionReviewActive = (todayIso) => {
-  const d = new Date(todayIso + 'T00:00:00');
-  const dow = d.getDay();
-  return dow === COMPETITION_REVIEW_WEEKDAY || dow === (COMPETITION_REVIEW_WEEKDAY + 1) % 7;
+  const dow = new Date(todayIso + 'T00:00:00').getDay();
+  return dow === COMPETITION_REVIEW_WEEKDAY || dow === (COMPETITION_REVIEW_WEEKDAY + 6) % 7;
+};
+
+// Tono del conteo por cuenta (ver COUNTER_TONES):
+//   sin plan → none · igual al plan → complete · menos → partial · más → over
+export const counterTone = (count, expected) => {
+  if (!expected) return 'none';
+  if (count > expected) return 'over';
+  if (count === expected) return 'complete';
+  return 'partial';
 };

@@ -61,6 +61,7 @@ import ProjectLinks from '@/components/shared/ProjectLinks';
 import MentionTextarea from '@/components/shared/MentionTextarea';
 import WorldDaysCalendar from './WorldDaysCalendar';
 import PostsSheet from './PostsSheet';
+import PostsCountStrip from './PostsCountStrip';
 import { SHOW_SOCIAL_PEDIDOS } from '@/constants/sections';
 import { useConfirm } from '@/hooks/useConfirm';
 
@@ -799,6 +800,9 @@ export default function SocialMediaApp({
       </header>
 
       <main className="max-w-7xl mx-auto w-full p-6 space-y-6">
+        {/* ── Conteo de posteos del mes, siempre a la vista ── */}
+        {social && <PostsCountStrip accounts={social.accounts} posts={social.posts} />}
+
         {/* ── Tabs principales: Pedidos / Herramientas ── */}
         <div className="bg-white border-2 border-slate-100 rounded-2xl p-1.5 inline-flex gap-1 shadow-sm">
           {[
@@ -845,7 +849,7 @@ export default function SocialMediaApp({
 
         {/* ── CONTENIDO TAB: CALENDARIO (días mundiales) ── */}
         {mainTab === 'calendario' && (
-          <WorldDaysCalendar theme={calendarTheme} onThemeChange={setCalendarTheme} />
+          <WorldDaysCalendar theme={calendarTheme} onThemeChange={setCalendarTheme} posts={social?.posts || []} accounts={social?.accounts || []} />
         )}
 
         {/* ── CONTENIDO TAB: HERRAMIENTAS ── */}

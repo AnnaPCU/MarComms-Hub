@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // PostEditor — Alta / edición de un posteo de la hoja de Social Media
 // ════════════════════════════════════════════════════════════════════
-// Campos: título, estado (4 chips), temática, semana, link, notas.
+// Campos: título, estado (4 chips), temática, semana, fecha de publicación, link, notas.
 //
 // Props:
 //   post             — posteo existente o null (nuevo)
@@ -28,6 +28,7 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
     status:    post?.status || DEFAULT_POST_STATUS,
     theme:     post?.theme || '',
     weekStart: post?.weekStart || defaultWeekStart || (weeks[0] && weeks[0].start) || '',
+    publishDate: post?.publishDate || '',
     link:      post?.link || '',
     notes:     post?.notes || '',
   });
@@ -120,9 +121,15 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className={labelCls}>Link (opcional)</label>
-              <input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="Drive, Canva, LinkedIn…" className={inputCls} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className={labelCls}>Fecha de publicación (opcional)</label>
+                <input type="date" value={form.publishDate} onChange={(e) => set('publishDate', e.target.value)} className={inputCls} title="Cuando está pactada, el posteo aparece en el calendario" />
+              </div>
+              <div className="space-y-1">
+                <label className={labelCls}>Link (opcional)</label>
+                <input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="Drive, Canva, LinkedIn…" className={inputCls} />
+              </div>
             </div>
 
             <div className="space-y-1">

@@ -18,8 +18,26 @@ export const SOCIAL_MEDIA_OWNER = 'Delfina Palmero';
 // miércoles siguiente.
 export const MISSING_POST_GRACE_BUSINESS_DAYS = 3;
 
-// Día de la semana del recordatorio de análisis de competencia (1 = lunes)
-export const COMPETITION_REVIEW_WEEKDAY = 1;
+// Bloque semanal de análisis de posteos de la competencia. Aparece en el
+// calendario como zona reservada y dispara el aviso el día anterior y el
+// día mismo. weekday: 0 = domingo … 6 = sábado.
+export const COMPETITION_REVIEW = {
+  weekday: 2,            // martes
+  start: '16:00',
+  end: '17:00',
+  label: 'Análisis de posteos de la competencia',
+  short: 'Competencia',
+};
+export const COMPETITION_REVIEW_WEEKDAY = COMPETITION_REVIEW.weekday;
+
+// ── Identidad de colores del conteo por cuenta ──
+//   complete = cumplió el plan · partial = falta · over = se pasó · none = sin plan
+export const COUNTER_TONES = {
+  complete: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  partial:  'bg-amber-100 text-amber-700 border-amber-200',
+  over:     'bg-red-100 text-red-700 border-red-200',
+  none:     'bg-slate-100 text-slate-500 border-slate-200',
+};
 
 // ── Estados de un posteo (los cuatro que pidió el equipo) ──
 // Clases completas (no dinámicas) para que Tailwind las detecte.

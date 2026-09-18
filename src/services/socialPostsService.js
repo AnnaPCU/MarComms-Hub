@@ -6,7 +6,7 @@
 //
 // Cuenta (UI):  { id, key, group, name, plan, sortOrder, active }
 // Posteo (UI):  { id, accountId, weekStart, monthKey, title, theme,
-//                 status, link, notes, createdBy, createdAt, updatedAt }
+//                 status, publishDate, link, notes, createdBy, createdAt, updatedAt }
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
@@ -47,6 +47,7 @@ export const postFromRow = (row) => (row ? {
   title:     row.title || '',
   theme:     row.theme || '',
   status:    row.status || 'en_proceso',
+  publishDate: row.publish_date || '',
   link:      row.link || '',
   notes:     row.notes || '',
   createdBy: row.created_by || '',
@@ -64,6 +65,7 @@ export const postToRow = (obj) => {
   if (obj.title     !== undefined) row.title = obj.title || '';
   if (obj.theme     !== undefined) row.theme = obj.theme || null;
   if (obj.status    !== undefined) row.status = obj.status || 'en_proceso';
+  if (obj.publishDate !== undefined) row.publish_date = obj.publishDate || null;
   if (obj.link      !== undefined) row.link = obj.link || null;
   if (obj.notes     !== undefined) row.notes = obj.notes || null;
   if (obj.createdBy !== undefined) row.created_by = obj.createdBy || null;
