@@ -43,6 +43,7 @@ import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { calcProgress } from '@/utils/progress';
 import { makeCampaignFromWebinar } from '@/utils/webinar';
 import { buildNotifications } from '@/utils/notifications';
+import { isSectionHidden } from '@/constants/sections';
 import { useNotificationAlerts } from '@/hooks/useNotificationAlerts';
 import NotificationToasts from '@/components/shared/NotificationToasts';
 import NotificationsWelcomeModal from '@/components/shared/NotificationsWelcomeModal';
@@ -327,6 +328,8 @@ export default function App() {
     { id: 'extras', title: 'Extras', description: 'Mini-soluciones: UTM Repository y más.', icon: <Sparkles className="w-8 h-8 text-slate-600" />, stats: 'Herramientas', color: 'bg-slate-100' },
     { id: 'client_portal', title: 'Portal Cliente', description: 'Vista que ve cada país de sus servicios.', icon: <User className="w-8 h-8 text-teal-600" />, stats: 'Público', color: 'bg-teal-50' }
   ];
+  // Secciones ocultas temporalmente (ver constants/sections.js)
+  const visibleSections = sections.filter(s => !isSectionHidden(s.id));
 
 
   const renderContent = () => {
@@ -343,7 +346,7 @@ export default function App() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-10">
-            {sections.map((section) => (
+            {visibleSections.map((section) => (
               <div 
                 key={section.id}
                 onClick={() => { setCurrentSection(section.id); setSelectedCountry(null); }}
@@ -702,7 +705,7 @@ export default function App() {
     }, {
       peopleList:    validNames,
       serviceOwners: liveServiceOwners,
-    });
+    }).filter(n => !n.navTo || !isSectionHidden(n.navTo)); // sin avisos hacia secciones ocultas
   }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
@@ -880,7 +883,7 @@ export default function App() {
             <div className="pt-8 pb-3 px-4">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operaciones</p>
             </div>
-            {sections.map(s => (
+            {visibleSections.map(s => (
               <button 
                 key={s.id}
                 onClick={() => { setCurrentSection(s.id); setSelectedCountry(null); }}
@@ -1142,10 +1145,10 @@ export default function App() {
                         { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
                         { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
                         { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
-                        { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week', divider: true },
-                        { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises' },
+                        { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week' },
+                        { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises', divider: true },
                         { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
-                      ].map(action => {
+                      ].filter(action => !isSectionHidden(action.section)).map(action => {
                         const ActionIcon = action.icon;
                         return (
                           <React.Fragment key={action.id}>

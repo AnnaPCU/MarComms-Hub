@@ -86,9 +86,9 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Pilares (ex Campañas) | Violeta / Rosa | `from-purple-600 to-pink-600` |
 | Eventos | Naranja / Rojo | `from-orange-500 to-red-500` |
 | Social Media (ex Content Hub) | Rosa / Rose | `from-pink-500 to-rose-500` |
-| Facturación | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
+| Facturación (oculta, ver `constants/sections.js`) | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
 | Países | Cyan / Teal | `from-cyan-500 to-teal-500` |
-| Mi Semana | Naranja / Ámbar | `from-orange-500 to-amber-500` |
+| Mi Semana (oculta, ver `constants/sections.js`) | Naranja / Ámbar | `from-orange-500 to-amber-500` |
 
 Mantené consistencia con esta paleta al agregar features.
 
@@ -179,6 +179,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/markets.js` | 17 países, 7 unidades de negocio |
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
+| `src/constants/sections.js` | `HIDDEN_SECTIONS`: secciones ocultas temporalmente (hoy Mi Semana y Facturación). Sacar el id de la lista para reactivarlas |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). Lógica en `src/utils/worldDays.js` |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |
