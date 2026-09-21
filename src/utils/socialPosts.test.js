@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mondayOf, monthKeyOfWeek, weeksOfMonth, weekLabel, expectedPostsBy,
   accountMonthSummary, missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, counterTone,
+  lastWeekOfMonth, monthCloseReminderActive, monthCloseSummary,
 } from './socialPosts';
 import { nextPostStatus, DEFAULT_SOCIAL_ACCOUNTS, ACCOUNT_GROUPS } from '@/constants/socialPosts';
 
@@ -117,6 +118,20 @@ describe('otros', () => {
     expect(competitionReviewActive('2026-09-16')).toBe(false); // miércoles
     expect(isCompetitionReviewDay('2026-09-15')).toBe(true);
     expect(isCompetitionReviewDay('2026-09-14')).toBe(false);
+  });
+
+  it('cierre de mes: lunes y martes de la última semana', () => {
+    expect(lastWeekOfMonth(2026, 9).start).toBe('2026-09-21');
+    expect(monthCloseReminderActive('2026-09-21')).toBe(true);  // lunes última semana
+    expect(monthCloseReminderActive('2026-09-22')).toBe(true);  // martes
+    expect(monthCloseReminderActive('2026-09-23')).toBe(false);
+    expect(monthCloseReminderActive('2026-09-14')).toBe(false); // lunes de otra semana
+  });
+
+  it('monthCloseSummary lista las cuentas que no llegan al plan, la más atrasada primero', () => {
+    const posts = [{ id: 'p', accountId: 'a2', weekStart: '2026-09-07', monthKey: '2026-09' }];
+    const s = monthCloseSummary([ACTIVE, SEMI, NONE], posts, '2026-09-21');
+    expect(s.map((x) => `${x.account.name} ${x.count}/${x.expected}`)).toEqual(['Peru 0/4', 'Chile 1/2']);
   });
 
   it('counterTone: identidad de colores del conteo', () => {

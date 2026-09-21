@@ -365,3 +365,21 @@ describe('14. competition_review — recordatorio semanal', () => {
     expect(notifs.some(n => n.type === 'competition_review')).toBe(false);
   });
 });
+
+describe('15. month_close — lunes de la última semana del mes', () => {
+  const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
+  const PERU = { id: 'acc-peru', name: 'Peru', group: 'CU Latinoamérica', plan: 'active', active: true };
+  // Junio 2026: última semana arranca lun 22/06
+  it('avisa el lunes de la última semana con las cuentas en falta', () => {
+    const notifs = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [] }, { now: new Date('2026-06-22T10:00:00Z') });
+    const n = notifs.find(x => x.id === 'month-close-2026-06');
+    expect(n).toBeTruthy();
+    expect(n.title).toContain('Última semana de junio');
+    expect(n.title).toContain('Peru 0/4');
+  });
+  it('no avisa otro lunes ni si no hay cuentas en falta', () => {
+    expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU] }, { now: new Date('2026-06-15T10:00:00Z') }).some(x => x.type === 'month_close')).toBe(false);
+    const full = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22'].map(w => ({ id: w, accountId: 'acc-peru', weekStart: w, monthKey: '2026-06' }));
+    expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: full }, { now: new Date('2026-06-22T10:00:00Z') }).some(x => x.type === 'month_close')).toBe(false);
+  });
+});

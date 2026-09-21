@@ -50,11 +50,11 @@ export const summarizeUnread = (notifications) => {
   (notifications || []).forEach((n) => { counts[n.type] = (counts[n.type] || 0) + 1; });
   const LABELS = {
     overdue: 'atrasada', soon: 'próxima a vencer', assigned: 'asignada', new: 'nueva',
-    responsible: 'de tu equipo', world_day: 'día mundial', missing_post: 'cuenta sin posteo', competition_review: 'rutina semanal',
+    responsible: 'de tu equipo', world_day: 'día mundial', missing_post: 'cuenta sin posteo', competition_review: 'rutina semanal', month_close: 'cierre de mes',
   };
   const PLURAL = {
     overdue: 'atrasadas', soon: 'próximas a vencer', assigned: 'asignadas', new: 'nuevas',
-    responsible: 'de tu equipo', world_day: 'días mundiales', missing_post: 'cuentas sin posteo', competition_review: 'rutinas semanales',
+    responsible: 'de tu equipo', world_day: 'días mundiales', missing_post: 'cuentas sin posteo', competition_review: 'rutinas semanales', month_close: 'cierres de mes',
   };
   return Object.entries(counts)
     .map(([type, c]) => `${c} ${c === 1 ? (LABELS[type] || type) : (PLURAL[type] || type)}`)

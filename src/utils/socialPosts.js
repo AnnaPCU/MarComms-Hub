@@ -133,6 +133,34 @@ export const competitionReviewActive = (todayIso) => {
   return dow === COMPETITION_REVIEW_WEEKDAY || dow === (COMPETITION_REVIEW_WEEKDAY + 6) % 7;
 };
 
+// ── Cierre de mes ──
+// Última semana del mes (según la regla de semanas de arriba)
+export const lastWeekOfMonth = (year, month) => {
+  const weeks = weeksOfMonth(year, month);
+  return weeks[weeks.length - 1];
+};
+
+// ¿Hoy es lunes o martes de la última semana del mes? (recordatorio de cierre)
+export const monthCloseReminderActive = (todayIso) => {
+  const year = Number(todayIso.slice(0, 4));
+  const month = Number(todayIso.slice(5, 7));
+  const last = lastWeekOfMonth(year, month);
+  if (!last) return false;
+  return todayIso === last.start || todayIso === addDays(last.start, 1);
+};
+
+// Cuentas que todavía no llegan a su plan en el mes de `todayIso`
+export const monthCloseSummary = (accounts, posts, todayIso) => {
+  const year = Number(todayIso.slice(0, 4));
+  const month = Number(todayIso.slice(5, 7));
+  const weeks = weeksOfMonth(year, month);
+  return (accounts || [])
+    .filter((a) => a.active !== false && postsPerMonthFor(a.plan) > 0)
+    .map((a) => ({ account: a, ...accountMonthSummary(a, posts, weeks) }))
+    .filter((s) => s.count < s.expected)
+    .sort((x, y) => (y.expected - y.count) - (x.expected - x.count));
+};
+
 // Tono del conteo por cuenta (ver COUNTER_TONES):
 //   sin plan → none · igual al plan → complete · menos → partial · más → over
 export const counterTone = (count, expected) => {

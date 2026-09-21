@@ -26,6 +26,8 @@
 //                                   (aviso el miércoles siguiente, últimas 3 semanas)
 //  14. competition_review         — bloque semanal de análisis de competencia (martes 16–17 h):
 //                                   aviso el lunes ("es mañana") y el martes ("es hoy")
+//  15. month_close                — lunes (y martes) de la última semana del mes: qué cuentas
+//                                   todavía no llegan a su plan
 //
 //   Eliminados (sep 2026, van por el CRM): subtareas individuales de
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
@@ -39,7 +41,7 @@ import { calcProgress } from './progress';
 import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
 import { activeWorldDayNotices } from './worldDays';
 import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
-import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf } from './socialPosts';
+import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
@@ -423,6 +425,21 @@ export const buildNotifications = (currentUser, data, options = {}) => {
           navTo: 'content', navTab: 'posteos',
         });
       });
+    if (monthCloseReminderActive(todayIso)) {
+      const pending = monthCloseSummary(socialAccounts, socialPosts, todayIso);
+      if (pending.length > 0) {
+        const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        const monthName = MONTHS[Number(todayIso.slice(5, 7)) - 1];
+        const detail = pending.slice(0, 6).map((s) => `${s.account.name} ${s.count}/${s.expected}`).join(', ');
+        notifs.push({
+          id: `month-close-${todayIso.slice(0, 7)}`, type: 'month_close', icon: AlertCircle, color: 'pink',
+          title: `Última semana de ${monthName}: ${pending.length} cuenta${pending.length > 1 ? 's' : ''} todavía no llega${pending.length > 1 ? 'n' : ''} a su plan (${detail}${pending.length > 6 ? '…' : ''})`,
+          shortTitle: `📆 Cierre de ${monthName}: ${pending.length} cuenta${pending.length > 1 ? 's' : ''} en falta`,
+          emoji: '📆', project: 'Cierre de mes', source: 'Social Media', date: todayIso,
+          navTo: 'content', navTab: 'posteos',
+        });
+      }
+    }
     if (competitionReviewActive(todayIso)) {
       notifs.push({
         id: `competition-review-${mondayOf(todayIso)}`, type: 'competition_review', icon: Sparkles, color: 'pink',
