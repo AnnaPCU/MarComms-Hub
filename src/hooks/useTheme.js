@@ -5,12 +5,13 @@
 // tema oscuro remapea las utilidades claras desde src/index.css, así
 // que no hace falta duplicar clases con dark: en cada componente.
 //
-// Preferencia guardada en localStorage: 'light' | 'dark' | 'system'.
-// Por defecto sigue al sistema operativo.
+// Preferencia guardada en localStorage: 'light' | 'dark'.
+// Por defecto es CLARO para todos: el modo oscuro solo se activa si la
+// persona lo elige (no se sigue la preferencia del sistema operativo).
 //
 // Devuelve { theme, resolved, setTheme, toggle }
-//   theme    — la preferencia ('light' | 'dark' | 'system')
-//   resolved — lo que se está mostrando ('light' | 'dark')
+//   theme    — la preferencia ('light' | 'dark')
+//   resolved — igual a theme (se mantiene por compatibilidad)
 //   toggle() — alterna entre claro y oscuro (fija la preferencia)
 // ════════════════════════════════════════════════════════════════════
 
@@ -20,28 +21,13 @@ const STORAGE_KEY = 'marcomms_hub_theme_v1';
 
 const readStored = () => {
   try {
-    const v = window.localStorage.getItem(STORAGE_KEY);
-    return v === 'light' || v === 'dark' ? v : 'system';
-  } catch (_e) { return 'system'; }
+    return window.localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  } catch (_e) { return 'light'; }
 };
-
-const systemPrefersDark = () =>
-  typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 export const useTheme = () => {
   const [theme, setThemeState] = useState(readStored);
-  const [systemDark, setSystemDark] = useState(systemPrefersDark);
-
-  // Seguir cambios del sistema mientras la preferencia sea 'system'
-  useEffect(() => {
-    if (!window.matchMedia) return undefined;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = (e) => setSystemDark(e.matches);
-    mq.addEventListener ? mq.addEventListener('change', onChange) : mq.addListener(onChange);
-    return () => { mq.removeEventListener ? mq.removeEventListener('change', onChange) : mq.removeListener(onChange); };
-  }, []);
-
-  const resolved = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+  const resolved = theme;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -50,10 +36,11 @@ export const useTheme = () => {
   }, [resolved]);
 
   const setTheme = useCallback((next) => {
-    setThemeState(next);
+    const value = next === 'dark' ? 'dark' : 'light';
+    setThemeState(value);
     try {
-      if (next === 'system') window.localStorage.removeItem(STORAGE_KEY);
-      else window.localStorage.setItem(STORAGE_KEY, next);
+      if (value === 'light') window.localStorage.removeItem(STORAGE_KEY); // claro = default, no hace falta guardarlo
+      else window.localStorage.setItem(STORAGE_KEY, value);
     } catch (_e) { /* storage deshabilitado */ }
   }, []);
 

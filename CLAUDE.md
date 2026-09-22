@@ -120,7 +120,7 @@ Mantené consistencia con esta paleta al agregar features.
 
 6. **Mobile responsive** — la app está optimizada para desktop. Mobile funciona pero no es ideal.
 
-7. ~~**Modo oscuro**~~ ✅ Implementado (sep 2026) vía `useTheme` + remapeo de utilidades en `src/index.css`. Si agregás un color claro nuevo (ej. `bg-lime-50`) y no se ve bien en oscuro, sumalo al remapeo.
+7. ~~**Modo oscuro**~~ ✅ Implementado (sep 2026) vía `useTheme` + remapeo de utilidades en `src/index.css`. Default: claro para todos; oscuro solo si la persona lo activa (no sigue al sistema operativo). Si agregás un color claro nuevo (ej. `bg-lime-50`) y no se ve bien en oscuro, sumalo al remapeo.
 
 8. **Multi-idioma** — solo español por ahora.
 
