@@ -79,7 +79,7 @@ export const useNotificationAlerts = ({ currentUser, notifications, unreadCount,
     if (document.visibilityState === 'visible' && document.hasFocus()) return;
     try {
       const { title, body, tag } = buildBrowserNotification(notif);
-      const n = new window.Notification(title, { body, tag, icon: '/favicon.svg' });
+      const n = new window.Notification(title, { body, tag, icon: '/favicon.png' });
       n.onclick = () => { window.focus(); if (onOpen) onOpen(notif); n.close(); };
     } catch (_e) { /* algunos navegadores tiran si no hay service worker */ }
   }, [onOpen]);

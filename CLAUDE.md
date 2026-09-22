@@ -87,7 +87,7 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Eventos | Naranja / Rojo | `from-orange-500 to-red-500` |
 | Social Media (ex Content Hub) | Rosa / Rose | `from-pink-500 to-rose-500` |
 | Facturación (oculta, ver `constants/sections.js`) | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
-| Países | Cyan / Teal | `from-cyan-500 to-teal-500` |
+| Portal Cliente (ex Países + Portal) | Cyan / Teal | `from-cyan-500 to-teal-500` |
 | Mi Semana (oculta, ver `constants/sections.js`) | Naranja / Ámbar | `from-orange-500 to-amber-500` |
 
 Mantené consistencia con esta paleta al agregar features.
@@ -120,7 +120,7 @@ Mantené consistencia con esta paleta al agregar features.
 
 6. **Mobile responsive** — la app está optimizada para desktop. Mobile funciona pero no es ideal.
 
-7. **Modo oscuro** — no implementado.
+7. ~~**Modo oscuro**~~ ✅ Implementado (sep 2026) vía `useTheme` + remapeo de utilidades en `src/index.css`. Si agregás un color claro nuevo (ej. `bg-lime-50`) y no se ve bien en oscuro, sumalo al remapeo.
 
 8. **Multi-idioma** — solo español por ahora.
 
@@ -142,6 +142,7 @@ Mantené consistencia con esta paleta al agregar features.
 - ❌ No exponer `ANTHROPIC_API_KEY` en código cliente
 - ❌ No agregar dependencias sin justificación (mantener el bundle chico)
 - ❌ No rediseñar UI sin pedirle al usuario primero
+- ❌ No usar `dark:` en componentes: el modo oscuro se resuelve con el remapeo de `src/index.css` (ver `useTheme`)
 - ❌ No recrear el Reporte Mailchimp en el Hub — esa herramienta vive en el sitio de reportes de Anna (proyecto aparte)
 - ❌ No usar `localStorage` directamente sin un hook que lo wrappee (cuando exista)
 
@@ -179,7 +180,9 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/markets.js` | 17 países, 7 unidades de negocio |
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
-| `src/constants/sections.js` | `HIDDEN_SECTIONS`: secciones ocultas temporalmente (hoy Mi Semana y Facturación). Sacar el id de la lista para reactivarlas |
+| `src/constants/sections.js` | `HIDDEN_SECTIONS`: secciones ocultas temporalmente (hoy Mi Semana, Facturación y Casos de Éxito). Sacar el id de la lista para reactivarlas |
+| `src/constants/markets.js` → `PORTAL_UNITS` | Portal Cliente: unidades activas (Control Union Certificaciones por país; Peterson Solutions Iberoamérica / Global / país) y sus alcances. UI en `src/components/client/PortalHome.jsx` + `ClientReportApp.jsx` |
+| `src/hooks/useTheme.js` | Modo claro/oscuro. El tema oscuro remapea utilidades claras desde `src/index.css` (sección MODO OSCURO), no hace falta `dark:` en cada clase |
 | `src/constants/socialPosts.js` | Hoja de posteos de LinkedIn: estados, planes, cuentas por defecto. Lógica de semanas y avisos en `src/utils/socialPosts.js`. UI en `src/components/social/PostsSheet.jsx` |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). Lógica en `src/utils/worldDays.js` |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |

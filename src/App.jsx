@@ -16,15 +16,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2,
-  ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard,
-  LogOut, Mail, MoreVertical, Receipt, Search, Sparkles, Trophy, User,
-  UserCheck, Video, X, Zap,
+  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2, ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard, Link2, LogOut, Mail, Moon, MoreVertical, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, User, UserCheck, Video, X, Zap,
 } from 'lucide-react';
 
 // Constants
 import { MARCOMMS, PEOPLE, SERVICE_OWNERS, TEAM_MEMBERS } from '@/constants/team';
-import { MARKETS, MARKETS_LIST } from '@/constants/markets';
+import { MARKETS, PORTAL_UNITS, portalScopeForCountry } from '@/constants/markets';
 import { WEBINAR_MAIL_TO_STEP, STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
@@ -39,6 +36,7 @@ import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
+import { useTheme } from '@/hooks/useTheme';
 
 // Utils
 import { calcProgress } from '@/utils/progress';
@@ -56,7 +54,7 @@ import SocialMediaApp from '@/components/social/SocialMediaApp';
 import FacturacionApp from '@/components/facturacion/FacturacionApp';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
-import CountryDetail from '@/components/country/CountryDetail';
+import PortalHome from '@/components/client/PortalHome';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 import ExtrasApp from '@/components/extras/ExtrasApp';
 
@@ -140,16 +138,41 @@ export default function App() {
   const [contentAutoTab, setContentAutoTab] = useState(null);   // abre una tab de Social Media al entrar (ej. 'calendario')
   const [focusProjectId, setFocusProjectId] = useState(null);  // deep-link: card a abrir al navegar desde Mi Semana
 
-  // Navega a una sección y opcionalmente enfoca un proyecto específico (abre su card/detalle)
-  const navigateToProject = (section, projectId = null) => {
+  const [currentSection, setCurrentSection] = useState('main');
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  // Portal Cliente: unidad activa y alcance abierto (país / región / global)
+  const [portalUnit, setPortalUnit] = useState(PORTAL_UNITS[0].id);
+  const [portalScope, setPortalScope] = useState(null);
+  // Menú lateral compacto por defecto (más lugar para el contenido)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return window.localStorage.getItem('marcomms_hub_sidebar_v1') !== 'open'; } catch (_e) { return true; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('marcomms_hub_sidebar_v1', sidebarCollapsed ? 'closed' : 'open'); } catch (_e) { /* ignorar */ }
+  }, [sidebarCollapsed]);
+  const { resolved: resolvedTheme, toggle: toggleTheme } = useTheme();
+
+  // Navegación central desde menú, tarjetas y acciones rápidas.
+  // Limpia TODO el sub-estado de la sección anterior (país abierto, portal
+  // abierto, proyecto enfocado). Antes el menú no limpiaba el portal abierto
+  // y la vista no cambiaba: parecía que la navegación "no funcionaba".
+  const goToSection = (section) => {
     setSelectedCountry(null);
-    setFocusProjectId(projectId);
+    setPortalScope(null);
+    setFocusProjectId(null);
+    setShowNotifications(false);
+    setShowSearchResults(false);
+    setShowFastAction(false);
     setCurrentSection(section);
   };
 
-  const [currentSection, setCurrentSection] = useState('main');
-  const [selectedCountry, setSelectedCountry] = useState(null);
-  const [clientReportCountry, setClientReportCountry] = useState(null);
+  // Navega a una sección y opcionalmente enfoca un proyecto específico (abre su card/detalle)
+  const navigateToProject = (section, projectId = null) => {
+    setSelectedCountry(null);
+    setPortalScope(null);
+    setFocusProjectId(projectId);
+    setCurrentSection(section);
+  };
 
   // ─── Reset de scroll al cambiar de sección ───
   // Sin esto, al navegar desde una sección scrolleada hacia abajo a otra,
@@ -158,7 +181,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
-  }, [currentSection, selectedCountry, clientReportCountry]);
+  }, [currentSection, selectedCountry, portalScope]);
 
   // ── Refs para cerrar dropdowns al hacer click afuera ──
   const searchContainerRef = useRef(null);
@@ -321,17 +344,14 @@ export default function App() {
     });
   };
 
-  const paisesData = MARKETS_LIST;
-
   const sections = [
-    { id: 'paises', title: 'Países', description: 'Gestión de mercados globales y entidades.', icon: <Globe2 className="w-8 h-8 text-blue-600" />, stats: '15 Países', color: 'bg-blue-50' },
+    { id: 'client_portal', title: 'Portal Cliente', description: 'Dashboard por país y por plan: Control Union Certificaciones y Peterson Solutions.', icon: <Globe2 className="w-8 h-8 text-teal-600" />, stats: `${PORTAL_UNITS.reduce((n, u) => n + u.scopes.length, 0)} dashboards`, color: 'bg-teal-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
-    { id: 'extras', title: 'Extras', description: 'Mini-soluciones: UTM Repository y más.', icon: <Sparkles className="w-8 h-8 text-slate-600" />, stats: 'Herramientas', color: 'bg-slate-100' },
-    { id: 'client_portal', title: 'Portal Cliente', description: 'Vista que ve cada país de sus servicios.', icon: <User className="w-8 h-8 text-teal-600" />, stats: 'Público', color: 'bg-teal-50' }
+    { id: 'extras', title: 'UTM Generator', description: 'Generá UTMs y reutilizá los que ya creó el equipo.', icon: <Link2 className="w-8 h-8 text-indigo-600" />, stats: 'Herramienta', color: 'bg-indigo-50' },
   ];
   // Secciones ocultas temporalmente (ver constants/sections.js)
   const visibleSections = sections.filter(s => !isSectionHidden(s.id));
@@ -354,7 +374,7 @@ export default function App() {
             {visibleSections.map((section) => (
               <div 
                 key={section.id}
-                onClick={() => { setCurrentSection(section.id); setSelectedCountry(null); }}
+                onClick={() => goToSection(section.id)}
                 className="group bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all cursor-pointer"
               >
                 <div className={`w-12 h-12 ${section.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
@@ -413,144 +433,49 @@ export default function App() {
       );
     }
 
-    if (clientReportCountry) {
-      return (
-        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-          <ClientReportApp
-            country={clientReportCountry}
-            webinars={globalWebinars}
-            campaigns={globalCampaigns}
-            events={globalEvents}
-            onBack={() => setClientReportCountry(null)}
-          />
-        </div>
-      );
-    }
-
     if (currentSection === 'client_portal') {
+      if (portalScope) {
+        return (
+          <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+            <ClientReportApp
+              scope={portalScope}
+              webinars={globalWebinars}
+              campaigns={globalCampaigns}
+              events={globalEvents}
+              onBack={() => setPortalScope(null)}
+            />
+          </div>
+        );
+      }
       return (
-        <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
+        <div className="p-6 lg:p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
           <div className="flex items-center gap-4 mb-6">
             <button
-              onClick={() => setCurrentSection('main')}
+              onClick={() => goToSection('main')}
               className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 transition-all shadow-sm"
             >
               <ArrowLeft size={20} />
             </button>
             <div>
               <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
-                <User className="w-8 h-8 text-teal-600" /> Portal Cliente
+                <Globe2 className="w-8 h-8 text-teal-600" /> Portal Cliente
               </h1>
-              <p className="text-slate-500 font-medium mt-1">Elegí un país para ver su reporte público de servicios.</p>
+              <p className="text-slate-500 font-medium mt-1">Elegí la unidad y el alcance para abrir su dashboard. Los planes por cliente llegan próximamente.</p>
             </div>
           </div>
-
-          <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4 mb-6">
-            <p className="text-xs text-teal-800 font-medium leading-relaxed flex items-start gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Esta es la vista simplificada que puede ver cada país (cliente interno). Muestra sus servicios activos, completados, fee facturado y deals generados. Permite filtrar por mes, servicio y unidad de negocio.</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Object.keys(MARKETS).sort().map(country => {
-              const nWebinars = globalWebinars.filter(w => w.pais === country).length;
-              const nCampaigns = globalCampaigns.filter(c => c.country === country).length;
-              const nEvents = globalEvents.filter(e => e.country === country).length;
-              const nStandalones = (globalStandaloneRequests || []).filter(r => r.country === country).length;
-              const total = nWebinars + nCampaigns + nEvents + nStandalones;
-              const udns = MARKETS[country] || [];
-              const hasActivity = total > 0;
-              return (
-                <div
-                  key={country}
-                  onClick={() => setClientReportCountry(country)}
-                  className={`group bg-white p-6 rounded-2xl border transition-all cursor-pointer ${hasActivity ? 'border-slate-200 hover:border-teal-500 hover:shadow-lg' : 'border-slate-100 hover:border-slate-300 opacity-75 hover:opacity-100'}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${hasActivity ? 'bg-teal-50 group-hover:bg-teal-600' : 'bg-slate-100'}`}>
-                      <Globe className={`w-5 h-5 transition-all ${hasActivity ? 'text-teal-600 group-hover:text-white' : 'text-slate-400'}`} />
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-teal-600 transition-colors" />
-                  </div>
-                  <h3 className="font-black text-lg text-slate-900 uppercase mb-2">{country}</h3>
-
-                  {/* Lista de UDNs (igual que sección Países) */}
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {udns.map(udn => (
-                      <span key={udn} className="text-[8px] font-black px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-100 uppercase tracking-wider">
-                        {udn}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-3 border-t border-slate-100">
-                    <span className="flex items-center gap-1"><Video className="w-3 h-3" /> {nWebinars}</span>
-                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {nCampaigns}</span>
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {nEvents}</span>
-                    <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> {nStandalones}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total servicios</span>
-                    <span className={`text-lg font-black ${hasActivity ? 'text-teal-600' : 'text-slate-400'}`}>{total}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <PortalHome
+            webinars={globalWebinars}
+            campaigns={globalCampaigns}
+            events={globalEvents}
+            requests={globalStandaloneRequests}
+            unitId={portalUnit}
+            onUnitChange={setPortalUnit}
+            onOpenScope={setPortalScope}
+          />
         </div>
       );
     }
 
-    if (currentSection === 'paises') {
-      return (
-        <div className="p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
-          <div className="flex items-center gap-4 mb-8">
-            <button 
-              onClick={() => {
-                if (selectedCountry) setSelectedCountry(null);
-                else setCurrentSection('main');
-              }}
-              className="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 transition-all shadow-sm"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="text-3xl font-black text-slate-900">Directorio de Países y Clientes</h1>
-          </div>
-
-          {selectedCountry ? (
-            <CountryDetail country={selectedCountry} webinars={globalWebinars} campaigns={globalCampaigns} events={globalEvents} standalones={globalStandaloneRequests} onNavigate={setCurrentSection} onViewAsClient={setClientReportCountry} />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {paisesData.map((item) => (
-                <div 
-                  key={item.id}
-                  onClick={() => setSelectedCountry(item)}
-                  className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-500 hover:shadow-lg transition-all cursor-pointer relative"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                      <Building2 size={20} />
-                    </div>
-                    <MoreVertical size={16} className="text-slate-300" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1">{item.pais}</h3>
-                  <p className="text-xs text-slate-500 mb-4 font-medium italic">{item.empresas.join(", ")}</p>
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                    <div className="flex -space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-indigo-600">W</div>
-                      <div className="w-6 h-6 rounded-full bg-purple-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-purple-600">C</div>
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Click para ver más</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-    
     if (currentSection === 'campaigns') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
@@ -813,7 +738,7 @@ export default function App() {
           title: country,
           subtitle: `${(MARKETS[country] || []).length} unidades de negocio`,
           extra: '',
-          navTo: 'paises',
+          navTo: 'client_portal',
           countryName: country
         });
       }
@@ -862,7 +787,7 @@ export default function App() {
                   Cancelar
                 </button>
                 <button
-                  onClick={() => { setCurrentUser(null); setShowLogoutConfirm(false); setCurrentSection('main'); }}
+                  onClick={() => { setCurrentUser(null); setShowLogoutConfirm(false); goToSection('main'); }}
                   className="flex-1 bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-200 transition-all"
                 >
                   Cerrar sesión
@@ -872,66 +797,81 @@ export default function App() {
           </div>
         </div>
       )}
-      <aside className="w-72 bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 shadow-sm">
-        {/* Bloque scrolleable: logo + nav. min-h-0 es clave para que overflow funcione dentro de un flex column. */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-8">
-          <div className="flex items-center gap-3 text-indigo-600 mb-12">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-              <Zap size={24} fill="currentColor" />
-            </div>
-            <span className="text-xl font-black tracking-tighter text-slate-800">MARCOMMS HUB</span>
+      <aside className={`${sidebarCollapsed ? 'w-[76px]' : 'w-64'} bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 transition-[width] duration-200`}>
+        {/* Logo + nav. min-h-0 es clave para que overflow funcione dentro de un flex column. */}
+        <div className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-3 py-5' : 'p-5'}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-6`}>
+            <button onClick={() => goToSection('main')} className="flex items-center" title="Hub Central">
+              {sidebarCollapsed ? (
+                <>
+                  <img src="/logos/marcomms-iso-color.png" data-logo="color" alt="MarComms" className="h-8 w-auto" />
+                  <img src="/logos/marcomms-iso-white.png" data-logo="white" alt="MarComms" className="h-8 w-auto" />
+                </>
+              ) : (
+                <>
+                  <img src="/logos/marcomms-color.png" data-logo="color" alt="MarComms" className="h-7 w-auto" />
+                  <img src="/logos/marcomms-white.png" data-logo="white" alt="MarComms" className="h-7 w-auto" />
+                </>
+              )}
+            </button>
+            {!sidebarCollapsed && (
+              <button onClick={() => setSidebarCollapsed(true)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Achicar menú">
+                <PanelLeftClose size={16} />
+              </button>
+            )}
           </div>
+          {sidebarCollapsed && (
+            <button onClick={() => setSidebarCollapsed(false)} className="w-full flex justify-center p-2 mb-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Expandir menú">
+              <PanelLeftOpen size={16} />
+            </button>
+          )}
 
           <nav className="space-y-1">
-            <button 
-              onClick={() => { setCurrentSection('main'); setSelectedCountry(null); }}
-              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${currentSection === 'main' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
-            >
-              <LayoutDashboard size={20} /> Hub Central
-            </button>
-            <div className="pt-8 pb-3 px-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operaciones</p>
-            </div>
-            {visibleSections.map(s => (
-              <button 
-                key={s.id}
-                onClick={() => { setCurrentSection(s.id); setSelectedCountry(null); }}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold transition-all ${currentSection === s.id ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50'}`}
-              >
-                {React.cloneElement(s.icon, { size: 18, className: currentSection === s.id ? 'text-indigo-600' : 'text-slate-400' })} 
-                {s.title}
-              </button>
-            ))}
+            {[{ id: 'main', title: 'Hub Central', icon: <LayoutDashboard /> }, ...visibleSections].map(s => {
+              const active = currentSection === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => goToSection(s.id)}
+                  title={s.title}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-xl text-sm font-bold transition-all ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                >
+                  {React.cloneElement(s.icon, { size: 18, className: active ? 'text-indigo-600' : 'text-slate-400' })}
+                  {!sidebarCollapsed && <span className="truncate">{s.title}</span>}
+                </button>
+              );
+            })}
           </nav>
         </div>
-        
-        {/* Footer del sidebar: usuario + logout. shrink-0 asegura que no se comprima cuando el nav es largo. */}
-        <div className="shrink-0 p-8 border-t border-slate-50 bg-slate-50/30">
-          {currentUser ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${currentUser.color} border-2 border-white shadow-md flex items-center justify-center text-white text-sm font-black`}>
-                  {currentUser.name.charAt(0).toUpperCase()}
-                </div>
+
+        {/* Footer: tema + usuario + logout. shrink-0 para que no se comprima cuando el nav es largo. */}
+        <div className={`shrink-0 border-t border-slate-100 ${sidebarCollapsed ? 'p-3' : 'p-4'} space-y-2`}>
+          <button
+            onClick={toggleTheme}
+            title={resolvedTheme === 'dark' ? 'Pasar a modo claro' : 'Pasar a modo oscuro'}
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all`}
+          >
+            {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            {!sidebarCollapsed && <span>{resolvedTheme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>}
+          </button>
+          {currentUser && (
+            <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-2' : 'gap-3'}`}>
+              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${currentUser.color} border-2 border-white shadow-md flex items-center justify-center text-white text-xs font-black shrink-0`} title={currentUser.name}>
+                {currentUser.name.charAt(0).toUpperCase()}
+              </div>
+              {!sidebarCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-slate-800 leading-none truncate">{currentUser.name}</p>
+                  <p className="text-xs font-black text-slate-800 leading-none truncate">{currentUser.name}</p>
                   <p className="text-slate-400 text-[10px] mt-1 font-bold uppercase tracking-wider truncate">{currentUser.team}</p>
                 </div>
-              </div>
+              )}
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className="w-full text-[10px] font-black bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all shrink-0"
+                title="Cerrar sesión"
               >
-                <LogOut className="w-3 h-3" /> Cerrar sesión
+                <LogOut className="w-4 h-4" />
               </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-900 border-2 border-white shadow-md flex items-center justify-center text-white text-xs font-black">AD</div>
-              <div>
-                <p className="text-sm font-black text-slate-800 leading-none">Admin Hub</p>
-                <p className="text-slate-400 text-[10px] mt-1 font-bold uppercase tracking-wider">Global Access</p>
-              </div>
             </div>
           )}
         </div>
@@ -987,10 +927,11 @@ export default function App() {
                                 setShowSearchResults(false);
                                 setSearchQuery('');
                                 if (r.countryName) {
-                                  setSelectedCountry({ pais: r.countryName });
-                                  setCurrentSection('paises');
+                                  const sc = portalScopeForCountry(r.countryName);
+                                  goToSection('client_portal');
+                                  if (sc) { setPortalUnit(sc.unitId); setPortalScope(sc); }
                                 } else if (r.navTo) {
-                                  setCurrentSection(r.navTo);
+                                  goToSection(r.navTo);
                                 }
                               }}
                               className="w-full p-3 hover:bg-slate-50 text-left flex items-center gap-3 transition-colors"
@@ -1018,6 +959,13 @@ export default function App() {
             )}
           </div>
           <div ref={notificationsContainerRef} className="flex items-center gap-3 ml-8 relative">
+            <button
+              onClick={toggleTheme}
+              className="p-3 rounded-2xl text-slate-500 hover:bg-slate-100 transition-all lg:hidden"
+              title={resolvedTheme === 'dark' ? 'Pasar a modo claro' : 'Pasar a modo oscuro'}
+            >
+              {resolvedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className={`p-3 rounded-2xl transition-all relative ${showNotifications ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-100'}`}
@@ -1156,7 +1104,7 @@ export default function App() {
                         { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content', hidden: !SHOW_SOCIAL_PEDIDOS },
                         { id: 'posteos',  label: 'Hoja de posteos',           icon: FileText, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
                         { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week' },
-                        { id: 'paises',   label: 'Vista de países',       icon: Globe,    color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'paises', divider: true },
+                        { id: 'portal',   label: 'Portal Cliente',        icon: Globe,    color: 'bg-teal-50 text-teal-700 hover:bg-teal-100',           section: 'client_portal', divider: true },
                         { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
                       ].filter(action => !action.hidden && !isSectionHidden(action.section)).map(action => {
                         const ActionIcon = action.icon;
@@ -1165,8 +1113,7 @@ export default function App() {
                             {action.divider && <div className="my-1 border-t border-slate-100" />}
                             <button
                               onClick={() => {
-                                setShowFastAction(false);
-                                setCurrentSection(action.section);
+                                goToSection(action.section);
                                 if (action.id === 'pedido') setContentAutoNew(true);
                                 if (action.id === 'posteos') setContentAutoTab('posteos');
                               }}

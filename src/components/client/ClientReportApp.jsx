@@ -23,8 +23,13 @@ import { calcProgress } from '@/utils/progress';
 import { generateProjectPDF } from '@/utils/pdf';
 import { HS_FORM_MARCOMMS_URL, HS_FORM_HSREQUEST_URL } from '@/constants/externalLinks';
 
-export default function ClientReportApp({ country, webinars, campaigns, events, onBack, isPublic = false }) {
+export default function ClientReportApp({ country, scope, webinars, campaigns, events, onBack, isPublic = false }) {
   const now = new Date();
+  // Alcance: un país (compatibilidad) o un scope del Portal Cliente
+  // ({ label, countries, units, unitLabel }). Ver PORTAL_UNITS en constants/markets.
+  const scopeObj = scope || { label: country, countries: [country], units: null, unitLabel: null };
+  const inScope = (c, bu) => scopeObj.countries.includes(c) && (!scopeObj.units || scopeObj.units.length === 0 || scopeObj.units.includes(bu));
+  const [view, setView] = useState('pais'); // pais | plan
   const [selectedMonth, setSelectedMonth] = useState("all"); // "all" | "YYYY-MM"
   const [selectedService, setSelectedService] = useState("all"); // all | webinar | campaign | event
   const [selectedBU, setSelectedBU] = useState("all");
@@ -135,7 +140,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
   const buildAllItems = () => {
     const items = [];
 
-    (webinars || []).filter(w => w.pais === country).forEach(w => {
+    (webinars || []).filter(w => inScope(w.pais, w.unidadNegocio)).forEach(w => {
       const progress = calcProgress(w);
       items.push({
         id: `w-${w.id}`,
@@ -156,7 +161,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
       });
     });
 
-    (campaigns || []).filter(c => c.country === country).forEach(c => {
+    (campaigns || []).filter(c => inScope(c.country, c.businessUnit)).forEach(c => {
       let totalSteps = 11;
       if (c.type === "paid" || c.type === "database" || c.type === "research") totalSteps = 3;
       const progress = Math.min(Math.round(((c.completedSteps || []).length / totalSteps) * 100), 100);
@@ -183,7 +188,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
       });
     });
 
-    (events || []).filter(ev => ev.country === country).forEach(ev => {
+    (events || []).filter(ev => inScope(ev.country, ev.businessUnit)).forEach(ev => {
       const tasks = Object.values(ev.tasks || {});
       const custom = ev.customTasks || [];
       const allTasks = [...tasks, ...custom];
@@ -231,6 +236,9 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
   const totalFee = filteredItems.reduce((acc, i) => acc + i.fee, 0);
   const totalDeals = filteredItems.reduce((acc, i) => acc + i.deals, 0);
   const totalCompletedFee = completedItems.reduce((acc, i) => acc + i.fee, 0);
+  // Inversión de Mkt = fee de los servicios + inversión en plataforma (paid media)
+  const totalInvestment = filteredItems.reduce((acc, i) => acc + i.fee + (i.platformInvestment || 0), 0);
+  const costPerDeal = totalDeals > 0 ? totalInvestment / totalDeals : null;
 
   // Deals por mes (para el gráfico de barras)
   const dealsByMonth = {};
@@ -267,10 +275,10 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
                 </button>
               )}
               <div className="flex items-center gap-3">
-                <div className="bg-white text-slate-900 px-3 py-1 rounded-lg font-black text-xs tracking-widest">REPORTE MARCOMMS</div>
+                <div className="bg-white text-slate-900 px-3 py-1 rounded-lg font-black text-xs tracking-widest">{scopeObj.unitLabel ? scopeObj.unitLabel.toUpperCase() : 'REPORTE MARCOMMS'}</div>
                 <div>
                   <h1 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
-                    <Globe className="w-6 h-6" /> {country}
+                    <Globe className="w-6 h-6" /> {scopeObj.label}
                   </h1>
                   <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">{monthLabel}</p>
                 </div>
@@ -331,6 +339,58 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
       </header>
 
       <main className="max-w-7xl mx-auto w-full p-6 space-y-6">
+        {/* Vista: por país / por plan */}
+        <div className="bg-white border-2 border-slate-100 rounded-2xl p-1.5 inline-flex gap-1 shadow-sm">
+          {[
+            { id: 'pais', label: scopeObj.countries.length > 1 ? 'Por país' : 'Dashboard' },
+            { id: 'plan', label: 'Por plan' },
+          ].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setView(t.id)}
+              className={`px-4 py-2 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${view === t.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {view === 'plan' && (
+          <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-slate-200 text-center">
+            <p className="text-sm font-black text-slate-700 uppercase tracking-tight">Dashboard por plan</p>
+            <p className="text-xs text-slate-400 mt-1">Próximamente. La definición de planes por cliente está pendiente.</p>
+          </div>
+        )}
+
+        {view === 'pais' && (<>
+        {/* Inversión de Mkt vs ROI */}
+        <div className="bg-slate-900 rounded-2xl p-6 text-white grid grid-cols-1 md:grid-cols-3 gap-6 shadow-xl">
+          <div className="md:border-r border-slate-700 md:pr-6">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="w-4 h-4 text-emerald-400" />
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Inversión de Mkt</p>
+            </div>
+            <p className="text-4xl font-black text-emerald-400 tracking-tight font-mono">${totalInvestment.toLocaleString()}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">fee de servicios + pauta en plataforma</p>
+          </div>
+          <div className="md:border-r border-slate-700 md:pr-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Database className="w-4 h-4 text-blue-400" />
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Deals generados</p>
+            </div>
+            <p className="text-4xl font-black text-blue-400 tracking-tight font-mono">{totalDeals}</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">{costPerDeal != null ? `$${Math.round(costPerDeal).toLocaleString()} de inversión por deal` : 'sin deals en el período'}</p>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-4 h-4 text-amber-400" />
+              <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">ROI</p>
+            </div>
+            <p className="text-2xl font-black text-amber-400 tracking-tight">Próximamente</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">Necesita el valor de los deals desde HubSpot. Hoy el retorno se mide en deals por inversión.</p>
+          </div>
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
@@ -544,6 +604,7 @@ export default function ClientReportApp({ country, webinars, campaigns, events, 
             </div>
           )}
         </section>
+        </>)}
       </main>
 
       {/* Modal de Checklist del Servicio */}

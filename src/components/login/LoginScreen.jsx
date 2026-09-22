@@ -45,9 +45,7 @@ export default function LoginScreen({ onLogin, teamMembers }) {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-6">
-            <div className="bg-white text-slate-900 px-4 py-2 rounded-xl font-black text-sm tracking-widest shadow-2xl">
-              MARCOMMS HUB
-            </div>
+            <img src="/logos/marcomms-white.png" alt="MarComms" className="h-12 w-auto drop-shadow-2xl" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
             ¿Quién entra hoy?
