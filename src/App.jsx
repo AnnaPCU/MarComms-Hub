@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2, ChevronRight, Clock, FileText, Globe, Globe2, Info, LayoutDashboard, Link2, LogOut, Mail, Moon, MoreVertical, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, User, UserCheck, Video, X, Zap,
+  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, Info, LayoutDashboard, Link2, LogOut, Mail, Moon, MoreVertical, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, User, UserCheck, Video, X, Zap,
 } from 'lucide-react';
 
 // Constants
@@ -36,6 +36,7 @@ import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
+import { useCrm } from '@/hooks/useCrm';
 import { useTheme } from '@/hooks/useTheme';
 
 // Utils
@@ -57,6 +58,7 @@ import ClientReportApp from '@/components/client/ClientReportApp';
 import PortalHome from '@/components/client/PortalHome';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 import ExtrasApp from '@/components/extras/ExtrasApp';
+import CrmApp from '@/components/crm/CrmApp';
 
 // Claves de localStorage. Versionadas → si cambia el shape, subir el sufijo.
 const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
@@ -242,6 +244,9 @@ export default function App() {
   // ─── Social Media: cuentas y posteos de LinkedIn (Supabase + realtime) ───
   const social = useSocialPosts();
   if (social.error) console.error('SocialPosts Supabase error:', social.error);
+  const crm = useCrm();
+  if (crm.error) console.error('CRM Supabase error:', crm.error);
+  const [crmAutoNew, setCrmAutoNew] = useState(false); // Acción Rápida → abrir editor de entrenamiento
 
   // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
   const {
@@ -348,6 +353,7 @@ export default function App() {
     { id: 'client_portal', title: 'Portal Cliente', description: 'Dashboard por país y por plan: Control Union Certificaciones y Peterson Solutions.', icon: <Globe2 className="w-8 h-8 text-teal-600" />, stats: `${PORTAL_UNITS.reduce((n, u) => n + u.scopes.length, 0)} dashboards`, color: 'bg-teal-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
+    { id: 'crm', title: 'CRM', description: 'Entrenamientos del CRM HubSpot a los clientes internos: realizados, cobrados y adopción por entidad.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${crm.trainings.length} entrenamientos`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
@@ -554,6 +560,20 @@ export default function App() {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
           <ExtrasApp onBack={() => setCurrentSection('main')} currentUser={currentUser} />
+        </div>
+      );
+    }
+
+    if (currentSection === 'crm') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+          <CrmApp
+            crm={crm}
+            currentUser={currentUser}
+            onBack={() => goToSection('main')}
+            autoNew={crmAutoNew}
+            onAutoNewConsumed={() => setCrmAutoNew(false)}
+          />
         </div>
       );
     }
@@ -1103,6 +1123,7 @@ export default function App() {
                         { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
                         { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content', hidden: !SHOW_SOCIAL_PEDIDOS },
                         { id: 'posteos',  label: 'Hoja de posteos',           icon: FileText, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
+                        { id: 'training', label: 'Nuevo entrenamiento CRM',   icon: Database, color: 'bg-sky-50 text-sky-700 hover:bg-sky-100',            section: 'crm' },
                         { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week' },
                         { id: 'portal',   label: 'Portal Cliente',        icon: Globe,    color: 'bg-teal-50 text-teal-700 hover:bg-teal-100',           section: 'client_portal', divider: true },
                         { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
@@ -1116,6 +1137,7 @@ export default function App() {
                                 goToSection(action.section);
                                 if (action.id === 'pedido') setContentAutoNew(true);
                                 if (action.id === 'posteos') setContentAutoTab('posteos');
+                                if (action.id === 'training') setCrmAutoNew(true);
                               }}
                               className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition-colors ${action.color}`}
                             >
