@@ -18,8 +18,8 @@
 --
 -- Incluye el seed de las 24 entidades del Excel "CRM Peterson & Control
 -- Union HubSpot Users - Seats" (hojas "Reglas Facturacion" y "Status"),
--- idempotente por `key`. Los entrenamientos históricos (marzo–mayo 2026)
--- están en supabase/seed/0018_crm_trainings_hist_2026.sql (opcional).
+-- idempotente por `key`. Los entrenamientos se cargan desde la app (el
+-- Excel no tenía fechas ni detalle suficiente para importarlos).
 --
 -- Cómo correr: Supabase Dashboard → SQL Editor → pegar todo → Run
 -- ════════════════════════════════════════════════════════════════════

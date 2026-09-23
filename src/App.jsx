@@ -817,10 +817,10 @@ export default function App() {
           </div>
         </div>
       )}
-      <aside className={`${sidebarCollapsed ? 'w-[76px]' : 'w-64'} bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 transition-[width] duration-200`}>
+      <aside className={`${sidebarCollapsed ? 'w-[76px]' : 'w-52'} bg-white border-r border-slate-200 hidden lg:flex flex-col sticky h-screen top-0 z-30 transition-[width] duration-200`}>
         {/* Logo + nav. min-h-0 es clave para que overflow funcione dentro de un flex column. */}
-        <div className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-3 py-5' : 'p-5'}`}>
-          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-6`}>
+        <div className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-3 py-5' : 'px-3 py-4'}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-4`}>
             <button onClick={() => goToSection('main')} className="flex items-center" title="Hub Central">
               {sidebarCollapsed ? (
                 <>
@@ -829,8 +829,8 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <img src="/logos/marcomms-color.png" data-logo="color" alt="MarComms" className="h-7 w-auto" />
-                  <img src="/logos/marcomms-white.png" data-logo="white" alt="MarComms" className="h-7 w-auto" />
+                  <img src="/logos/marcomms-color.png" data-logo="color" alt="MarComms" className="h-5 w-auto" />
+                  <img src="/logos/marcomms-white.png" data-logo="white" alt="MarComms" className="h-5 w-auto" />
                 </>
               )}
             </button>
@@ -854,7 +854,7 @@ export default function App() {
                   key={s.id}
                   onClick={() => goToSection(s.id)}
                   title={s.title}
-                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-3 px-3 py-2.5'} rounded-xl text-sm font-bold transition-all ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-0 py-3' : 'gap-2.5 px-2.5 py-2'} rounded-xl text-[13px] font-bold transition-all ${active ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
                 >
                   {React.cloneElement(s.icon, { size: 18, className: active ? 'text-indigo-600' : 'text-slate-400' })}
                   {!sidebarCollapsed && <span className="truncate">{s.title}</span>}
@@ -865,17 +865,17 @@ export default function App() {
         </div>
 
         {/* Footer: tema + usuario + logout. shrink-0 para que no se comprima cuando el nav es largo. */}
-        <div className={`shrink-0 border-t border-slate-100 ${sidebarCollapsed ? 'p-3' : 'p-4'} space-y-2`}>
+        <div className={`shrink-0 border-t border-slate-100 p-3 space-y-2`}>
           <button
             onClick={toggleTheme}
             title={resolvedTheme === 'dark' ? 'Pasar a modo claro' : 'Pasar a modo oscuro'}
-            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all`}
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center py-2' : 'gap-2.5 px-2.5 py-2'} rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all`}
           >
             {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             {!sidebarCollapsed && <span>{resolvedTheme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</span>}
           </button>
           {currentUser && (
-            <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-2' : 'gap-3'}`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-2' : 'gap-2'}`}>
               <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${currentUser.color} border-2 border-white shadow-md flex items-center justify-center text-white text-xs font-black shrink-0`} title={currentUser.name}>
                 {currentUser.name.charAt(0).toUpperCase()}
               </div>

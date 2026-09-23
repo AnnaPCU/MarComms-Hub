@@ -93,7 +93,7 @@ export default function CrmApp({ crm, currentUser, onBack, autoNew, onAutoNewCon
       <div className="max-w-6xl mx-auto w-full p-6 space-y-4">
         {usingFallback && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold px-4 py-2 rounded-xl">
-            Mostrando las entidades por defecto: las tablas del CRM todavía no existen en Supabase. Corré la migración 0018 (y el seed opcional) para poder cargar entrenamientos.
+            Mostrando las entidades por defecto: las tablas del CRM todavía no existen en Supabase. Corré la migración 0018 para poder cargar entrenamientos.
           </div>
         )}
 

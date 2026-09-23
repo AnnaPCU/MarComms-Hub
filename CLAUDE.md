@@ -102,7 +102,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones pendientes de correr en producción: ver `supabase/migrations/` (0018 CRM: entidades + entrenamientos, con seed histórico opcional en `supabase/seed/0018_crm_trainings_hist_2026.sql`). Las 0015–0017 ya se corrieron (sep 2026).
+   - Migraciones: todas corridas en producción hasta la 0018 (CRM: entidades + entrenamientos, sep 2026). Si agregás una nueva, anotala acá hasta que se corra.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
