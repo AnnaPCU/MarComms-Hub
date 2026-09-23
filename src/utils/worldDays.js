@@ -8,6 +8,8 @@
 // - noticeDateFor(dateIso)           → ISO del aviso (N días hábiles antes)
 // - upcomingWorldDays(todayIso, opts)→ lista ordenada para el calendario
 // - activeWorldDayNotices(todayIso)  → días cuyo aviso está vigente hoy
+// - worldDayCountries(day)           → países donde repercute más ([] = global)
+// - accountsForWorldDay(day, accts)  → cuentas de LinkedIn desde las que publicar
 // ════════════════════════════════════════════════════════════════════
 
 import {
@@ -15,7 +17,43 @@ import {
   WORLD_DAYS_NOTICE_BUSINESS_DAYS,
   WORLD_DAY_THEME_BY_ID,
 } from '@/constants/worldDays';
+import { MARKETS_LIST } from '@/constants/markets';
 import { daysBetween, subtractBusinessDays, toIsoDate } from './date';
+
+// ────────────────────────────────────────────────────────────────────
+// Países y cuentas
+// ────────────────────────────────────────────────────────────────────
+
+export const WORLD_DAY_GLOBAL_LABEL = 'Todos los países';
+
+const normalize = (str) => String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+// Nombre para mostrar de una clave de MARKETS ('RD' → 'Rep. Dominicana')
+export const countryDisplay = (key) => (MARKETS_LIST.find((m) => m.key === key) || {}).pais || key;
+
+// ¿Es un día global (sin países con más peso)?
+export const isGlobalWorldDay = (worldDay) => !worldDay || !Array.isArray(worldDay.countries) || worldDay.countries.length === 0;
+
+// Países donde repercute más, para mostrar. [] si es global.
+export const worldDayCountries = (worldDay) => (isGlobalWorldDay(worldDay) ? [] : worldDay.countries.map(countryDisplay));
+
+// Texto corto: "Todos los países" | "Brasil, Peru, Ecuador" | "Brasil, Peru +3"
+export const worldDayCountriesText = (worldDay, max = 3) => {
+  const list = worldDayCountries(worldDay);
+  if (list.length === 0) return WORLD_DAY_GLOBAL_LABEL;
+  if (list.length <= max) return list.join(', ');
+  return `${list.slice(0, max).join(', ')} +${list.length - max}`;
+};
+
+// Cuentas de LinkedIn desde las que conviene publicar ese día.
+// Global → todas las cuentas activas. Con países → las cuentas cuyo nombre
+// es uno de esos países (las cuentas se llaman 'Peru', 'Brasil', 'España'…).
+export const accountsForWorldDay = (worldDay, accounts) => {
+  const active = (accounts || []).filter((a) => a && a.active !== false);
+  if (isGlobalWorldDay(worldDay)) return active;
+  const wanted = new Set(worldDay.countries.flatMap((c) => [normalize(c), normalize(countryDisplay(c))]));
+  return active.filter((a) => wanted.has(normalize(a.name)));
+};
 
 // Fecha ISO de un día mundial para un año dado.
 // Soporta día fijo (`day`) o regla "n-ésimo día de semana" (`rule`).

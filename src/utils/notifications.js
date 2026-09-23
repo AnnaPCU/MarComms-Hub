@@ -39,12 +39,16 @@ import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
 import { calcProgress } from './progress';
 import { WORLD_DAYS_NOTIFY_USER } from '@/constants/worldDays';
-import { activeWorldDayNotices } from './worldDays';
+import { activeWorldDayNotices, accountsForWorldDay, isGlobalWorldDay, worldDayCountriesText } from './worldDays';
 import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
 import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
+// Nombre del mes en minúscula a partir de 'YYYY-MM' o 'YYYY-MM-DD'
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const monthLabel = (iso) => MONTH_NAMES[Number(String(iso).slice(5, 7)) - 1] || '';
+
 const WEBINAR_TASK_KEYS = [
   'teamsGroup', 'testDay', 'bbdd', 'hubspot',
   'landingLivestorm', 'ppt', 'onePager',
@@ -398,11 +402,16 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     activeWorldDayNotices(todayIso, options.worldDays).forEach((d) => {
       const when = d.daysLeft === 0 ? 'es hoy' : d.daysLeft === 1 ? 'es mañana' : `es en ${d.daysLeft} días`;
       const themeLabel = d.themeInfo?.label || d.theme;
+      // Desde qué cuentas publicar: global → todas; con países → solo esas cuentas
+      const targetAccounts = [...new Set(accountsForWorldDay(d, socialAccounts).map((a) => a.name))]; // CU Brasil y PS Brasil → 'Brasil' una vez
+      const target = isGlobalWorldDay(d)
+        ? 'Sirve para todas las cuentas.'
+        : `Repercute más en ${worldDayCountriesText(d, 4)}${targetAccounts.length ? ` (cuentas: ${targetAccounts.join(', ')})` : ''}.`;
       notifs.push({
         id: `world-day-${d.id}-${d.date}`, type: 'world_day', icon: Calendar, color: 'pink',
-        title: `${d.name} ${when} (${formatDate(d.date)}). Preparar contenido para redes.`,
+        title: `${d.name} ${when} (${formatDate(d.date)}). Preparar contenido para redes. ${target}`,
         shortTitle: `📅 ${d.name}`,
-        emoji: '📅', project: `Temática: ${themeLabel}`, source: 'Social Media', date: d.date,
+        emoji: '📅', project: `Temática: ${themeLabel} · ${worldDayCountriesText(d)}`, source: 'Social Media', date: d.date,
         navTo: 'content', navTab: 'calendario',
       });
     });
@@ -419,7 +428,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       .forEach((a) => {
         notifs.push({
           id: `missing-post-${a.account.id}-${a.week.start}`, type: 'missing_post', icon: AlertCircle, color: 'pink',
-          title: `${a.account.name}: sin posteo la semana ${a.week.label} (${a.actual} de ${a.expected} esperados en el mes)`,
+          title: `${a.account.name}: falta el posteo ${a.week.index} de ${monthLabel(a.monthKey)} (${a.actual} de ${a.expected} esperados en el mes)`,
           shortTitle: `📭 Sin posteo: ${a.account.name}`,
           emoji: '📭', project: a.account.group, source: 'Social Media', date: a.week.end,
           navTo: 'content', navTab: 'posteos',
@@ -428,8 +437,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     if (monthCloseReminderActive(todayIso)) {
       const pending = monthCloseSummary(socialAccounts, socialPosts, todayIso);
       if (pending.length > 0) {
-        const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-        const monthName = MONTHS[Number(todayIso.slice(5, 7)) - 1];
+        const monthName = monthLabel(todayIso);
         const detail = pending.slice(0, 6).map((s) => `${s.account.name} ${s.count}/${s.expected}`).join(', ');
         notifs.push({
           id: `month-close-${todayIso.slice(0, 7)}`, type: 'month_close', icon: AlertCircle, color: 'pink',

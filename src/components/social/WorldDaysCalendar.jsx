@@ -4,7 +4,8 @@
 // Grilla mensual (lunes a domingo) con los días mundiales de
 // sustentabilidad y certificación. Se navega mes a mes, se filtra por
 // temática con un desplegable y, al cliquear una fecha, el panel lateral
-// muestra el detalle (temática, nota, día del aviso a la responsable).
+// muestra el detalle (temática, países donde repercute más, cuentas desde
+// las que publicar, nota, día del aviso a la responsable).
 // Sin selección, el panel lista las próximas fechas.
 //
 // Además muestra:
@@ -21,7 +22,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
-import { Bell, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, Globe, MapPin, Search, X } from 'lucide-react';
 
 import {
   WORLD_DAY_THEMES,
@@ -32,7 +33,7 @@ import {
 import { TEAM_MEMBERS } from '@/constants/team';
 import { COMPETITION_REVIEW, POST_STATUS_BY_ID } from '@/constants/socialPosts';
 import { isCompetitionReviewDay } from '@/utils/socialPosts';
-import { worldDaysInMonth, monthGrid, upcomingWorldDays } from '@/utils/worldDays';
+import { worldDaysInMonth, monthGrid, upcomingWorldDays, worldDayCountries, worldDayCountriesText, accountsForWorldDay, isGlobalWorldDay } from '@/utils/worldDays';
 import { formatDate, todayIso as getTodayIso } from '@/utils/date';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -98,7 +99,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
       <button
         key={`${d.id}-${d.date}`}
         onClick={(e) => { e.stopPropagation(); setSelected(isSel ? null : d); }}
-        title={d.name}
+        title={`${d.name} · ${worldDayCountriesText(d, 4)}`}
         className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate transition-all ${t ? t.color : 'bg-slate-50 text-slate-600 border-slate-200'} ${isSel ? 'ring-2 ring-pink-400' : 'hover:brightness-95'}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${t ? t.dot : 'bg-slate-400'}`} />
@@ -256,6 +257,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
               </span>
             </div>
             {selected.note && <p className="text-xs text-slate-600 leading-relaxed">{selected.note}</p>}
+            <WorldDayTargets day={selected} accounts={accounts} />
             <div className={`rounded-xl border p-3 flex items-center gap-2 ${selected.noticeActive ? 'bg-pink-50 border-pink-200' : 'bg-slate-50 border-slate-100'}`}>
               <Bell className={`w-4 h-4 shrink-0 ${selected.noticeActive ? 'text-pink-600' : 'text-slate-400'}`} />
               <div>
@@ -288,6 +290,10 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
                           {d.themeInfo?.label}
                           {d.noticeActive && <span className="text-pink-600 font-black">· {countdown(d.daysLeft)}</span>}
                         </p>
+                        <p className="text-[10px] font-bold text-slate-500 mt-0.5 flex items-center gap-1">
+                          {isGlobalWorldDay(d) ? <Globe className="w-3 h-3 text-slate-400 shrink-0" /> : <MapPin className="w-3 h-3 text-pink-500 shrink-0" />}
+                          <span className="truncate">{worldDayCountriesText(d)}</span>
+                        </p>
                       </div>
                     </button>
                   </li>
@@ -297,6 +303,58 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
           </>
         )}
       </aside>
+    </div>
+  );
+}
+
+// ── Países donde repercute más + cuentas desde las que publicar ──
+// Global → "Todos los países" y todas las cuentas activas.
+// Con países → chips por país y solo las cuentas de esos países.
+function WorldDayTargets({ day, accounts }) {
+  const global = isGlobalWorldDay(day);
+  const countries = worldDayCountries(day);
+  const targets = accountsForWorldDay(day, accounts);
+  // Agrupar cuentas por grupo (CU Latinoamérica, PS Iberia & America…)
+  const byGroup = targets.reduce((acc, a) => {
+    (acc[a.group || 'Otras'] = acc[a.group || 'Otras'] || []).push(a.name);
+    return acc;
+  }, {});
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
+          {global ? <Globe className="w-3 h-3" /> : <MapPin className="w-3 h-3 text-pink-500" />}
+          {global ? 'Repercute en' : 'Repercute más en'}
+        </p>
+        {global ? (
+          <p className="text-xs font-black text-slate-800 mt-1">Todos los países · día global</p>
+        ) : (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {countries.map((c) => (
+              <span key={c} className="text-[10px] font-black px-2 py-0.5 rounded-md bg-white border border-pink-200 text-pink-700">{c}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Cuentas para publicar</p>
+        {(accounts || []).length === 0 ? (
+          <p className="text-[11px] text-slate-400 mt-1">Sin cuentas cargadas.</p>
+        ) : global ? (
+          <p className="text-[11px] font-bold text-slate-700 mt-1">Todas las cuentas activas ({targets.length})</p>
+        ) : targets.length === 0 ? (
+          <p className="text-[11px] text-slate-400 mt-1">Ninguna cuenta de LinkedIn en esos países.</p>
+        ) : (
+          <ul className="mt-1 space-y-0.5">
+            {Object.entries(byGroup).map(([group, names]) => (
+              <li key={group} className="text-[11px] leading-snug">
+                <span className="font-black text-slate-500">{group}:</span>{' '}
+                <span className="font-bold text-slate-800">{names.join(', ')}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

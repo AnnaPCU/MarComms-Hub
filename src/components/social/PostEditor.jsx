@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // PostEditor — Alta / edición de un posteo de la hoja de Social Media
 // ════════════════════════════════════════════════════════════════════
-// Campos: título, estado (4 chips), temática, semana, fecha de publicación, link, notas.
+// Campos: título, estado (4 chips), temática, posteo del mes (1..n), fecha de publicación, link, notas.
 //
 // Props:
 //   post             — posteo existente o null (nuevo)
@@ -57,10 +57,10 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
     if (ok && onDelete) onDelete();
   };
 
-  // Si el posteo es de otro mes, sumar su semana a las opciones
+  // Si el posteo es de otro mes, sumar su semana a las opciones (se muestra como 'otro mes')
   const weekOptions = weeks.some((w) => w.start === form.weekStart) || !form.weekStart
     ? weeks
-    : [{ index: 0, start: form.weekStart, label: `semana del ${form.weekStart}` }, ...weeks];
+    : [{ index: 0, start: form.weekStart, label: 'Otro mes' }, ...weeks];
 
   return (
     <ModalPortal>
@@ -114,9 +114,9 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
                 </select>
               </div>
               <div className="space-y-1">
-                <label className={labelCls}>Semana</label>
+                <label className={labelCls}>Posteo</label>
                 <select value={form.weekStart} onChange={(e) => set('weekStart', e.target.value)} className={inputCls}>
-                  {weekOptions.map((w) => <option key={w.start} value={w.start}>{w.index ? `Semana ${w.index} · ` : ''}{w.label}</option>)}
+                  {weekOptions.map((w) => <option key={w.start} value={w.start}>{w.index ? `Posteo ${w.index}` : w.label}</option>)}
                 </select>
               </div>
             </div>

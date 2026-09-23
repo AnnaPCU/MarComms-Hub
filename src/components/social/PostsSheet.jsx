@@ -2,8 +2,9 @@
 // PostsSheet — Hoja de seguimiento de posteos de LinkedIn
 // ════════════════════════════════════════════════════════════════════
 // Reemplaza el Excel de Delfi. Una fila por cuenta (agrupadas por
-// cuenta de LinkedIn), una columna por semana del mes, y en cada celda
-// los posteos de esa semana como chips coloreados por estado.
+// cuenta de LinkedIn), una columna por posteo del mes (Posteo 1..n, una
+// por semana, sin mostrar fechas) y en cada celda los posteos como chips
+// coloreados por estado.
 //
 //   - Clic en el punto del chip → rota el estado (proceso → listo →
 //     aprobado → programado).
@@ -182,9 +183,8 @@ export default function PostsSheet({
               {weeks.map((w) => {
                 const isNow = today >= w.start && today <= w.end;
                 return (
-                  <th key={w.start} className={`px-2 py-2 text-[10px] font-black uppercase tracking-widest text-center ${isNow ? 'text-pink-600' : 'text-slate-400'}`}>
-                    <span className="block">Semana {w.index}</span>
-                    <span className={`block text-[9px] font-bold normal-case tracking-normal ${isNow ? 'text-pink-500' : 'text-slate-400'}`}>{w.label}</span>
+                  <th key={w.start} className={`px-2 py-2 text-[10px] font-black uppercase tracking-widest text-center ${isNow ? 'text-pink-600' : 'text-slate-400'}`} title={isNow ? 'Posteo de esta semana' : undefined}>
+                    Posteo {w.index}
                   </th>
                 );
               })}

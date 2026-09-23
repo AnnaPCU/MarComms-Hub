@@ -291,6 +291,24 @@ describe('12. world_day — aviso 3 días hábiles antes', () => {
     expect(n.navTo).toBe('content');
     expect(n.navTab).toBe('calendario');
     expect(n.title).toContain('es en 3 días');
+    // Medio Ambiente es global: sirve para todas las cuentas
+    expect(n.title).toContain('todas las cuentas');
+    expect(n.project).toContain('Todos los países');
+  });
+
+  it('un día con países nombra las cuentas de esos países', () => {
+    // Océanos = lun 08/06 → aviso desde mié 03/06
+    const accounts = [
+      { id: 'a1', name: 'Peru', group: 'CU Latinoamérica', plan: 'active' },
+      { id: 'a2', name: 'Argentina', group: 'PS Iberia & America', plan: 'none' },
+      { id: 'a3', name: 'España', group: 'CU España', plan: 'active' },
+    ];
+    const notifs = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: accounts }, { now: new Date('2026-06-03T10:00:00Z') });
+    const n = notifs.find(x => x.id === 'world-day-oceanos-2026-06-08');
+    expect(n).toBeTruthy();
+    expect(n.title).toContain('Repercute más en');
+    expect(n.title).toContain('cuentas: Peru, España');
+    expect(n.title).not.toContain('Argentina');
   });
 
   it('todavía no avisa Océanos (aviso recién el 03/06)', () => {
@@ -340,6 +358,8 @@ describe('13. missing_post — cuenta por debajo del plan', () => {
     const n = notifs.find(n => n.id === 'missing-post-acc-peru-2026-05-18');
     expect(n.navTab).toBe('posteos');
     expect(n.title).toContain('Peru');
+    // Semana del 18/05 = posteo 3 de mayo; el aviso habla de posteos, no de fechas
+    expect(n.title).toContain('falta el posteo 3 de mayo');
   });
 
   it('no avisa si la cuenta cumple el acumulado', () => {

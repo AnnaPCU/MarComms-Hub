@@ -774,7 +774,7 @@ export default function SocialMediaApp({
               <div>
                 <h1 className="text-2xl font-black uppercase tracking-tight">Seguimiento de posteos</h1>
                 <p className="text-[10px] text-pink-100 font-bold uppercase tracking-widest">
-                  {SHOW_SOCIAL_PEDIDOS ? `${filtered.length} piezas en pipeline` : 'LinkedIn · una fila por cuenta, una columna por semana'}
+                  {SHOW_SOCIAL_PEDIDOS ? `${filtered.length} piezas en pipeline` : 'LinkedIn · una fila por cuenta, una columna por posteo del mes'}
                 </p>
               </div>
             </div>

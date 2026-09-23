@@ -17,8 +17,13 @@ import {
   groupByMonth,
   worldDaysInMonth,
   monthGrid,
+  isGlobalWorldDay,
+  worldDayCountries,
+  worldDayCountriesText,
+  accountsForWorldDay,
 } from './worldDays';
-import { WORLD_DAYS, WORLD_DAY_THEMES, WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
+import { WORLD_DAYS, WORLD_DAY_THEMES, WORLD_DAY_THEME_BY_ID, WORLD_DAY_COUNTRIES } from '@/constants/worldDays';
+import { MARKETS } from '@/constants/markets';
 
 describe('date — días hábiles', () => {
   it('toIsoDate no pasa por UTC', () => {
@@ -182,5 +187,47 @@ describe('worldDays — grilla mensual', () => {
     expect(grid[0][0].iso).toBe('2026-08-31');
     expect(grid[0][0].inMonth).toBe(false);
     expect(grid[0][1].iso).toBe('2026-09-01');
+  });
+});
+
+describe('worldDays — países y cuentas', () => {
+  const byId = Object.fromEntries(WORLD_DAYS.map((d) => [d.id, d]));
+  const ACCOUNTS = [
+    { id: 'a1', name: 'Peru', group: 'CU Latinoamérica', plan: 'active' },
+    { id: 'a2', name: 'Brasil', group: 'CU Latinoamérica', plan: 'none' },
+    { id: 'a3', name: 'España', group: 'CU España', plan: 'active' },
+    { id: 'a4', name: 'Certificaciones', group: 'CU Latinoamérica', plan: 'active' },
+    { id: 'a5', name: 'Argentina', group: 'PS Iberia & America', plan: 'none', active: false },
+  ];
+
+  it('todo día tiene countries (lista) y las claves de WORLD_DAY_COUNTRIES existen y son países de MARKETS', () => {
+    WORLD_DAYS.forEach((d) => expect(Array.isArray(d.countries)).toBe(true));
+    Object.entries(WORLD_DAY_COUNTRIES).forEach(([id, list]) => {
+      expect(byId[id], `id desconocido: ${id}`).toBeTruthy();
+      list.forEach((c) => expect(MARKETS[c], `país desconocido: ${c} en ${id}`).toBeTruthy());
+    });
+  });
+
+  it('un día sin países es global', () => {
+    expect(isGlobalWorldDay(byId['medio-ambiente'])).toBe(true);
+    expect(worldDayCountries(byId['medio-ambiente'])).toEqual([]);
+    expect(worldDayCountriesText(byId['medio-ambiente'])).toBe('Todos los países');
+  });
+
+  it('café repercute en países cafeteros y muestra el nombre de RD completo', () => {
+    const cafe = byId['cafe'];
+    expect(isGlobalWorldDay(cafe)).toBe(false);
+    expect(worldDayCountries(cafe)).toContain('Brasil');
+    expect(worldDayCountries(cafe)).toContain('Rep. Dominicana');
+    expect(worldDayCountriesText(cafe, 2)).toMatch(/^Brasil, Colombia \+\d+$/);
+  });
+
+  it('accountsForWorldDay: global → todas las activas; con países → solo las de esos países', () => {
+    const all = accountsForWorldDay(byId['medio-ambiente'], ACCOUNTS);
+    expect(all.map((a) => a.id)).toEqual(['a1', 'a2', 'a3', 'a4']); // a5 está inactiva
+    const cafe = accountsForWorldDay(byId['cafe'], ACCOUNTS);
+    expect(cafe.map((a) => a.name)).toEqual(['Peru', 'Brasil']);
+    const olivo = accountsForWorldDay(byId['olivo'], ACCOUNTS);
+    expect(olivo.map((a) => a.name)).toEqual(['Peru', 'España']);
   });
 });

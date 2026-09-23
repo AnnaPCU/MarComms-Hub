@@ -15,6 +15,9 @@
 //             tipo "segundo jueves de noviembre"
 //   theme   — id de WORLD_DAY_THEMES
 //   note    — por qué nos importa / normas relacionadas (para el brief)
+//   countries — países donde el día repercute más (claves de MARKETS).
+//             Se asigna desde WORLD_DAY_COUNTRIES (más abajo). Lista vacía
+//             = día global: sirve para todas las cuentas.
 //
 // La lógica de fechas (próxima ocurrencia, aviso N días hábiles antes)
 // vive en src/utils/worldDays.js.
@@ -48,7 +51,7 @@ export const WORLD_DAY_THEME_BY_ID = WORLD_DAY_THEMES.reduce((acc, t) => {
 }, {});
 
 // ── Calendario ──
-export const WORLD_DAYS = [
+const WORLD_DAYS_BASE = [
   // Enero
   { id: 'educacion-ambiental', short: 'Educación ambiental',  name: 'Día Mundial de la Educación Ambiental',                       month: 1,  day: 26, theme: 'sustentabilidad', note: 'Concientización y capacitación en sustentabilidad.' },
   // Febrero
@@ -116,3 +119,35 @@ export const WORLD_DAYS = [
   { id: 'anticorrupcion', short: 'Contra la corrupción',       name: 'Día Internacional contra la Corrupción',                      month: 12, day: 9,  theme: 'social',          note: 'Gobernanza, ISO 37001, integridad.' },
   { id: 'derechos-humanos', short: 'Derechos humanos',     name: 'Día de los Derechos Humanos',                                 month: 12, day: 10, theme: 'social',          note: 'Debida diligencia en derechos humanos, cadena de suministro.' },
 ];
+
+// ── Países donde más repercute cada día ──
+// Todos son días internacionales, pero el peso comercial cambia según la
+// industria de cada mercado (café → Brasil/Colombia/Peru, olivo → España/
+// Portugal/Argentina, etc.). Sirve para saber desde qué cuentas de LinkedIn
+// conviene publicar. Los que no figuran acá son globales (todas las cuentas).
+// Claves: las de MARKETS en src/constants/markets.js.
+export const WORLD_DAY_COUNTRIES = {
+  'legumbres':          ['Argentina', 'Canada', 'Mexico', 'Brasil'],
+  'bosques':            ['Brasil', 'Chile', 'Uruguay', 'Peru', 'Canada', 'Portugal'],
+  'fashion-revolution': ['Peru', 'Brasil', 'Portugal', 'España', 'Mexico', 'USA'],
+  'sanidad-vegetal':    ['Argentina', 'Brasil', 'Chile', 'Peru', 'Mexico', 'Ecuador', 'Guatemala'],
+  'abejas':             ['Argentina', 'Mexico', 'Brasil', 'Uruguay', 'Chile'],
+  'te':                 ['Argentina'],
+  'biodiversidad':      ['Brasil', 'Colombia', 'Ecuador', 'Peru', 'Mexico'],
+  'leche':              ['Argentina', 'Uruguay', 'Brasil', 'Mexico', 'USA', 'Canada'],
+  'oceanos':            ['Chile', 'Peru', 'Ecuador', 'Mexico', 'España', 'Portugal', 'Canada', 'USA'],
+  'viento':             ['Brasil', 'Argentina', 'Uruguay', 'Mexico', 'USA', 'España', 'Portugal'],
+  'desertificacion':    ['Argentina', 'Chile', 'Mexico', 'Peru', 'Brasil', 'España'],
+  'gastronomia':        ['Peru', 'Mexico', 'España', 'Argentina'],
+  'bosques-tropicales': ['Brasil', 'Peru', 'Ecuador', 'Colombia', 'Mexico', 'Guatemala'],
+  'manglares':          ['Ecuador', 'Mexico', 'Brasil', 'Colombia', 'Guatemala', 'RD'],
+  'cafe':               ['Brasil', 'Colombia', 'Peru', 'Mexico', 'Guatemala', 'RD', 'Ecuador'],
+  'cacao':              ['Ecuador', 'Peru', 'Brasil', 'RD', 'Colombia', 'Mexico'],
+  'animales':           ['Argentina', 'Brasil', 'Uruguay', 'Paraguay', 'Mexico', 'USA'],
+  'algodon':            ['Brasil', 'USA', 'Peru', 'Argentina', 'Mexico', 'España'],
+  'pesca':              ['Chile', 'Peru', 'Ecuador', 'Mexico', 'España', 'Portugal', 'Canada', 'USA'],
+  'olivo':              ['España', 'Portugal', 'Argentina', 'Chile', 'Peru', 'Uruguay'],
+  'suelo':              ['Argentina', 'Brasil', 'Uruguay', 'Paraguay', 'USA', 'Canada', 'Mexico'],
+};
+
+export const WORLD_DAYS = WORLD_DAYS_BASE.map((d) => ({ ...d, countries: WORLD_DAY_COUNTRIES[d.id] || [] }));
