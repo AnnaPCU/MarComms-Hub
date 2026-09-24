@@ -75,6 +75,7 @@ export default function UtmForm({ form, setField, onClear, accent, onCopy, onSav
           <div>
             <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1 block">1. Unidad de Negocio *</label>
             <select value={form.businessUnit} onChange={(e) => setField('businessUnit', e.target.value)} className={innerCls}>
+              <option value="">Seleccionar...</option>
               {businessUnits.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>

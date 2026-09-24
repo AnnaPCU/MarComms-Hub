@@ -41,6 +41,7 @@ describe('utm — listas cerradas', () => {
     expect(MARCOMMS_BUSINESS_UNITS).toContain('Peterson Solutions');
     expect(MARCOMMS_BUSINESS_UNITS).not.toContain('BELE');
     expect(MARCOMMS_BUSINESS_UNITS).not.toContain('Peterson');
+    expect(MARCOMMS_BUSINESS_UNITS).not.toContain('MARCOMMS');
   });
   it('valores viejos: etiqueta y traducción', () => {
     expect(utmValueLabel('source', 'contenido')).toBe('Contenido (viejo)');

@@ -51,7 +51,6 @@ export const COUNTRIES = Object.keys(MARKETS).sort();
 
 // Unidades de negocio para Marcomms (usadas en UTM builder y formularios)
 export const MARCOMMS_BUSINESS_UNITS = [
-  'MARCOMMS',
   'Control Union',
   'CU Barcos',
   'CU Warrants',

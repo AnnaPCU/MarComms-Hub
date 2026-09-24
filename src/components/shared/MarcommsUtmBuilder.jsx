@@ -25,6 +25,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, ChevronDown, Database } from 'lucide-react';
+import { MARCOMMS_BUSINESS_UNITS } from '@/constants/markets';
 import { useUtmLinks } from '@/hooks/useUtmLinks';
 import { useConfirm } from '@/hooks/useConfirm';
 import { buildUtmCampaign, buildUtmUrl, isUtmFormComplete, normalizeLegacyUtmValue, utmValueLabel } from '@/utils/utm';
@@ -60,7 +61,7 @@ export default function MarcommsUtmBuilder({
 
   const initialForm = useCallback(() => ({
     url: '', source: '', medium: '', organization: 'Control Union',
-    businessUnit: defaultBusinessUnit || 'MARCOMMS', country: defaultCountry || '', campaignName: defaultCampaignName || '',
+    businessUnit: defaultBusinessUnit || '', country: defaultCountry || '', campaignName: defaultCampaignName || '',
   }), [defaultBusinessUnit, defaultCountry, defaultCampaignName]);
 
   const [form, setForm] = useState(initialForm);
@@ -118,7 +119,7 @@ export default function MarcommsUtmBuilder({
       source: normalizeLegacyUtmValue('source', link.source),
       medium: normalizeLegacyUtmValue('medium', link.medium),
       organization: link.organization === 'Peterson' ? 'Peterson Solutions' : (link.organization || 'Control Union'),
-      businessUnit: link.businessUnit === 'Peterson' ? 'Peterson Solutions' : (link.businessUnit || 'MARCOMMS'),
+      businessUnit: link.businessUnit === 'Peterson' ? 'Peterson Solutions' : (MARCOMMS_BUSINESS_UNITS.includes(link.businessUnit) ? link.businessUnit : ''),
       country: link.country || '',
       campaignName: link.campaignName || '',
     });
