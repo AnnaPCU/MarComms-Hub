@@ -19,7 +19,7 @@ export default function ExtrasApp({ onBack, currentUser }) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col w-full">
         <header className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 sticky top-0 z-30 shadow-xl">
-          <div className="max-w-4xl mx-auto flex items-center gap-4">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
             <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
@@ -34,8 +34,8 @@ export default function ExtrasApp({ onBack, currentUser }) {
             </div>
           </div>
         </header>
-        <main className="max-w-4xl mx-auto w-full p-6">
-          <MarcommsUtmBuilder accentColor="indigo" currentUser={currentUser} />
+        <main className="max-w-7xl mx-auto w-full p-6">
+          <MarcommsUtmBuilder accentColor="indigo" currentUser={currentUser} layout="wide" />
         </main>
       </div>
     );

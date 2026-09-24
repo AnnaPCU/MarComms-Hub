@@ -16,19 +16,40 @@ export const CAMPAIGN_CONTENT_PIECES = [
 // Estos valores van en el utm_source / utm_medium de las URLs generadas
 // por el UTM Builder.
 
+// Fuentes y medios del UTM Generator (sep 2026: listas cerradas, son las
+// únicas disponibles). Los valores viejos que quedaron en el repositorio
+// (contenido, paid_media, email_mkt…) se muestran con LEGACY_UTM_LABELS y
+// se traducen al cargar un UTM guardado con LEGACY_UTM_VALUE_MAP.
 export const UTM_SOURCES = [
-  { value: 'paid_media', label: 'Paid Media' },
-  { value: 'contenido',  label: 'Contenido' },
+  { value: 'content',   label: 'Content' },
+  { value: 'linkedin',  label: 'LinkedIn' },
+  { value: 'meta',      label: 'Meta (Instagram o Facebook)' },
+  { value: 'google',    label: 'Google' },
+  { value: 'mailchimp', label: 'Mailchimp' },
+  { value: 'apollo',    label: 'Apollo' },
+  { value: 'hubspot',   label: 'HubSpot' },
 ];
 
 export const UTM_MEDIUMS = [
-  { value: 'linkedin',  label: 'LinkedIn' },
-  { value: 'google',    label: 'Google' },
-  { value: 'meta',      label: 'Meta (Facebook/Instagram)' },
-  { value: 'email_mkt', label: 'Email Marketing' },
-  { value: 'content',   label: 'Content' },
-  { value: 'webinar',   label: 'Webinar' },
+  { value: 'email_marketing', label: 'Email Marketing' },
+  { value: 'social',          label: 'Social' },
+  { value: 'paid_media',      label: 'Paid Media' },
+  { value: 'webinar',         label: 'Webinar' },
 ];
+
+// Etiquetas para valores históricos que ya no están en las listas
+export const LEGACY_UTM_LABELS = {
+  contenido:      'Contenido (viejo)',
+  email_mkt:      'Email Marketing (viejo)',
+  Linkedin:       'LinkedIn (viejo)',
+  'Social Media': 'Social (viejo)',
+};
+
+// Traducción de valores viejos al cargar un UTM guardado en el formulario
+export const LEGACY_UTM_VALUE_MAP = {
+  source: { contenido: 'content', Linkedin: 'linkedin', LinkedIn: 'linkedin' },
+  medium: { email_mkt: 'email_marketing', 'Social Media': 'social', 'social_media': 'social' },
+};
 
 // ── Pasos (steps) de cada tipo de campaña ──
 // IDs deben coincidir con los que se guardan en campaign.completedSteps.

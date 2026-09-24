@@ -57,15 +57,16 @@ export const MARCOMMS_BUSINESS_UNITS = [
   'CU Warrants',
   'CU Certificaciones',
   'CU Norte',
-  'Peterson',
-  'BELE',
+  'Peterson Solutions',
 ];
 
 // Organización macro (columna "Peterson o Control Union" del Excel de UTMs).
 // Es un dato de clasificación del UTM — NO va dentro del string utm_campaign.
+// PCU = Peterson Control Union (piezas del grupo, sin marca puntual).
 export const ORGANIZATIONS = [
   'Control Union',
-  'Peterson',
+  'Peterson Solutions',
+  'PCU',
 ];
 
 // ── Display names para países con nombres "raros" (RD, Ptech, etc.) ──
