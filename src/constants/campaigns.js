@@ -16,6 +16,22 @@ export const CAMPAIGN_CONTENT_PIECES = [
 // Estos valores van en el utm_source / utm_medium de las URLs generadas
 // por el UTM Builder.
 
+// ── Pilares (sep 2026) ──
+// Un pilar agrupa servicios del mismo tipo. Los webinars y eventos son
+// colecciones propias; email, paid, database y research son `type` de la
+// tabla campaigns. Se usa en Pilares (tabs) y en el Portal Cliente (filtro).
+export const PILLARS = [
+  { id: 'webinars', label: 'Webinars' },
+  { id: 'eventos',  label: 'Eventos' },
+  { id: 'email',    label: 'Email Mkt' },
+  { id: 'paid',     label: 'Paid Media' },
+  { id: 'database', label: 'Creación BBDD' },
+  { id: 'research', label: 'Investigación' },
+];
+export const PILLAR_BY_ID = PILLARS.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+// type de una campaña → id de pilar (las campañas auto de webinar son 'email' por variant)
+export const pillarOfCampaign = (campaign) => (campaign?.variant === 'webinar' ? 'email' : (PILLAR_BY_ID[campaign?.type] ? campaign.type : 'email'));
+
 // Fuentes y medios del UTM Generator (sep 2026: listas cerradas, son las
 // únicas disponibles). Los valores viejos que quedaron en el repositorio
 // (contenido, paid_media, email_mkt…) se muestran con LEGACY_UTM_LABELS y

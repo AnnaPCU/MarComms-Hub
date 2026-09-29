@@ -15,15 +15,18 @@ import { ArrowLeft, Video, Mail, Target, Database, BarChart3, Calendar } from 'l
 import WebinarApp from '@/components/webinar/WebinarApp';
 import CampaignsApp from '@/components/campaigns/CampaignsApp';
 import EventsApp from '@/components/events/EventsApp';
+import { PILLARS } from '@/constants/campaigns';
 
-const PILARES = [
-  { id: 'webinars', label: 'Webinars',      icon: Video,     accent: 'bg-indigo-600' },
-  { id: 'eventos',  label: 'Eventos',       icon: Calendar,  accent: 'bg-orange-600' },
-  { id: 'email',    label: 'Email Mkt',     icon: Mail,      accent: 'bg-blue-600' },
-  { id: 'paid',     label: 'Paid Media',    icon: Target,    accent: 'bg-amber-600' },
-  { id: 'database', label: 'Creación BBDD', icon: Database,  accent: 'bg-emerald-600' },
-  { id: 'research', label: 'Investigación', icon: BarChart3, accent: 'bg-purple-600' },
-];
+// Ícono y color por pilar; las etiquetas salen de PILLARS (constants/campaigns)
+const PILAR_STYLE = {
+  webinars: { icon: Video,     accent: 'bg-indigo-600' },
+  eventos:  { icon: Calendar,  accent: 'bg-orange-600' },
+  email:    { icon: Mail,      accent: 'bg-blue-600' },
+  paid:     { icon: Target,    accent: 'bg-amber-600' },
+  database: { icon: Database,  accent: 'bg-emerald-600' },
+  research: { icon: BarChart3, accent: 'bg-purple-600' },
+};
+const PILARES = PILLARS.map((p) => ({ ...p, ...PILAR_STYLE[p.id] }));
 
 export default function CampanasApp({
   onBack,

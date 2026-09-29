@@ -22,6 +22,8 @@ import {
 import { calcProgress } from '@/utils/progress';
 import { generateProjectPDF } from '@/utils/pdf';
 import { HS_FORM_MARCOMMS_URL, HS_FORM_HSREQUEST_URL } from '@/constants/externalLinks';
+import { PILLARS, pillarOfCampaign } from '@/constants/campaigns';
+import { unitsForCountry } from '@/constants/markets';
 
 export default function ClientReportApp({ country, scope, webinars, campaigns, events, onBack, isPublic = false }) {
   const now = new Date();
@@ -31,7 +33,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
   const inScope = (c, bu) => scopeObj.countries.includes(c) && (!scopeObj.units || scopeObj.units.length === 0 || scopeObj.units.includes(bu));
   const [view, setView] = useState('pais'); // pais | plan
   const [selectedMonth, setSelectedMonth] = useState("all"); // "all" | "YYYY-MM"
-  const [selectedService, setSelectedService] = useState("all"); // all | webinar | campaign | event
+  const [selectedService, setSelectedService] = useState("all"); // all | id de pilar (PILLARS)
   const [selectedBU, setSelectedBU] = useState("all");
   const [selectedItem, setSelectedItem] = useState(null); // item + rawData para mostrar checklist
 
@@ -130,11 +132,16 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   };
 
-  const SERVICE_TYPES = {
-    webinar: { label: "Webinars", icon: Video, color: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500" },
-    campaign: { label: "Campañas", icon: Mail, color: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
-    event: { label: "Eventos", icon: Calendar, color: "bg-orange-50 text-orange-700 border-orange-200", dot: "bg-orange-500" }
+  // Estilo por pilar (las etiquetas salen de PILLARS)
+  const PILLAR_STYLE = {
+    webinars: { icon: Video,      color: "bg-indigo-50 text-indigo-700 border-indigo-200",   dot: "bg-indigo-500" },
+    eventos:  { icon: Calendar,   color: "bg-orange-50 text-orange-700 border-orange-200",   dot: "bg-orange-500" },
+    email:    { icon: Mail,       color: "bg-blue-50 text-blue-700 border-blue-200",         dot: "bg-blue-500" },
+    paid:     { icon: Zap,        color: "bg-amber-50 text-amber-700 border-amber-200",      dot: "bg-amber-500" },
+    database: { icon: Database,   color: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+    research: { icon: TrendingUp, color: "bg-purple-50 text-purple-700 border-purple-200",   dot: "bg-purple-500" },
   };
+  const SERVICE_TYPES = Object.fromEntries(PILLARS.map((p) => [p.id, { label: p.label, ...PILLAR_STYLE[p.id] }]));
 
   // Normalizar todos los servicios del país en una sola lista
   const buildAllItems = () => {
@@ -145,6 +152,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
       items.push({
         id: `w-${w.id}`,
         source: 'webinar',
+        pillar: 'webinars',
         name: w.name,
         businessUnit: w.unidadNegocio || '—',
         client: w.client || '',
@@ -165,18 +173,13 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
       let totalSteps = 11;
       if (c.type === "paid" || c.type === "database" || c.type === "research") totalSteps = 3;
       const progress = Math.min(Math.round(((c.completedSteps || []).length / totalSteps) * 100), 100);
-      const typeLabel = {
-        email: "Email Marketing",
-        paid: "Paid Media",
-        research: "Investigación",
-        database: "BBDD"
-      };
       items.push({
         id: `c-${c.id}`,
         source: 'campaign',
+        pillar: pillarOfCampaign(c),
         name: c.name,
         businessUnit: c.businessUnit || '—',
-        subtype: typeLabel[c.type] || c.type,
+        subtype: null,
         fee: Number(c.budget) || 0,
         platformInvestment: Number(c.platformInvestment) || 0,
         deals: Number(c.dealsCreated) || 0,
@@ -197,6 +200,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
       items.push({
         id: `e-${ev.id}`,
         source: 'event',
+        pillar: 'eventos',
         name: ev.name,
         businessUnit: ev.businessUnit || '—',
         client: ev.client || '',
@@ -220,7 +224,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
   // Aplicar filtros
   const filteredItems = allItems.filter(item => {
     if (selectedBU !== "all" && item.businessUnit !== selectedBU) return false;
-    if (selectedService !== "all" && item.source !== selectedService) return false;
+    if (selectedService !== "all" && item.pillar !== selectedService) return false;
     if (selectedMonth !== "all") {
       // Un item entra al mes si su completedAt o su date caen en ese mes
       const match = item.completedMonthKey === selectedMonth || (item.date && monthKey(item.date) === selectedMonth);
@@ -258,7 +262,16 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
     const label = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
     monthOptions.push({ key, label: label.charAt(0).toUpperCase() + label.slice(1) });
   }
-  const uniqueBUs = [...new Set(allItems.map(i => i.businessUnit))].filter(Boolean).sort();
+  // Unidades del filtro: las que operan en los países del alcance (aunque
+  // todavía no tengan servicios cargados), acotadas a las unidades del
+  // alcance si lo hay, más cualquier unidad que aparezca en los datos.
+  const uniqueBUs = useMemo(() => {
+    const fromMarkets = scopeObj.countries.flatMap((c) => unitsForCountry(c))
+      .filter((u) => !scopeObj.units || scopeObj.units.length === 0 || scopeObj.units.includes(u));
+    const fromItems = allItems.map((i) => i.businessUnit).filter((b) => b && b !== '—');
+    return [...new Set([...fromMarkets, ...fromItems])].sort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeObj.countries.join(','), (scopeObj.units || []).join(','), allItems.length]);
 
   const monthLabel = selectedMonth === "all" ? "Todos los meses" : (monthOptions.find(m => m.key === selectedMonth)?.label || selectedMonth);
 
@@ -320,10 +333,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
               {monthOptions.map(m => <option key={m.key} value={m.key} className="text-slate-900">{m.label}</option>)}
             </select>
             <select value={selectedService} onChange={e => setSelectedService(e.target.value)} className="bg-white/10 border border-white/20 text-white px-3 py-2 rounded-xl font-black text-xs outline-none hover:bg-white/20 transition-colors">
-              <option value="all" className="text-slate-900">Todos los servicios</option>
-              <option value="webinar" className="text-slate-900">Webinars</option>
-              <option value="campaign" className="text-slate-900">Campañas</option>
-              <option value="event" className="text-slate-900">Eventos</option>
+              <option value="all" className="text-slate-900">Todos los pilares</option>
+              {PILLARS.map((p) => <option key={p.id} value={p.id} className="text-slate-900">{p.label}</option>)}
             </select>
             <select value={selectedBU} onChange={e => setSelectedBU(e.target.value)} className="bg-white/10 border border-white/20 text-white px-3 py-2 rounded-xl font-black text-xs outline-none hover:bg-white/20 transition-colors">
               <option value="all" className="text-slate-900">Todas las unidades</option>
@@ -484,7 +495,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
           {activeItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {activeItems.map(item => {
-                const s = SERVICE_TYPES[item.source];
+                const s = SERVICE_TYPES[item.pillar] || SERVICE_TYPES.email;
                 const Icon = s.icon;
                 return (
                   <div
@@ -558,7 +569,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
                   </thead>
                   <tbody>
                     {completedItems.map(item => {
-                      const s = SERVICE_TYPES[item.source];
+                      const s = SERVICE_TYPES[item.pillar] || SERVICE_TYPES.email;
                       const Icon = s.icon;
                       const completedDate = item.completedAt ? new Date(item.completedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
                       return (
@@ -613,7 +624,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         const doneCount = checklist.filter(c => c.done).length;
         const totalCount = checklist.length;
         const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-        const s = SERVICE_TYPES[selectedItem.source];
+        const s = SERVICE_TYPES[selectedItem.pillar] || SERVICE_TYPES.email;
         const HeaderIcon = s.icon;
 
         // Agrupar por fase si es un evento

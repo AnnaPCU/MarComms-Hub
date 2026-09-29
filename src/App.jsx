@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  AlertCircle, ArrowLeft, Bell, Building2, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, Info, LayoutDashboard, Link2, LogOut, Mail, Moon, MoreVertical, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, User, UserCheck, Video, X, Zap,
+  ArrowLeft, Bell, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, LayoutDashboard, Link2, LogOut, Mail, Moon, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, Video, X,
 } from 'lucide-react';
 
 // Constants
@@ -135,8 +135,7 @@ export default function App() {
   }, [readNotifications]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [showFastAction, setShowFastAction] = useState(false);
-  const [contentAutoNew, setContentAutoNew] = useState(false); // abre "nuevo pedido" al entrar desde acción rápida
+  const [contentAutoNew, setContentAutoNew] = useState(false); // abre "nuevo pedido" al entrar (sin uso desde sep 2026, se quitó Acción Rápida)
   const [contentAutoTab, setContentAutoTab] = useState(null);   // abre una tab de Social Media al entrar (ej. 'calendario')
   const [focusProjectId, setFocusProjectId] = useState(null);  // deep-link: card a abrir al navegar desde Mi Semana
 
@@ -164,7 +163,6 @@ export default function App() {
     setFocusProjectId(null);
     setShowNotifications(false);
     setShowSearchResults(false);
-    setShowFastAction(false);
     setCurrentSection(section);
   };
 
@@ -188,11 +186,9 @@ export default function App() {
   // ── Refs para cerrar dropdowns al hacer click afuera ──
   const searchContainerRef = useRef(null);
   const notificationsContainerRef = useRef(null);
-  const fastActionContainerRef = useRef(null);
 
   useOnClickOutside(searchContainerRef,        () => setShowSearchResults(false), showSearchResults);
   useOnClickOutside(notificationsContainerRef, () => setShowNotifications(false), showNotifications);
-  useOnClickOutside(fastActionContainerRef,    () => setShowFastAction(false),    showFastAction);
   
   // ─── Webinars / Campaigns / Events: Supabase + realtime via hooks ───
   // Los hooks devuelven [data, setData, meta] — setData se comporta
@@ -246,7 +242,6 @@ export default function App() {
   if (social.error) console.error('SocialPosts Supabase error:', social.error);
   const crm = useCrm();
   if (crm.error) console.error('CRM Supabase error:', crm.error);
-  const [crmAutoNew, setCrmAutoNew] = useState(false); // Acción Rápida → abrir editor de entrenamiento
 
   // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
   const {
@@ -571,8 +566,6 @@ export default function App() {
             crm={crm}
             currentUser={currentUser}
             onBack={() => goToSection('main')}
-            autoNew={crmAutoNew}
-            onAutoNewConsumed={() => setCrmAutoNew(false)}
           />
         </div>
       );
@@ -1093,65 +1086,6 @@ export default function App() {
                 </div>
             )}
 
-            <div className="h-8 w-px bg-slate-200 mx-2"></div>
-
-            {/* Fast Action: menú con accesos rápidos */}
-            <div ref={fastActionContainerRef} className="relative">
-              <button
-                onClick={() => setShowFastAction(!showFastAction)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
-                  showFastAction ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white hover:bg-indigo-600'
-                }`}
-              >
-                <Zap size={14} className="fill-current" /> ACCIÓN RÁPIDA
-              </button>
-              {showFastAction && (
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[60] overflow-hidden">
-                    <div className="p-3 border-b border-slate-100 bg-gradient-to-r from-slate-900 to-indigo-900">
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-amber-300 fill-current" />
-                        <h3 className="font-black text-sm text-white uppercase tracking-tight">Acción Rápida</h3>
-                      </div>
-                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">
-                        Crear o ir directo
-                      </p>
-                    </div>
-                    <div className="p-2">
-                      {[
-                        { id: 'webinar',  label: 'Nuevo webinar',         icon: Video,    color: 'bg-blue-50 text-blue-700 hover:bg-blue-100',         section: 'campaigns' },
-                        { id: 'campaign', label: 'Nueva campaña',         icon: Mail,     color: 'bg-purple-50 text-purple-700 hover:bg-purple-100',   section: 'campaigns' },
-                        { id: 'event',    label: 'Nuevo evento',          icon: Calendar, color: 'bg-orange-50 text-orange-700 hover:bg-orange-100',   section: 'campaigns' },
-                        { id: 'pedido',   label: 'Nuevo pedido Social Media', icon: Sparkles, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content', hidden: !SHOW_SOCIAL_PEDIDOS },
-                        { id: 'posteos',  label: 'Hoja de posteos',           icon: FileText, color: 'bg-pink-50 text-pink-700 hover:bg-pink-100',         section: 'content' },
-                        { id: 'training', label: 'Nuevo entrenamiento CRM',   icon: Database, color: 'bg-sky-50 text-sky-700 hover:bg-sky-100',            section: 'crm' },
-                        { id: 'myweek',   label: 'Mi semana',             icon: Clock,    color: 'bg-amber-50 text-amber-700 hover:bg-amber-100',      section: 'my_week' },
-                        { id: 'portal',   label: 'Portal Cliente',        icon: Globe,    color: 'bg-teal-50 text-teal-700 hover:bg-teal-100',           section: 'client_portal', divider: true },
-                        { id: 'fact',     label: 'Facturación',           icon: Receipt,  color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100', section: 'facturacion' }
-                      ].filter(action => !action.hidden && !isSectionHidden(action.section)).map(action => {
-                        const ActionIcon = action.icon;
-                        return (
-                          <React.Fragment key={action.id}>
-                            {action.divider && <div className="my-1 border-t border-slate-100" />}
-                            <button
-                              onClick={() => {
-                                goToSection(action.section);
-                                if (action.id === 'pedido') setContentAutoNew(true);
-                                if (action.id === 'posteos') setContentAutoTab('posteos');
-                                if (action.id === 'training') setCrmAutoNew(true);
-                              }}
-                              className={`w-full p-2.5 rounded-lg flex items-center gap-3 transition-colors ${action.color}`}
-                            >
-                              <ActionIcon className="w-4 h-4 shrink-0" />
-                              <span className="text-xs font-black uppercase tracking-wider flex-1 text-left">{action.label}</span>
-                              <ChevronRight className="w-3.5 h-3.5 opacity-50" />
-                            </button>
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  </div>
-              )}
-            </div>
           </div>
         </header>
 

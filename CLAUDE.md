@@ -181,6 +181,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/markets.js` | 17 países, 7 unidades de negocio |
 | `src/constants/webinar.js` | 21 tareas, mappings webinar↔campaign |
 | `src/constants/events.js` | 5 fases de eventos |
+| `src/constants/campaigns.js` | `PILLARS` (Webinars, Eventos, Email Mkt, Paid Media, Creación BBDD, Investigación): fuente única para las tabs de Pilares y el filtro del Portal Cliente. También fuentes/medios del UTM Generator |
 | `src/constants/sections.js` | `HIDDEN_SECTIONS`: secciones ocultas temporalmente (hoy Mi Semana, Facturación y Casos de Éxito). Sacar el id de la lista para reactivarlas |
 | `src/constants/markets.js` → `PORTAL_UNITS` | Portal Cliente: unidades activas (Control Union Certificaciones por país; Peterson Solutions Iberoamérica / Global / país) y sus alcances. UI en `src/components/client/PortalHome.jsx` + `ClientReportApp.jsx` |
 | `src/hooks/useTheme.js` | Modo claro/oscuro. El tema oscuro remapea utilidades claras desde `src/index.css` (sección MODO OSCURO), no hace falta `dark:` en cada clase |

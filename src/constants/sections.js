@@ -12,7 +12,6 @@
 //
 // Efecto de estar acá:
 //   - No aparece en el Hub Central ni en el menú lateral
-//   - No aparece en Acción Rápida
 //   - Las notificaciones que navegan a esa sección no se muestran
 // ════════════════════════════════════════════════════════════════════
 
