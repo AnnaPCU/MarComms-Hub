@@ -28,7 +28,7 @@ import { Link, ChevronDown, Database } from 'lucide-react';
 import { MARCOMMS_BUSINESS_UNITS } from '@/constants/markets';
 import { useUtmLinks } from '@/hooks/useUtmLinks';
 import { useConfirm } from '@/hooks/useConfirm';
-import { buildUtmCampaign, buildUtmUrl, isUtmFormComplete, normalizeLegacyUtmValue, utmValueLabel } from '@/utils/utm';
+import { buildUtmCampaign, buildUtmUrl, isUtmFormComplete, normalizeLegacyUtmValue, utmValueLabel, countriesOf, countriesLabel } from '@/utils/utm';
 import UtmForm from './utm/UtmForm';
 import UtmRepository from './utm/UtmRepository';
 
@@ -61,7 +61,7 @@ export default function MarcommsUtmBuilder({
 
   const initialForm = useCallback(() => ({
     url: '', source: '', medium: '', organization: 'Control Union',
-    businessUnit: defaultBusinessUnit || '', country: defaultCountry || '', campaignName: defaultCampaignName || '',
+    businessUnit: defaultBusinessUnit || '', country: countriesOf(defaultCountry), campaignName: defaultCampaignName || '',
   }), [defaultBusinessUnit, defaultCountry, defaultCampaignName]);
 
   const [form, setForm] = useState(initialForm);
@@ -76,7 +76,7 @@ export default function MarcommsUtmBuilder({
     setForm((f) => ({
       ...f,
       campaignName: defaultCampaignName || f.campaignName,
-      country: defaultCountry || f.country,
+      country: defaultCountry ? countriesOf(defaultCountry) : f.country,
       businessUnit: defaultBusinessUnit || f.businessUnit,
     }));
   }, [defaultCampaignName, defaultCountry, defaultBusinessUnit]);
@@ -97,7 +97,7 @@ export default function MarcommsUtmBuilder({
         label: [form.campaignName, utmValueLabel('medium', form.medium)].filter(Boolean).join(' · ') || 'UTM',
         url: buildUtmUrl(form),
         source: form.source, medium: form.medium, businessUnit: form.businessUnit, organization: form.organization,
-        country: form.country, campaignName: form.campaignName,
+        country: countriesLabel(form.country), campaignName: form.campaignName,
         utmCampaign: buildUtmCampaign(form),
         createdBy: currentUser?.name || '',
       });
@@ -120,7 +120,7 @@ export default function MarcommsUtmBuilder({
       medium: normalizeLegacyUtmValue('medium', link.medium),
       organization: link.organization === 'Peterson' ? 'Peterson Solutions' : (link.organization || 'Control Union'),
       businessUnit: link.businessUnit === 'Peterson' ? 'Peterson Solutions' : (MARCOMMS_BUSINESS_UNITS.includes(link.businessUnit) ? link.businessUnit : ''),
-      country: link.country || '',
+      country: countriesOf(link.country),
       campaignName: link.campaignName || '',
     });
     setError('');

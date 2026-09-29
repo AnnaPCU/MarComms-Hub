@@ -16,6 +16,12 @@ describe('utm — armado', () => {
     expect(buildUtmCampaign(FORM)).toBe('cu_warrants_argentina_marcomms_warrants_mayo_2026');
   });
 
+  it('varios países se unen con guion en el utm_campaign', () => {
+    expect(buildUtmCampaign({ ...FORM, country: ['Argentina', 'Chile'] })).toBe('cu_warrants_argentina-chile_marcomms_warrants_mayo_2026');
+    expect(buildUtmCampaign({ ...FORM, country: 'Argentina, Chile' })).toBe('cu_warrants_argentina-chile_marcomms_warrants_mayo_2026');
+    expect(missingUtmFields({ ...FORM, country: [] })).toEqual(['País']);
+  });
+
   it('URL final agrega https y los tres parámetros', () => {
     expect(buildUtmUrl(FORM)).toBe('https://argentina.controlunion.com/warrants?utm_source=linkedin&utm_medium=social&utm_campaign=cu_warrants_argentina_marcomms_warrants_mayo_2026');
   });
@@ -66,6 +72,10 @@ describe('utm — repositorio', () => {
       { value: 'linkedin', count: 1, label: 'LinkedIn' },
     ]);
     expect(utmFilterOptions(L, 'country').map((o) => o.value)).toEqual(['Brasil', 'Canada', 'Mexico']);
+    // Un UTM con varios países cuenta para cada uno
+    const multi = [...L, { id: '4', country: 'Argentina, Chile', source: 'google', medium: 'paid_media' }];
+    expect(utmFilterOptions(multi, 'country').map((o) => o.value)).toEqual(['Argentina', 'Brasil', 'Canada', 'Chile', 'Mexico']);
+    expect(filterUtmLinks(multi, { ...EMPTY_UTM_FILTERS, country: 'Chile' }).map((l) => l.id)).toEqual(['4']);
   });
   it('filtra por varios criterios y por texto', () => {
     expect(filterUtmLinks(L, { ...EMPTY_UTM_FILTERS, source: 'contenido' }).map((l) => l.id)).toEqual(['1', '2']);

@@ -3,6 +3,8 @@
 // ════════════════════════════════════════════════════════════════════
 // Estructura del utm_campaign (sep 2026, sin "servicio"):
 //   [unidad_negocio]_[país]_marcomms_[nombre_campaña]
+// Varios países se unen con guion dentro del segmento: argentina-chile.
+// En el repositorio `country` se guarda como "Argentina, Chile".
 //
 // - buildUtmCampaign(form)            → string del utm_campaign
 // - buildUtmUrl(form)                 → URL final (con lo que haya cargado)
@@ -18,12 +20,18 @@ import { UTM_SOURCES, UTM_MEDIUMS, LEGACY_UTM_LABELS, LEGACY_UTM_VALUE_MAP } fro
 
 export const UTM_IDENTIFIER = 'MarComms'; // fijo: identifica que el lead viene del equipo
 
+export const COUNTRY_SEPARATOR = ', ';
+// Acepta array o string "Argentina, Chile" → ['Argentina', 'Chile']
+export const countriesOf = (value) => (Array.isArray(value) ? value : String(value || '').split(',').map((c) => c.trim())).filter(Boolean);
+export const countriesLabel = (value) => countriesOf(value).join(COUNTRY_SEPARATOR);
+const countrySegment = (value) => countriesOf(value).map((c) => slugifyUtm(c)).filter(Boolean).join('-');
+
 export const buildUtmCampaign = ({ businessUnit, country, campaignName }) =>
-  [businessUnit, country, UTM_IDENTIFIER, campaignName].map((p) => slugifyUtm(p)).filter(Boolean).join('_');
+  [slugifyUtm(businessUnit), countrySegment(country), slugifyUtm(UTM_IDENTIFIER), slugifyUtm(campaignName)].filter(Boolean).join('_');
 
 // Identificador y unidad vienen con default: el utm_campaign "existe" recién
 // cuando hay país o nombre de campaña (dato propio de esta pieza)
-export const hasUtmCampaignParts = (form) => [form.country, form.campaignName].some((p) => (p || '').toString().trim());
+export const hasUtmCampaignParts = (form) => countriesOf(form.country).length > 0 || !!(form.campaignName || '').toString().trim();
 
 export const cleanBaseUrl = (url) => {
   const u = (url || '').trim();
@@ -53,7 +61,7 @@ const REQUIRED = [
   ['country', 'País'],
   ['campaignName', 'Nombre de la Campaña'],
 ];
-export const missingUtmFields = (form) => REQUIRED.filter(([k]) => !(form[k] || '').toString().trim()).map(([, label]) => label);
+export const missingUtmFields = (form) => REQUIRED.filter(([k]) => (k === 'country' ? countriesOf(form.country).length === 0 : !(form[k] || '').toString().trim())).map(([, label]) => label);
 export const isUtmFormComplete = (form) => missingUtmFields(form).length === 0;
 
 const LISTS = { source: UTM_SOURCES, medium: UTM_MEDIUMS };
@@ -76,7 +84,10 @@ export const normalizeLegacyUtmValue = (kind, value) => {
 // Opciones de un filtro a partir de lo que hay guardado, con conteo
 export const utmFilterOptions = (links, key) => {
   const counts = {};
-  (links || []).forEach((l) => { const v = l[key]; if (v) counts[v] = (counts[v] || 0) + 1; });
+  (links || []).forEach((l) => {
+    const values = key === 'country' ? countriesOf(l[key]) : [l[key]];
+    values.forEach((v) => { if (v) counts[v] = (counts[v] || 0) + 1; });
+  });
   const kind = key === 'source' || key === 'medium' ? key : null;
   return Object.entries(counts)
     .map(([value, count]) => ({ value, count, label: kind ? utmValueLabel(kind, value) : value }))
@@ -90,7 +101,9 @@ export const filterUtmLinks = (links, filters = EMPTY_UTM_FILTERS, query = '') =
   return (links || []).filter((l) => {
     for (const key of Object.keys(EMPTY_UTM_FILTERS)) {
       const f = filters[key];
-      if (f && f !== 'all' && (l[key] || '') !== f) return false;
+      if (f && f !== 'all') {
+        if (key === 'country' ? !countriesOf(l[key]).includes(f) : (l[key] || '') !== f) return false;
+      }
     }
     if (!q) return true;
     return [l.label, l.url, l.campaignName, l.country, l.businessUnit, l.organization, l.medium, l.source, l.utmCampaign, l.createdBy]

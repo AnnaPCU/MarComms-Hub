@@ -16,7 +16,9 @@
 //
 // Props:
 //   todayIso   — YYYY-MM-DD (default: hoy). Se pasa para tests/preview.
-//   theme      — temática seleccionada ('all' | id) — controlado
+//   theme      — filtro de días mundiales ('all' | 'none' | id de temática) — controlado
+//   Filtro de cuenta (local): filtra los posteos y deja solo los días
+//   mundiales que repercuten en el país de esa cuenta (los globales siempre).
 //   onThemeChange(themeId)
 //   posts, accounts — de useSocialPosts (opcionales)
 // ════════════════════════════════════════════════════════════════════
@@ -34,6 +36,7 @@ import { TEAM_MEMBERS } from '@/constants/team';
 import { COMPETITION_REVIEW, POST_STATUS_BY_ID } from '@/constants/socialPosts';
 import { isCompetitionReviewDay } from '@/utils/socialPosts';
 import { worldDaysInMonth, monthGrid, upcomingWorldDays, worldDayCountries, worldDayCountriesText, accountsForWorldDay, isGlobalWorldDay } from '@/utils/worldDays';
+import { ACCOUNT_GROUPS } from '@/constants/socialPosts';
 import { formatDate, todayIso as getTodayIso } from '@/utils/date';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -53,6 +56,10 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
 
   const [cursor, setCursor] = useState({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
   const [selected, setSelected] = useState(null); // día mundial decorado
+  const [accountId, setAccountId] = useState('all'); // filtro de cuenta
+  const account = accountId === 'all' ? null : (accounts || []).find((a) => a.id === accountId) || null;
+  // Un día mundial se muestra si es global o si repercute en el país de la cuenta elegida
+  const dayMatchesAccount = (d) => !account || isGlobalWorldDay(d) || accountsForWorldDay(d, [account]).length > 0;
 
   const isCurrentMonth = cursor.year === Number(today.slice(0, 4)) && cursor.month === Number(today.slice(5, 7));
 
@@ -69,7 +76,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
   };
 
   const weeks = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
-  const monthDays = useMemo(() => worldDaysInMonth(cursor.year, cursor.month, today, { theme }), [cursor, today, theme]);
+  const monthDays = useMemo(() => (theme === 'none' ? [] : worldDaysInMonth(cursor.year, cursor.month, today, { theme }).filter(dayMatchesAccount)), [cursor, today, theme, accountId]); // eslint-disable-line react-hooks/exhaustive-deps
   const byDate = useMemo(() => {
     const acc = {};
     monthDays.forEach(d => { (acc[d.date] = acc[d.date] || []).push(d); });
@@ -83,14 +90,15 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
     const acc = {};
     (posts || []).forEach((p) => {
       if (!p.publishDate) return;
+      if (accountId !== 'all' && p.accountId !== accountId) return;
       (acc[p.publishDate] = acc[p.publishDate] || []).push({ ...p, account: byId[p.accountId] });
     });
     return acc;
-  }, [posts, accounts]);
+  }, [posts, accounts, accountId]);
   const [selectedPost, setSelectedPost] = useState(null);
 
   // Próximas fechas (independiente del mes que se está mirando)
-  const upcoming = useMemo(() => upcomingWorldDays(today, { theme }).slice(0, 6), [today, theme]);
+  const upcoming = useMemo(() => (theme === 'none' ? [] : upcomingWorldDays(today, { theme }).filter(dayMatchesAccount).slice(0, 6)), [today, theme, accountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const renderPill = (d, compact = true) => {
     const t = d.themeInfo;
@@ -133,11 +141,25 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
           )}
           <div className="flex-1" />
           <select
+            value={accountId}
+            onChange={e => { setAccountId(e.target.value); setSelected(null); setSelectedPost(null); }}
+            className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-pink-300"
+            title="Filtra los posteos y los días mundiales que le corresponden al país de la cuenta"
+          >
+            <option value="all">Todas las cuentas</option>
+            {[...ACCOUNT_GROUPS, ...(accounts || []).map((a) => a.group).filter((g) => g && !ACCOUNT_GROUPS.includes(g))].filter((g, i, arr) => arr.indexOf(g) === i).map((g) => {
+              const items = (accounts || []).filter((a) => a.group === g && a.active !== false);
+              return items.length ? <optgroup key={g} label={g}>{items.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup> : null;
+            })}
+          </select>
+          <select
             value={theme}
             onChange={e => { onThemeChange && onThemeChange(e.target.value); setSelected(null); }}
             className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-pink-300"
+            title="Qué días mundiales mostrar"
           >
-            <option value="all">Todas las temáticas</option>
+            <option value="all">Días mundiales: todos</option>
+            <option value="none">Días mundiales: ocultar</option>
             {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
         </div>
@@ -270,7 +292,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
           <>
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Próximas fechas</h3>
             {upcoming.length === 0 ? (
-              <p className="text-xs text-slate-400">No hay fechas para esta temática.</p>
+              <p className="text-xs text-slate-400">{theme === 'none' ? 'Días mundiales ocultos.' : 'No hay fechas para este filtro.'}</p>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {upcoming.map(d => (

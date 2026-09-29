@@ -14,7 +14,7 @@ import React, { useMemo } from 'react';
 import { Zap, Lock, AlertCircle, CheckCircle2, Copy, Save } from 'lucide-react';
 import { MARKETS, MARCOMMS_BUSINESS_UNITS, ORGANIZATIONS } from '@/constants/markets';
 import { UTM_SOURCES, UTM_MEDIUMS } from '@/constants/campaigns';
-import { buildUtmCampaign, buildUtmUrl, hasUtmCampaignParts, missingUtmFields, UTM_IDENTIFIER } from '@/utils/utm';
+import { buildUtmCampaign, buildUtmUrl, hasUtmCampaignParts, missingUtmFields, countriesOf, UTM_IDENTIFIER } from '@/utils/utm';
 
 const labelCls = 'text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 block';
 
@@ -26,7 +26,8 @@ export default function UtmForm({ form, setField, onClear, accent, onCopy, onSav
   const utmCampaign = useMemo(() => buildUtmCampaign(form), [form]);
   const missing = useMemo(() => missingUtmFields(form), [form]);
   const complete = missing.length === 0;
-  const touched = Object.values(form).some((v) => (v || '').toString().trim());
+  const touched = Object.values(form).some((v) => (Array.isArray(v) ? v.length > 0 : (v || '').toString().trim()));
+  const selectedCountries = countriesOf(form.country);
 
   // Si llega una unidad que no está en la lista (proyecto viejo), se muestra igual
   const businessUnits = MARCOMMS_BUSINESS_UNITS.includes(form.businessUnit) || !form.businessUnit
@@ -71,7 +72,7 @@ export default function UtmForm({ form, setField, onClear, accent, onCopy, onSav
           <span className="text-[10px] text-purple-600 font-medium">· unidad_país_marcomms_campaña</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr_200px] gap-2">
           <div>
             <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1 block">1. Unidad de Negocio *</label>
             <select value={form.businessUnit} onChange={(e) => setField('businessUnit', e.target.value)} className={innerCls}>
@@ -80,11 +81,22 @@ export default function UtmForm({ form, setField, onClear, accent, onCopy, onSav
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1 block">2. País *</label>
-            <select value={form.country} onChange={(e) => setField('country', e.target.value)} className={innerCls}>
-              <option value="">Seleccionar...</option>
-              {Object.keys(MARKETS).sort().map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1 block">2. País * <span className="normal-case tracking-normal font-bold text-purple-400">(podés elegir varios)</span></label>
+            <div className="flex flex-wrap gap-1 p-2 bg-white border-2 border-purple-100 rounded-lg min-h-[38px]">
+              {Object.keys(MARKETS).sort().map((c) => {
+                const on = selectedCountries.includes(c);
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setField('country', on ? selectedCountries.filter((x) => x !== c) : [...selectedCountries, c])}
+                    className={`text-[10px] font-black px-2 py-0.5 rounded-md border transition-colors ${on ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-purple-300'}`}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div>
             <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1 block">3. Identificador</label>
