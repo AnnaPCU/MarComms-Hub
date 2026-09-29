@@ -10,7 +10,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 - ~8 usuarios internos (no exposición pública)
 - Idioma: **100% Español argentino**
-- Maneja: webinars, pilares (campañas), eventos, Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país, CRM (entrenamientos del CRM HubSpot a los clientes internos)
+- Maneja: webinars, pilares (campañas), eventos, programas (campaña integral que agrupa pilares), Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país, CRM (entrenamientos del CRM HubSpot a los clientes internos)
 - Stack: **React 18 + Vite + Tailwind**
 - Backend: **pendiente** (plan en `BACKEND_PLAN.md`)
 
@@ -89,6 +89,7 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Facturación (oculta, ver `constants/sections.js`) | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
 | Portal Cliente (ex Países + Portal) | Cyan / Teal | `from-cyan-500 to-teal-500` |
 | CRM (entrenamientos HubSpot) | Sky / Azul | `from-sky-500 to-blue-600` |
+| Programas (campaña integral de pilares) | Violeta / Fucsia | `from-violet-600 to-fuchsia-600` |
 | Mi Semana (oculta, ver `constants/sections.js`) | Naranja / Ámbar | `from-orange-500 to-amber-500` |
 
 Mantené consistencia con esta paleta al agregar features.
@@ -102,7 +103,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones: todas corridas en producción hasta la 0020 (sep 2026). Si agregás una nueva, anotala acá hasta que se corra.
+   - Migraciones: todas corridas en producción hasta la 0021 (programas, sep 2026). Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
@@ -187,6 +188,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/hooks/useTheme.js` | Modo claro/oscuro. El tema oscuro remapea utilidades claras desde `src/index.css` (sección MODO OSCURO), no hace falta `dark:` en cada clase |
 | `src/constants/socialPosts.js` | Hoja de posteos de LinkedIn: estados, planes, cuentas por defecto. Lógica de semanas y avisos en `src/utils/socialPosts.js`. UI en `src/components/social/PostsSheet.jsx` (las columnas se muestran como "Posteo 1..n", sin fechas; por debajo siguen siendo semanas lun–dom) |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). `WORLD_DAY_COUNTRIES`: países donde repercute más cada día (sin entrada = global, todas las cuentas). Lógica y cuentas sugeridas en `src/utils/worldDays.js` |
+| `src/constants/programs.js` | Programas: pilares que se pueden generar y estados. Un programa agrupa webinar/evento/campañas por `programId` (migration 0021). Lógica en `src/utils/programs.js` (armado de pilares, progreso), datos en `src/hooks/usePrograms.js` + `src/services/programsService.js`, UI en `src/components/programs/`. La creación (programa + pilares) se orquesta en `App.jsx` → `createProgramWithPillars` |
 | `src/constants/crm.js` | CRM: unidades, tipos y estados de entrenamiento, checklist de adopción y entidades por defecto (del Excel "HubSpot Users - Seats"). Lógica en `src/utils/crm.js`, datos en `src/hooks/useCrm.js` + `src/services/crmService.js`, UI en `src/components/crm/` |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |

@@ -107,9 +107,11 @@ export const useCollection = (service, options = {}) => {
       const prevById = new Map(prev.map((p) => [String(p.id), p]));
       const nextById = new Map(next.map((n) => [String(n.id), n]));
 
-      // Adds
+      // Adds. Guarda: en desarrollo React (StrictMode) ejecuta el updater dos
+      // veces; si el id ya está en vuelo no se vuelve a insertar.
       for (const n of next) {
         if (!prevById.has(String(n.id))) {
+          if (pendingWritesRef.current.has(n.id)) continue;
           pendingWritesRef.current.add(n.id);
           service.create(n)
             .catch((e) => console.error('[useCollection] create error:', e))
@@ -133,9 +135,10 @@ export const useCollection = (service, options = {}) => {
         }
       }
 
-      // Removes
+      // Removes (misma guarda que en Adds)
       for (const p of prev) {
         if (!nextById.has(String(p.id))) {
+          if (pendingWritesRef.current.has(p.id)) continue;
           pendingWritesRef.current.add(p.id);
           service.remove(p.id)
             .catch((e) => console.error('[useCollection] delete error:', e))

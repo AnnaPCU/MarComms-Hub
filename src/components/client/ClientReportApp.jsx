@@ -24,8 +24,12 @@ import { generateProjectPDF } from '@/utils/pdf';
 import { HS_FORM_MARCOMMS_URL, HS_FORM_HSREQUEST_URL } from '@/constants/externalLinks';
 import { PILLARS, pillarOfCampaign } from '@/constants/campaigns';
 import { unitsForCountry } from '@/constants/markets';
+import { programItems, programSummary, matchesProgramScope } from '@/utils/programs';
+import { PROGRAM_STATUS } from '@/constants/programs';
+import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
+import { Layers } from 'lucide-react';
 
-export default function ClientReportApp({ country, scope, webinars, campaigns, events, onBack, isPublic = false }) {
+export default function ClientReportApp({ country, scope, webinars, campaigns, events, programs = [], onOpenProgram, onBack, isPublic = false }) {
   const now = new Date();
   // Alcance: un país (compatibilidad) o un scope del Portal Cliente
   // ({ label, countries, units, unitLabel }). Ver PORTAL_UNITS en constants/markets.
@@ -265,11 +269,14 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
   // Unidades del filtro: las que operan en los países del alcance (aunque
   // todavía no tengan servicios cargados), acotadas a las unidades del
   // alcance si lo hay, más cualquier unidad que aparezca en los datos.
+  // "Control Union" a secas no se lista: los servicios de CU son sus unidades
+  // (CU Certificaciones, CU Barcos, CU Warrants, CU Norte). "Peterson" es alias viejo.
+  const HIDDEN_UNITS = ['Control Union', 'Peterson'];
   const uniqueBUs = useMemo(() => {
     const fromMarkets = scopeObj.countries.flatMap((c) => unitsForCountry(c))
       .filter((u) => !scopeObj.units || scopeObj.units.length === 0 || scopeObj.units.includes(u));
     const fromItems = allItems.map((i) => i.businessUnit).filter((b) => b && b !== '—');
-    return [...new Set([...fromMarkets, ...fromItems])].sort();
+    return [...new Set([...fromMarkets, ...fromItems])].filter((u) => !HIDDEN_UNITS.includes(u)).sort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopeObj.countries.join(','), (scopeObj.units || []).join(','), allItems.length]);
 
@@ -476,6 +483,52 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
             </div>
           </div>
         )}
+
+        {/* ── Programas en este alcance: cada uno con sus pilares y progreso ── */}
+        {(() => {
+          const scoped = (programs || []).filter((p) => matchesProgramScope(p, scopeObj)
+            && (selectedBU === 'all' || p.businessUnit === selectedBU));
+          if (scoped.length === 0) return null;
+          const data = { webinars, campaigns, events };
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center"><Layers className="w-5 h-5 text-violet-600" /></div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Programas</h2>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campañas integrales con sus pilares</p>
+                </div>
+                <span className="ml-auto bg-violet-50 text-violet-700 text-[10px] font-black px-2.5 py-1 rounded-full border border-violet-200">{scoped.length}</span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {scoped.map((p) => {
+                  const its = programItems(p, data).filter((it) => selectedService === 'all' || it.pillar === selectedService);
+                  const sum = programSummary(programItems(p, data));
+                  const st = PROGRAM_STATUS[sum.status] || PROGRAM_STATUS.planned;
+                  return (
+                    <div key={p.id} className="bg-white border-2 border-slate-100 rounded-2xl p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <h3 className="font-black text-slate-900 leading-tight truncate">{p.name}</h3>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{[p.businessUnit, p.client, p.objective].filter(Boolean).join(' · ')}</p>
+                        </div>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider border shrink-0 ${st.color}`}>{st.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${sum.progress === 100 ? 'bg-emerald-500' : 'bg-violet-500'}`} style={{ width: `${sum.progress}%` }} /></div>
+                        <span className="text-[10px] font-mono font-bold text-slate-500">{sum.completed}/{sum.total} · {sum.progress}%</span>
+                      </div>
+                      <ProgramPillarsList items={its} compact onOpen={(it) => { const item = allItems.find((x) => x.id === `${it.source === 'webinar' ? 'w' : it.source === 'event' ? 'e' : 'c'}-${it.id}`); if (item) setSelectedItem(item); }} />
+                      {onOpenProgram && !isPublic && (
+                        <button onClick={() => onOpenProgram(p.id)} className="mt-3 text-[10px] font-black uppercase tracking-widest text-violet-600 hover:text-violet-800">Ver programa completo →</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Sección 1 - Activos */}
         <section>

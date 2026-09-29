@@ -75,7 +75,7 @@ export default function PortalHome({ webinars, campaigns, events, requests, unit
             return (
               <button
                 key={s.id}
-                onClick={() => onOpenScope({ ...s, unitId: unit.id, unitLabel: unit.label, units: unit.units })}
+                onClick={() => onOpenScope({ ...s, unitId: unit.id, unitLabel: unit.label, units: s.kind === 'country' ? null : unit.units })} // en un país se ven todas las unidades; Iberoamérica/Global solo las de Peterson
                 className={`group text-left bg-white p-5 rounded-2xl border transition-all ${hasActivity ? 'border-slate-200 hover:border-teal-500 hover:shadow-lg' : 'border-slate-100 hover:border-slate-300 opacity-80 hover:opacity-100'} ${s.kind !== 'country' ? 'md:col-span-2 lg:col-span-1' : ''}`}
               >
                 <div className="flex items-center justify-between mb-3">

@@ -42,6 +42,7 @@ export const fromRow = (row) => {
     createdAt:        row.created_at || null,
     updatedAt:        row.updated_at || null,
     quotationValidated: row.quotation_validated === true,
+    programId:        row.program_id || null,       // programa que agrupa este pilar (migration 0021)
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
@@ -71,6 +72,7 @@ export const toRow = (obj) => {
   if (obj.dealsCreated !== undefined)     row.deals_created = Number(obj.dealsCreated) || 0;
   if (obj.completedAt !== undefined)      row.completed_at = obj.completedAt;
   if (obj.quotationValidated !== undefined) row.quotation_validated = !!obj.quotationValidated;
+  if (obj.programId !== undefined)        row.program_id = obj.programId || null;
   if (obj.plannerLink !== undefined)      row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)      row.hubspot_link = obj.hubspotLink || null;
   if (obj.content !== undefined)          row.content = obj.content || {};

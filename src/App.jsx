@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  ArrowLeft, Bell, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, LayoutDashboard, Link2, LogOut, Mail, Moon, PanelLeftClose, PanelLeftOpen, Receipt, Search, Sparkles, Sun, Trophy, Video, X,
+  ArrowLeft, Bell, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, Layers, LayoutDashboard, Link2, LogOut, Mail, Moon, PanelLeftClose, PanelLeftOpen, Plus, Receipt, Search, Sparkles, Sun, Trophy, Video, X,
 } from 'lucide-react';
 
 // Constants
@@ -37,6 +37,8 @@ import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
 import { useCrm } from '@/hooks/useCrm';
+import { usePrograms } from '@/hooks/usePrograms';
+import { buildProgramProjects } from '@/utils/programs';
 import { useTheme } from '@/hooks/useTheme';
 
 // Utils
@@ -59,6 +61,8 @@ import PortalHome from '@/components/client/PortalHome';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 import ExtrasApp from '@/components/extras/ExtrasApp';
 import CrmApp from '@/components/crm/CrmApp';
+import ProgramsApp from '@/components/programs/ProgramsApp';
+import ProgramWizard from '@/components/programs/ProgramWizard';
 
 // Claves de localStorage. Versionadas → si cambia el shape, subir el sufijo.
 const SESSION_STORAGE_KEY = 'marcomms_hub_session_v1';
@@ -243,6 +247,32 @@ export default function App() {
   const crm = useCrm();
   if (crm.error) console.error('CRM Supabase error:', crm.error);
 
+  // ─── Programas (campaña integral que agrupa pilares) ───
+  const programs = usePrograms();
+  if (programs.error) console.error('Programs Supabase error:', programs.error);
+  const [showProgramWizard, setShowProgramWizard] = useState(false);
+  const [focusProgramId, setFocusProgramId] = useState(null);
+
+  // Crea el programa en la DB y después genera cada pilar tildado como
+  // proyecto propio (webinar con su campaña de mailings, evento, campañas).
+  const createProgramWithPillars = async (form) => {
+    const program = await programs.createProgram({
+      name: form.name.trim(), client: form.client, country: form.country, businessUnit: form.businessUnit,
+      objective: form.objective, startDate: form.startDate, endDate: form.endDate, notes: form.notes,
+      createdBy: currentUser?.name || '',
+    });
+    const built = buildProgramProjects(form, program);
+    if (built.webinars.length) {
+      setGlobalWebinars(prev => [...built.webinars, ...prev]);
+      built.webinars.forEach(w => onWebinarCreated(w)); // campaña de mailings vinculada
+    }
+    if (built.events.length) setGlobalEvents(prev => [...built.events, ...prev]);
+    if (built.campaigns.length) setGlobalCampaigns(prev => [...built.campaigns, ...prev]);
+    setShowProgramWizard(false);
+    setFocusProgramId(program.id);
+    goToSection('programs');
+  };
+
   // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
   const {
     tasks: globalAssignedTasks,
@@ -291,7 +321,7 @@ export default function App() {
   // ─────────────────────────────────────────────────────────────
 
   const onWebinarCreated = (newWebinar) => {
-    const linkedCampaign = makeCampaignFromWebinar(newWebinar);
+    const linkedCampaign = { ...makeCampaignFromWebinar(newWebinar), programId: newWebinar.programId || null };
     // Linkear bidireccional
     setGlobalWebinars(prev => prev.map(w => w.id === newWebinar.id ? { ...w, linkedCampaignId: linkedCampaign.id } : w));
     setGlobalCampaigns(prev => [linkedCampaign, ...prev]);
@@ -347,6 +377,7 @@ export default function App() {
   const sections = [
     { id: 'client_portal', title: 'Portal Cliente', description: 'Dashboard por país y por plan: Control Union Certificaciones y Peterson Solutions.', icon: <Globe2 className="w-8 h-8 text-teal-600" />, stats: `${PORTAL_UNITS.reduce((n, u) => n + u.scopes.length, 0)} dashboards`, color: 'bg-teal-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
+    { id: 'programs', title: 'Programas', description: 'Campañas integrales: un objetivo con varios pilares (webinar, evento, email, paid, BBDD, investigación).', icon: <Layers className="w-8 h-8 text-violet-600" />, stats: `${programs.programs.length} ${programs.programs.length === 1 ? 'programa' : 'programas'}`, color: 'bg-violet-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'crm', title: 'CRM', description: 'Entrenamientos del CRM HubSpot a los clientes internos: realizados, cobrados y adopción por entidad.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${crm.trainings.length} entrenamientos`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
@@ -440,6 +471,8 @@ export default function App() {
           <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
             <ClientReportApp
               scope={portalScope}
+              programs={programs.programs}
+              onOpenProgram={(id) => { setFocusProgramId(id); goToSection('programs'); }}
               webinars={globalWebinars}
               campaigns={globalCampaigns}
               events={globalEvents}
@@ -555,6 +588,25 @@ export default function App() {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
           <ExtrasApp onBack={() => setCurrentSection('main')} currentUser={currentUser} />
+        </div>
+      );
+    }
+
+    if (currentSection === 'programs') {
+      return (
+        <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
+          <ProgramsApp
+            programs={programs}
+            webinars={globalWebinars}
+            campaigns={globalCampaigns}
+            events={globalEvents}
+            onBack={() => goToSection('main')}
+            onNew={() => setShowProgramWizard(true)}
+            onOpenProject={navigateToProject}
+            onOpenPortal={(country) => { const sc = portalScopeForCountry(country); goToSection('client_portal'); if (sc) { setPortalUnit(sc.unitId); setPortalScope(sc); } }}
+            focusProgramId={focusProgramId}
+            onFocusHandled={() => setFocusProgramId(null)}
+          />
         </div>
       );
     }
@@ -1086,8 +1138,20 @@ export default function App() {
                 </div>
             )}
 
+            <div className="h-8 w-px bg-slate-200 mx-2"></div>
+            <button
+              onClick={() => setShowProgramWizard(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-slate-900 text-white hover:bg-violet-600 transition-all"
+              title="Crear un programa: un objetivo con varios pilares"
+            >
+              <Plus size={14} /> NUEVO PROGRAMA
+            </button>
           </div>
         </header>
+
+        {showProgramWizard && (
+          <ProgramWizard onCreate={createProgramWithPillars} onClose={() => setShowProgramWizard(false)} currentUser={currentUser} />
+        )}
 
         <main className="flex-1 overflow-x-hidden">
           {renderContent()}
