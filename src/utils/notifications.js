@@ -54,7 +54,7 @@ const WEBINAR_TASK_KEYS = [
   'landingLivestorm', 'ppt', 'onePager',
   'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost',
   'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
-  'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte',
+  'reporte',
 ];
 
 /**

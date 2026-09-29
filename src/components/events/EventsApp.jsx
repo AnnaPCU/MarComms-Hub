@@ -22,6 +22,7 @@ import { calcEventProgress } from '@/utils/progress';
 import { makeEvent, recalcEventDates } from '@/utils/events';
 import { MARKETS, unitsForCountry } from '@/constants/markets';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
+import BudgetInput from '@/components/shared/BudgetInput';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 
@@ -594,18 +595,15 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
               <input type="text" value={ev.client} onChange={e => updateEvent(ev.id, "client", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm" />
             </div>
             <div>
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Fee Marcomms (USD)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={ev.fee || 0}
-                  onChange={e => updateEvent(ev.id, "fee", Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full p-3 pl-7 bg-orange-50 border border-orange-200 rounded-xl outline-none focus:border-orange-500 font-black text-orange-700 text-sm"
-                />
-              </div>
-              <p className="text-[9px] text-orange-600 font-bold mt-1">Va a facturación</p>
+              <BudgetInput
+                label="Fee Marcomms"
+                accent="orange"
+                amount={ev.fee || 0}
+                billing={ev.billing}
+                onAmount={(v) => updateEvent(ev.id, "fee", v === '' ? 0 : v)}
+                onBilling={(v) => updateEvent(ev.id, "billing", v)}
+              />
+              {ev.billing !== 'plan' && <p className="text-[9px] text-orange-600 font-bold mt-1">Va a facturación</p>}
             </div>
             <div>
               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Deals HubSpot</label>

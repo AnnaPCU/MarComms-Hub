@@ -72,10 +72,6 @@ export const makeWebinar = (name, date, client, monto, pais, unidadNegocio) => {
     mailPre3:         { done: false, date: '', text: '', owner: 'Francisco Capoulat' },
     mailPostAttended: { done: false, date: '', text: '', owner: 'Francisco Capoulat' },
     mailPostNoShow:   { done: false, date: '', text: '', owner: 'Francisco Capoulat' },
-    bannerInv1:       { done: false, owner: 'Victoria Colombo' },
-    bannerInv2:       { done: false, owner: 'Victoria Colombo' },
-    bannerInv3:       { done: false, owner: 'Victoria Colombo' },
-    bannerPost:       { done: false, owner: 'Victoria Colombo' },
     reporte:          { done: false, date: '', owner: 'Delfina Palmero' },
   };
   if (date) w = autoCalcDates(date, w);

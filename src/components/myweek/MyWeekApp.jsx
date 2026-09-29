@@ -51,14 +51,13 @@ export default function MyWeekApp({ onBack, webinars, setWebinars, campaigns, se
         'landingLivestorm', 'ppt', 'onePager',
         'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost',
         'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
-        'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte'];
+        'reporte'];
       const labels = {
         teamsGroup: 'Equipos (Teams/Zoom)', testDay: 'Test Day', bbdd: 'Base de Datos', hubspot: 'HubSpot Sync',
         landingLivestorm: 'Landing de registro', ppt: 'PPT (si aplica)', onePager: 'One pager (si aplica)',
         lknAnuncio: 'LKN post "anuncio"', lknReminder: 'LKN post "1 day to go"', lknHoy: 'LKN post "es hoy"', lknPost: 'LKN post "recap"',
-        mailPre1: 'Mailing 01: Invitación', mailPre2: 'Mailing 02: Teaser', mailPre3: 'Mailing 03: H-24',
-        mailPostAttended: 'Mailing Post — Asistentes', mailPostNoShow: 'Mailing Post — No asistidos',
-        bannerInv1: 'Banner email invitación 1', bannerInv2: 'Banner email invitación 2', bannerInv3: 'Banner email invitación 3', bannerPost: 'Banner email post webinar',
+        mailPre1: 'Email invitación 1', mailPre2: 'Email invitación 2', mailPre3: 'Email invitación 3',
+        mailPostAttended: 'Email post — Asistentes', mailPostNoShow: 'Email post — No asistidos',
         reporte: 'Reporte final'
       };
       taskKeys.forEach(k => {

@@ -14,6 +14,8 @@
 //   hasText         — mostrar input de texto
 //   isAutoDate      — formato visual para fecha auto-calculada
 //   customDropdown  — array de opciones para dropdown tipo
+//   optional        — tarea "si aplica": muestra el toggle Aplica / No aplica;
+//                     si no aplica no suma al avance y no se puede tildar
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
@@ -33,8 +35,10 @@ export default function TaskEditorRow({
   customDropdown,
   hasTags,   // editor de etiquetas (chips)
   hasCost,   // input de costo numérico
+  optional,  // "si aplica"
 }) {
   const d = data || {};
+  const applies = !optional || !!d.applies;
   const showDate = hasDate !== false;
   const tags = Array.isArray(d.tags) ? d.tags : [];
   const [tagInput, setTagInput] = useState('');
@@ -49,16 +53,28 @@ export default function TaskEditorRow({
   const removeTag = (t) => updateField(wId, `${field}.tags`, tags.filter((x) => x !== t));
 
   return (
-    <div className="flex flex-col gap-2 p-3.5 border-b border-slate-100 bg-white hover:bg-slate-50 transition-colors last:border-0">
+    <div className={`flex flex-col gap-2 p-3.5 border-b border-slate-100 bg-white hover:bg-slate-50 transition-colors last:border-0 ${applies ? '' : 'opacity-60'}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-extrabold uppercase text-slate-700 tracking-wide flex-1">
           {title}
+          {optional && !applies && <span className="ml-2 text-[9px] font-bold normal-case tracking-normal text-slate-400">no suma al avance</span>}
         </span>
+        {optional && (
+          <button
+            type="button"
+            onClick={() => updateField(wId, `${field}.applies`, !applies)}
+            title={applies ? 'Marcar como "no aplica": deja de contar para el avance' : 'Marcar como "aplica": pasa a contar para el avance'}
+            className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md border transition-colors ${applies ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+          >
+            {applies ? 'Aplica' : 'No aplica'}
+          </button>
+        )}
         <input
           type="checkbox"
           checked={!!d.done}
+          disabled={!applies}
           onChange={(e) => updateField(wId, `${field}.done`, e.target.checked)}
-          className="w-5 h-5 accent-blue-500 cursor-pointer rounded shrink-0"
+          className="w-5 h-5 accent-blue-500 cursor-pointer rounded shrink-0 disabled:cursor-not-allowed"
         />
       </div>
       <div className="flex items-center gap-1.5 flex-wrap">

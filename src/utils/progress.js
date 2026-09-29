@@ -2,21 +2,27 @@
 // PROGRESS — Cálculo de progreso de proyectos
 // ════════════════════════════════════════════════════════════════════
 
+import { webinarTaskApplies } from '@/constants/webinar';
+
 /**
  * Calcula el progreso % de un WEBINAR (21 tareas).
  * Cada tarea aporta 1/21 del total.
  */
+export const WEBINAR_TASK_KEYS = [
+  'teamsGroup', 'testDay', 'bbdd', 'hubspot',
+  'landingLivestorm', 'ppt', 'onePager',
+  'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost',
+  'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
+  'reporte',
+];
+
+// Las tareas opcionales (PPT, one pager) solo cuentan si en ese webinar
+// se marcaron como "aplica". Así el 100% no depende de piezas que no van.
 export const calcProgress = (w) => {
   if (!w) return 0;
-  const s = [
-    w.teamsGroup, w.testDay, w.bbdd, w.hubspot,
-    w.landingLivestorm, w.ppt, w.onePager,
-    w.lknAnuncio, w.lknReminder, w.lknHoy, w.lknPost,
-    w.mailPre1, w.mailPre2, w.mailPre3, w.mailPostAttended, w.mailPostNoShow,
-    w.bannerInv1, w.bannerInv2, w.bannerInv3, w.bannerPost,
-    w.reporte,
-  ].map((x) => x?.done);
-  return Math.round((s.filter(Boolean).length / s.length) * 100);
+  const keys = WEBINAR_TASK_KEYS.filter((k) => webinarTaskApplies(w, k));
+  const done = keys.filter((k) => w[k]?.done).length;
+  return Math.round((done / keys.length) * 100);
 };
 
 /**

@@ -55,11 +55,11 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         { key: 'bbdd', label: 'Base de datos cargada' },
         { key: 'lknAnuncio', label: 'LinkedIn: Anuncio oficial' },
         { key: 'lknReminder', label: 'LinkedIn: Última llamada' },
-        { key: 'mailPre1', label: 'Mailing 01: Invitación' },
-        { key: 'mailPre2', label: 'Mailing 02: Teaser' },
-        { key: 'mailPre3', label: 'Mailing 03: H-24 (último)' },
-        { key: 'mailPostAttended', label: 'Mailing Post — Asistentes (grabación + PPT)' },
-        { key: 'mailPostNoShow', label: 'Mailing Post — No asistidos (link a grabación)' },
+        { key: 'mailPre1', label: 'Email invitación 1' },
+        { key: 'mailPre2', label: 'Email invitación 2' },
+        { key: 'mailPre3', label: 'Email invitación 3 (H-24)' },
+        { key: 'mailPostAttended', label: 'Email post — Asistentes (grabación + PPT)' },
+        { key: 'mailPostNoShow', label: 'Email post — No asistidos (link a grabación)' },
         { key: 'lknPost', label: 'LinkedIn Post: Recap del webinar' },
         { key: 'hubspot', label: 'Carga de deals en HubSpot' },
         { key: 'reporte', label: 'Reporte final entregado' }
@@ -161,7 +161,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         businessUnit: w.unidadNegocio || '—',
         client: w.client || '',
         date: w.mainDate,
-        fee: Number(w.monto) || 0,
+        fee: w.billing === 'plan' ? 0 : (Number(w.monto) || 0),
+        billing: w.billing || 'usd',
         deals: Number(w.dealsCreated) || 0,
         progress,
         status: progress === 100 ? 'completed' : 'active',
@@ -184,7 +185,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         name: c.name,
         businessUnit: c.businessUnit || '—',
         subtype: null,
-        fee: Number(c.budget) || 0,
+        fee: c.billing === 'plan' ? 0 : (Number(c.budget) || 0),
+        billing: c.billing || 'usd',
         platformInvestment: Number(c.platformInvestment) || 0,
         deals: Number(c.dealsCreated) || 0,
         progress,
@@ -209,7 +211,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         businessUnit: ev.businessUnit || '—',
         client: ev.client || '',
         date: ev.date,
-        fee: Number(ev.fee) || 0,
+        fee: ev.billing === 'plan' ? 0 : (Number(ev.fee) || 0),
+        billing: ev.billing || 'usd',
         deals: Number(ev.dealsCreated) || 0,
         progress,
         status: progress === 100 ? 'completed' : 'active',
@@ -389,7 +392,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Inversión de Mkt</p>
             </div>
             <p className="text-4xl font-black text-emerald-400 tracking-tight font-mono">${totalInvestment.toLocaleString()}</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">fee de servicios + pauta en plataforma</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">fee de servicios + pauta en plataforma (lo incluido en el plan no suma)</p>
           </div>
           <div className="md:border-r border-slate-700 md:pr-6">
             <div className="flex items-center gap-2 mb-1">
@@ -563,7 +566,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest border ${s.color}`}>
-                            {s.label}{item.subtype ? ` · ${item.subtype}` : ''}
+                            {s.label}{item.subtype ? ` · ${item.subtype}` : ''}{item.billing === 'plan' ? ' · Incluido en el plan' : ''}
                           </span>
                         </div>
                         <h4 className="font-black text-sm text-slate-800 uppercase leading-tight">{item.name}</h4>

@@ -21,6 +21,15 @@ export const STEP_TO_WEBINAR_MAIL = Object.fromEntries(
   Object.entries(WEBINAR_MAIL_TO_STEP).map(([k, v]) => [v, k])
 );
 
+// ── Tareas opcionales ("si aplica") ──
+// No todos los webinars llevan PPT ni one pager. Estas tareas NO suman al
+// porcentaje de avance salvo que en ese webinar se marquen como "aplica"
+// (task.applies = true). Se usa en calcProgress, el PDF y el Portal Cliente.
+// (sep 2026) Se quitaron las tareas de banner: el banner es parte del email.
+export const OPTIONAL_WEBINAR_TASKS = ['ppt', 'onePager'];
+export const webinarTaskApplies = (webinar, key) =>
+  !OPTIONAL_WEBINAR_TASKS.includes(key) || !!(webinar && webinar[key] && webinar[key].applies);
+
 // ── Piezas de contenido del webinar (Social Media) ──
 // kind='mixed' = pieza con copy + diseño / 'design' = solo diseño
 export const WEBINAR_CONTENT_PIECES = [
@@ -31,9 +40,10 @@ export const WEBINAR_CONTENT_PIECES = [
   { key: 'lknPost',          label: 'LKN post "recap del webinar"', defaultOwner: 'Agustina Ball',  syncTask: 'lknPost',          kind: 'design' },
   { key: 'ppt',              label: 'PPT (si aplica)',                       defaultOwner: 'Agustina Ball',  syncTask: 'ppt',              kind: 'mixed' },
   { key: 'onePager',         label: 'One pager (si aplica)',                 defaultOwner: 'Agustina Ball',  syncTask: 'onePager',         kind: 'mixed' },
-  { key: 'bannerInv1',       label: 'Banner email invitación 1',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv1',       kind: 'design' },
-  { key: 'bannerInv2',       label: 'Banner email invitación 2',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv2',       kind: 'design' },
-  { key: 'bannerInv3',       label: 'Banner email invitación 3',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv3',       kind: 'design' },
-  { key: 'bannerPost',       label: 'Banner email post webinar',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerPost',       kind: 'design' },
+  { key: 'mailPre1',          label: 'Email invitación 1',           defaultOwner: 'Francisco Capoulat', syncTask: 'mailPre1',          kind: 'mixed' },
+  { key: 'mailPre2',          label: 'Email invitación 2',           defaultOwner: 'Francisco Capoulat', syncTask: 'mailPre2',          kind: 'mixed' },
+  { key: 'mailPre3',          label: 'Email invitación 3',           defaultOwner: 'Francisco Capoulat', syncTask: 'mailPre3',          kind: 'mixed' },
+  { key: 'mailPostAttended',  label: 'Email post — Asistentes',      defaultOwner: 'Francisco Capoulat', syncTask: 'mailPostAttended',  kind: 'mixed' },
+  { key: 'mailPostNoShow',    label: 'Email post — No asistidos',    defaultOwner: 'Francisco Capoulat', syncTask: 'mailPostNoShow',    kind: 'mixed' },
   { key: 'reporte',          label: 'Reporte final',                defaultOwner: 'Delfina Palmero', syncTask: 'reporte',          kind: 'mixed' },
 ];

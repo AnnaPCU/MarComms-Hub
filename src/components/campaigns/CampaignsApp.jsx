@@ -38,6 +38,7 @@ import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
+import BudgetInput from '@/components/shared/BudgetInput';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
 const campaignId = () => {
@@ -590,17 +591,15 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             </div>
 
                             <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Fee Marcomms (USD)</p>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  className="w-full p-2.5 pl-7 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:ring-2 focus:ring-amber-400 outline-none"
-                                  value={campaign.budget}
-                                  onChange={(e) => updateCampaign(campaign.id, 'budget', Math.max(0, parseFloat(e.target.value) || 0))}
+                              <BudgetInput
+                                  label="Fee Marcomms"
+                                  accent="amber"
+                                  size="sm"
+                                  amount={campaign.budget}
+                                  billing={campaign.billing}
+                                  onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
+                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
                                 />
-                              </div>
                             </div>
 
                             <div>
@@ -848,17 +847,15 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 </div>
 
                                 <div>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Monto (USD)</p>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      className={`w-full p-2.5 pl-7 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 ${accentClasses.ring}`}
-                                      value={campaign.budget}
-                                      onChange={(e) => updateCampaign(campaign.id, 'budget', Math.max(0, parseFloat(e.target.value) || 0))}
-                                    />
-                                  </div>
+                                  <BudgetInput
+                                  label="Monto"
+                                  accent="blue"
+                                  size="sm"
+                                  amount={campaign.budget}
+                                  billing={campaign.billing}
+                                  onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
+                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
+                                />
                                 </div>
 
                                 {isDb && (
@@ -970,11 +967,11 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                       /* ─── VISTA CAMPAÑA WEBINAR (5 mailings linkeados al Webinar Hub) ─── */
                       (() => {
                         const webinarSteps = [
-                          { id: 'mail1_pre',         label: 'Mailing 01: Invitación',      offset: 'D-15' },
-                          { id: 'mail2_teaser',      label: 'Mailing 02: Teaser',          offset: 'D-8' },
-                          { id: 'mail3_h24',         label: 'Mailing 03: H-24 (último)',   offset: 'D-1' },
-                          { id: 'mailpost_attended', label: 'Mailing Post — Asistentes (grabación + PPT)', offset: 'D+1' },
-                          { id: 'mailpost_noshow',   label: 'Mailing Post — No asistidos (link a grabación)', offset: 'D+1' }
+                          { id: 'mail1_pre',         label: 'Email invitación 1',          offset: 'D-15' },
+                          { id: 'mail2_teaser',      label: 'Email invitación 2',          offset: 'D-8' },
+                          { id: 'mail3_h24',         label: 'Email invitación 3 (H-24)',   offset: 'D-1' },
+                          { id: 'mailpost_attended', label: 'Email post — Asistentes (grabación + PPT)', offset: 'D+1' },
+                          { id: 'mailpost_noshow',   label: 'Email post — No asistidos (link a grabación)', offset: 'D+1' }
                         ];
                         const completed = new Set(campaign.completedSteps || []);
                         const totalDone = webinarSteps.filter(s => completed.has(s.id)).length;
@@ -1175,11 +1172,15 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 </div>
 
                                 <div>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Fee Marcomms (USD)</p>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                                    <input type="number" min="0" value={campaign.budget} onChange={(e) => updateCampaign(campaign.id, 'budget', Math.max(0, parseFloat(e.target.value) || 0))} className="w-full p-2.5 pl-7 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-400" />
-                                  </div>
+                                  <BudgetInput
+                                  label="Fee Marcomms"
+                                  accent="blue"
+                                  size="sm"
+                                  amount={campaign.budget}
+                                  billing={campaign.billing}
+                                  onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
+                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
+                                />
                                 </div>
 
                                 {/* Responsable de la campaña */}

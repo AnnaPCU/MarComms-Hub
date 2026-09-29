@@ -24,19 +24,15 @@ export const getProjectChecklist = (project, type) => {
       { key: 'landingLivestorm', label: 'Landing de registro publicada', ...(project.landingLivestorm || {}) },
       { key: 'testDay',          label: 'Día de prueba técnica',       ...(project.testDay          || {}) },
       { key: 'bbdd',             label: 'Base de datos cargada',       ...(project.bbdd             || {}) },
-      { key: 'bannerInv1',       label: 'Banner invitación 1',         ...(project.bannerInv1       || {}) },
-      { key: 'bannerInv2',       label: 'Banner invitación 2',         ...(project.bannerInv2       || {}) },
-      { key: 'bannerInv3',       label: 'Banner invitación 3',         ...(project.bannerInv3       || {}) },
-      { key: 'bannerPost',       label: 'Banner post-evento',          ...(project.bannerPost       || {}) },
       { key: 'lknAnuncio',       label: 'LinkedIn: Anuncio oficial',   ...(project.lknAnuncio       || {}) },
       { key: 'lknReminder',      label: 'LinkedIn: Recordatorio',      ...(project.lknReminder      || {}) },
       { key: 'lknHoy',           label: 'LinkedIn: Última llamada',    ...(project.lknHoy           || {}) },
       { key: 'lknPost',          label: 'LinkedIn: Post evento',       ...(project.lknPost          || {}) },
-      { key: 'mailPre1',         label: 'Mailing 01: Invitación',      ...(project.mailPre1         || {}) },
-      { key: 'mailPre2',         label: 'Mailing 02: Teaser',          ...(project.mailPre2         || {}) },
-      { key: 'mailPre3',         label: 'Mailing 03: Última llamada',  ...(project.mailPre3         || {}) },
-      { key: 'mailPostAttended', label: 'Mail post: Asistentes',       ...(project.mailPostAttended || {}) },
-      { key: 'mailPostNoShow',   label: 'Mail post: No-show',          ...(project.mailPostNoShow   || {}) },
+      { key: 'mailPre1',         label: 'Email invitación 1',          ...(project.mailPre1         || {}) },
+      { key: 'mailPre2',         label: 'Email invitación 2',          ...(project.mailPre2         || {}) },
+      { key: 'mailPre3',         label: 'Email invitación 3',          ...(project.mailPre3         || {}) },
+      { key: 'mailPostAttended', label: 'Email post: Asistentes',      ...(project.mailPostAttended || {}) },
+      { key: 'mailPostNoShow',   label: 'Email post: No asistidos',    ...(project.mailPostNoShow   || {}) },
       { key: 'hubspot',          label: 'Deals creados en HubSpot',    ...(project.hubspot          || {}) },
       { key: 'reporte',          label: 'Reporte final',               ...(project.reporte          || {}) },
     ];
@@ -70,9 +66,9 @@ export const getProjectChecklist = (project, type) => {
     let stepDefs = [];
     if (project.variant === 'webinar') {
       stepDefs = [
-        ['mail1_pre',         'Mailing 01: Invitación'],
-        ['mail2_teaser',      'Mailing 02: Teaser'],
-        ['mail3_h24',         'Mailing 03: Última llamada (H-24)'],
+        ['mail1_pre',         'Email invitación 1'],
+        ['mail2_teaser',      'Email invitación 2'],
+        ['mail3_h24',         'Email invitación 3 (H-24)'],
         ['mailpost_attended', 'Mail post: Asistentes'],
         ['mailpost_noshow',   'Mail post: No-show'],
       ];

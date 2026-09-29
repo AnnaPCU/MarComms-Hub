@@ -17,7 +17,6 @@ const TASK_KEYS = [
   'landingLivestorm', 'ppt', 'onePager',
   'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost',
   'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
-  'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost',
   'reporte',
 ];
 
@@ -43,6 +42,7 @@ export const fromRow = (row) => {
     updatedAt:        row.updated_at || null,
     quotationValidated: row.quotation_validated === true,
     programId:        row.program_id || null,       // programa que agrupa este pilar (migration 0021)
+    billing:          row.billing || 'usd',          // 'usd' | 'plan' (incluido en el plan mensual, migration 0022)
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
@@ -73,6 +73,7 @@ export const toRow = (obj) => {
   if (obj.completedAt !== undefined)      row.completed_at = obj.completedAt;
   if (obj.quotationValidated !== undefined) row.quotation_validated = !!obj.quotationValidated;
   if (obj.programId !== undefined)        row.program_id = obj.programId || null;
+  if (obj.billing !== undefined)          row.billing = obj.billing === 'plan' ? 'plan' : 'usd';
   if (obj.plannerLink !== undefined)      row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)      row.hubspot_link = obj.hubspotLink || null;
   if (obj.content !== undefined)          row.content = obj.content || {};

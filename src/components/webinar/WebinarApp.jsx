@@ -24,6 +24,7 @@ import { calcProgress } from '@/utils/progress';
 import { makeWebinar, autoCalcDates } from '@/utils/webinar';
 import { COUNTRY_BU_MAPPING_WEBINAR, unitsForCountry } from '@/constants/markets';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
+import BudgetInput from '@/components/shared/BudgetInput';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
@@ -431,10 +432,14 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Cliente / Marca</label>
                   <input type="text" value={activeW.client} onChange={e=>updateField(activeW.id, "client", e.target.value.toUpperCase())} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm uppercase" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Presupuesto USD</label>
-                  <input type="number" min="0" value={activeW.monto} onChange={e=>updateField(activeW.id, "monto", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm" />
-                </div>
+                <BudgetInput
+                  label="Presupuesto"
+                  accent="blue"
+                  amount={activeW.monto}
+                  billing={activeW.billing}
+                  onAmount={(v) => updateField(activeW.id, "monto", v)}
+                  onBilling={(v) => updateField(activeW.id, "billing", v)}
+                />
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Asistentes Logueados</label>
                   <input type="number" min="0" value={activeW.asistentes} onChange={e=>updateField(activeW.id, "asistentes", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm" />
@@ -489,21 +494,17 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <TaskEditorRow title='LKN post "1 day to go"' data={activeW.lknReminder} field="lknReminder" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
                 <TaskEditorRow title='LKN post "es hoy"' data={activeW.lknHoy} field="lknHoy" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
                 <TaskEditorRow title='LKN post "recap del webinar"' data={activeW.lknPost} field="lknPost" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
-                <TaskEditorRow title="PPT (si aplica)" data={activeW.ppt} field="ppt" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="One pager (si aplica)" data={activeW.onePager} field="onePager" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="Banner email invitación 1" data={activeW.bannerInv1} field="bannerInv1" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="Banner email invitación 2" data={activeW.bannerInv2} field="bannerInv2" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="Banner email invitación 3" data={activeW.bannerInv3} field="bannerInv3" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="Banner email post webinar" data={activeW.bannerPost} field="bannerPost" wId={activeW.id} updateField={updateField} />
+                <TaskEditorRow title="PPT (si aplica)" data={activeW.ppt} field="ppt" wId={activeW.id} updateField={updateField} optional />
+                <TaskEditorRow title="One pager (si aplica)" data={activeW.onePager} field="onePager" wId={activeW.id} updateField={updateField} optional />
                 <TaskEditorRow title="Reporte final" data={activeW.reporte} field="reporte" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
 
-                {/* ── MAILINGS (sincronizan con campaña linkeada) ── */}
-                <div className="bg-blue-50 px-4 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest border-t-2 border-blue-100">Mailings (sync con Campaña linkeada)</div>
-                <TaskEditorRow title="Mailing 01: Invitación" data={activeW.mailPre1} field="mailPre1" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
-                <TaskEditorRow title="Mailing 02: Teaser" data={activeW.mailPre2} field="mailPre2" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
-                <TaskEditorRow title="Mailing 03: H-24" data={activeW.mailPre3} field="mailPre3" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
-                <TaskEditorRow title="Mailing Post — Asistentes" data={activeW.mailPostAttended} field="mailPostAttended" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
-                <TaskEditorRow title="Mailing Post — No asistidos" data={activeW.mailPostNoShow} field="mailPostNoShow" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
+                {/* ── EMAILS (sincronizan con campaña linkeada; el banner es parte del email) ── */}
+                <div className="bg-blue-50 px-4 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest border-t-2 border-blue-100">Emails (sync con Campaña linkeada)</div>
+                <TaskEditorRow title="Email invitación 1" data={activeW.mailPre1} field="mailPre1" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
+                <TaskEditorRow title="Email invitación 2" data={activeW.mailPre2} field="mailPre2" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
+                <TaskEditorRow title="Email invitación 3" data={activeW.mailPre3} field="mailPre3" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
+                <TaskEditorRow title="Email post — Asistentes" data={activeW.mailPostAttended} field="mailPostAttended" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
+                <TaskEditorRow title="Email post — No asistidos" data={activeW.mailPostNoShow} field="mailPostNoShow" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
 
                 {/* ── Deals creados ── */}
                 <div className="bg-white border border-slate-200 rounded-xl p-4 my-3">

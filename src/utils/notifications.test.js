@@ -72,20 +72,19 @@ describe('buildNotifications', () => {
         id: 'w1', name: 'Mi Webinar',
         serviceOwner: 'Victoria Colombo',
         mainDate: TOMORROW,
-        ppt: { done: true }, // 1/21 = 4%
+        teamsGroup: { done: true }, // 1/15 = 7% (ppt y onePager no cuentan salvo que apliquen)
       };
       const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, webinars: [webinar] }, opts);
       const n = notifs.find((x) => x.type === 'responsible' && x.id === 'resp-w-w1');
       expect(n).toBeTruthy();
-      expect(n.title).toBe('"Mi Webinar" está al 5% y es mañana');
+      expect(n.title).toBe('"Mi Webinar" está al 7% y es mañana');
     });
 
     it('NO genera notif si progress >= 100', () => {
       const allDone = {};
       ['teamsGroup', 'testDay', 'bbdd', 'hubspot', 'landingLivestorm', 'ppt', 'onePager',
        'lknAnuncio', 'lknReminder', 'lknHoy', 'lknPost',
-       'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow',
-       'bannerInv1', 'bannerInv2', 'bannerInv3', 'bannerPost', 'reporte'].forEach((k) => {
+       'mailPre1', 'mailPre2', 'mailPre3', 'mailPostAttended', 'mailPostNoShow', 'reporte'].forEach((k) => {
         allDone[k] = { done: true };
       });
       const webinar = {
