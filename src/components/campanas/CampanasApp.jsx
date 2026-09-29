@@ -16,6 +16,7 @@ import WebinarApp from '@/components/webinar/WebinarApp';
 import CampaignsApp from '@/components/campaigns/CampaignsApp';
 import EventsApp from '@/components/events/EventsApp';
 import { PILLARS } from '@/constants/campaigns';
+import { isPillarHidden } from '@/constants/sections';
 
 // Ícono y color por pilar; las etiquetas salen de PILLARS (constants/campaigns)
 const PILAR_STYLE = {
@@ -26,7 +27,7 @@ const PILAR_STYLE = {
   database: { icon: Database,  accent: 'bg-emerald-600' },
   research: { icon: BarChart3, accent: 'bg-purple-600' },
 };
-const PILARES = PILLARS.map((p) => ({ ...p, ...PILAR_STYLE[p.id] }));
+const PILARES = PILLARS.filter((p) => !isPillarHidden(p.id)).map((p) => ({ ...p, ...PILAR_STYLE[p.id] }));
 
 export default function CampanasApp({
   onBack,

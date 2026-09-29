@@ -24,3 +24,9 @@ export const isSectionHidden = (id) => HIDDEN_SECTIONS.includes(id);
 // Poner en true para volver a mostrarla (tab, botón "Nuevo pedido" y la
 // acción rápida).
 export const SHOW_SOCIAL_PEDIDOS = false;
+
+// Pilares ocultos temporalmente (sep 2026: Eventos). No aparecen como tab en
+// Pilares, ni en el wizard de Programas, ni en el filtro del Portal Cliente.
+// Los eventos ya cargados siguen existiendo en la base y en los programas.
+export const HIDDEN_PILLARS = ['eventos'];
+export const isPillarHidden = (id) => HIDDEN_PILLARS.includes(id);

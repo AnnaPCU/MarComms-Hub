@@ -23,6 +23,7 @@ import { calcProgress } from '@/utils/progress';
 import { generateProjectPDF } from '@/utils/pdf';
 import { HS_FORM_MARCOMMS_URL, HS_FORM_HSREQUEST_URL } from '@/constants/externalLinks';
 import { PILLARS, pillarOfCampaign } from '@/constants/campaigns';
+import { isPillarHidden } from '@/constants/sections';
 import { unitsForCountry } from '@/constants/markets';
 import { programItems, programSummary, matchesProgramScope } from '@/utils/programs';
 import { PROGRAM_STATUS } from '@/constants/programs';
@@ -344,7 +345,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
             </select>
             <select value={selectedService} onChange={e => setSelectedService(e.target.value)} className="bg-white/10 border border-white/20 text-white px-3 py-2 rounded-xl font-black text-xs outline-none hover:bg-white/20 transition-colors">
               <option value="all" className="text-slate-900">Todos los pilares</option>
-              {PILLARS.map((p) => <option key={p.id} value={p.id} className="text-slate-900">{p.label}</option>)}
+              {PILLARS.filter((p) => !isPillarHidden(p.id)).map((p) => <option key={p.id} value={p.id} className="text-slate-900">{p.label}</option>)}
             </select>
             <select value={selectedBU} onChange={e => setSelectedBU(e.target.value)} className="bg-white/10 border border-white/20 text-white px-3 py-2 rounded-xl font-black text-xs outline-none hover:bg-white/20 transition-colors">
               <option value="all" className="text-slate-900">Todas las unidades</option>

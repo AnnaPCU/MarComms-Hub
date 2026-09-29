@@ -14,7 +14,10 @@ import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Layers, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { MARKETS, unitsForCountry } from '@/constants/markets';
-import { PROGRAM_PILLARS } from '@/constants/programs';
+import { PROGRAM_PILLARS as ALL_PROGRAM_PILLARS } from '@/constants/programs';
+import { isPillarHidden } from '@/constants/sections';
+
+const PROGRAM_PILLARS = ALL_PROGRAM_PILLARS.filter((p) => !isPillarHidden(p.id));
 import { missingProgramFields, defaultPillarName } from '@/utils/programs';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-violet-300';

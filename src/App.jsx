@@ -161,7 +161,12 @@ export default function App() {
   // Limpia TODO el sub-estado de la sección anterior (país abierto, portal
   // abierto, proyecto enfocado). Antes el menú no limpiaba el portal abierto
   // y la vista no cambiaba: parecía que la navegación "no funcionaba".
+  // sectionEpoch: sube en cada navegación por menú; se usa como `key` de la
+  // sección para que se remonte y vuelva a su vista general (ej. estar dentro
+  // de un webinar y cliquear "Pilares" en el menú).
+  const [sectionEpoch, setSectionEpoch] = useState(0);
   const goToSection = (section) => {
+    setSectionEpoch((n) => n + 1);
     setSelectedCountry(null);
     setPortalScope(null);
     setFocusProjectId(null);
@@ -514,6 +519,7 @@ export default function App() {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
            <CampanasApp
+             key={sectionEpoch}
              onBack={() => setCurrentSection('main')}
              webinars={globalWebinars}
              setWebinars={setGlobalWebinars}
