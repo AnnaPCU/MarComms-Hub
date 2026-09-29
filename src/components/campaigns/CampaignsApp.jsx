@@ -553,6 +553,16 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración de Campaña</h3>
 
                           <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-4">
+                            <div>
+                              <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Nombre de la campaña</p>
+                              <input
+                                type="text"
+                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-amber-400 outline-none"
+                                value={campaign.name}
+                                onChange={(e) => updateCampaign(campaign.id, 'name', e.target.value)}
+                                placeholder="Nombre de la campaña"
+                              />
+                            </div>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
@@ -609,7 +619,6 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             </div>
 
                             <ProjectLinks
-                              plannerLink={campaign.plannerLink}
                               hubspotLink={campaign.hubspotLink}
                               onChange={(field, v) => updateCampaign(campaign.id, field, v)}
                             />
@@ -909,7 +918,6 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 </div>
 
                                 <ProjectLinks
-                                  plannerLink={campaign.plannerLink}
                                   hubspotLink={campaign.hubspotLink}
                                   onChange={(field, v) => updateCampaign(campaign.id, field, v)}
                                 />
@@ -1191,7 +1199,6 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 </div>
 
                                 <ProjectLinks
-                                  plannerLink={campaign.plannerLink}
                                   hubspotLink={campaign.hubspotLink}
                                   onChange={(field, v) => updateCampaign(campaign.id, field, v)}
                                 />

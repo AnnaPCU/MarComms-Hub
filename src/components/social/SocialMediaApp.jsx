@@ -1255,7 +1255,7 @@ export default function SocialMediaApp({
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-                {/* Sección Links (Planner + ticket HubSpot) — a nivel proyecto/pedido */}
+                {/* Sección Links (ticket HubSpot) — a nivel proyecto/pedido */}
                 {(() => {
                   const { sourceType, projectId } = refreshed;
                   let proj = null;
@@ -1289,7 +1289,6 @@ export default function SocialMediaApp({
                       <div className={sourceType === 'standalone' ? 'mt-2' : ''}>
                         <ProjectLinks
                           columns
-                          plannerLink={proj.plannerLink}
                           hubspotLink={proj.hubspotLink}
                           onChange={saveLink}
                         />

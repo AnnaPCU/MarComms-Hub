@@ -1,23 +1,24 @@
 // ════════════════════════════════════════════════════════════════════
-// ProjectLinks — Links externos del proyecto (Planner + ticket HubSpot)
+// ProjectLinks — Link externo del proyecto (ticket HubSpot)
 // ════════════════════════════════════════════════════════════════════
-// Dos inputs de URL con botón para abrir en pestaña nueva cuando el
-// link es válido. Se usa en Webinars, Eventos, Campañas y Social Media.
+// Input de URL con botón para abrir en pestaña nueva cuando el link es
+// válido. Se usa en Webinars, Eventos, Campañas y Social Media.
+// (El link de Planner se sacó en sep 2026; la columna planner_link queda
+// en la DB sin uso.)
 //
 // El valor se edita en un borrador local y se guarda al salir del campo
 // (blur o Enter) — así no disparamos un update a Supabase por cada tecla.
 //
 // Props:
-//   plannerLink / hubspotLink — valores actuales (string)
-//   onChange(field, value)    — field: 'plannerLink' | 'hubspotLink'
+//   hubspotLink            — valor actual (string)
+//   onChange(field, value) — field: 'hubspotLink'
 //   columns                   — true: 2 columnas / false: apilado
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useState } from 'react';
-import { ClipboardList, Ticket, ExternalLink } from 'lucide-react';
+import { Ticket, ExternalLink } from 'lucide-react';
 
 const FIELDS = [
-  { key: 'plannerLink', label: 'Link Planner', icon: ClipboardList, placeholder: 'https://tasks.office.com/...' },
   { key: 'hubspotLink', label: 'Ticket HubSpot', icon: Ticket, placeholder: 'https://app.hubspot.com/...' },
 ];
 
@@ -66,8 +67,8 @@ function LinkField({ field, value, onCommit }) {
   );
 }
 
-export default function ProjectLinks({ plannerLink = '', hubspotLink = '', onChange, columns = false }) {
-  const values = { plannerLink, hubspotLink };
+export default function ProjectLinks({ hubspotLink = '', onChange, columns = false }) {
+  const values = { hubspotLink };
   return (
     <div className={columns ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : 'space-y-3'}>
       {FIELDS.map((f) => (

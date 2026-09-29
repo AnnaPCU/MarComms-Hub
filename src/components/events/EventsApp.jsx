@@ -21,6 +21,7 @@ import {
 import { calcEventProgress } from '@/utils/progress';
 import { makeEvent, recalcEventDates } from '@/utils/events';
 import { MARKETS, unitsForCountry } from '@/constants/markets';
+import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 
@@ -97,6 +98,16 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
     setEvents([ev, ...events]);
     setNewEvent({ name: "", date: "", country: "", businessUnit: "", client: "", fee: "" });
     setShowCreateModal(false);
+  };
+
+  // Varios campos de una vez (nombre, país, unidad desde el título)
+  const updateEventFields = (id, patch) => {
+    setEvents(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      const next = { ...e, ...patch };
+      if (activeEvent && activeEvent.id === id) setActiveEvent(next);
+      return next;
+    }));
   };
 
   const updateEvent = (id, field, value) => {
@@ -527,13 +538,14 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
             <button onClick={() => setActiveEvent(null)} className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-center border border-slate-100 shrink-0">
               <ArrowLeft className="w-4 h-4 text-slate-600" />
             </button>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-orange-500 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Evento</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">{ev.country} / {ev.businessUnit}</span>
-              </div>
-              <h1 className="text-xl font-black uppercase tracking-tight text-slate-900 truncate">{ev.name}</h1>
-            </div>
+            <ProjectTitleEditor
+              name={ev.name}
+              country={ev.country}
+              businessUnit={ev.businessUnit}
+              accent="orange"
+              badge={<span className="bg-orange-500 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Evento</span>}
+              onSave={(patch) => updateEventFields(ev.id, patch)}
+            />
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="bg-orange-50 border border-orange-100 px-4 py-2 rounded-xl">
@@ -625,7 +637,6 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
           <div className="mt-4 pt-4 border-t border-slate-50">
             <ProjectLinks
               columns
-              plannerLink={ev.plannerLink}
               hubspotLink={ev.hubspotLink}
               onChange={(field, v) => updateEvent(ev.id, field, v)}
             />

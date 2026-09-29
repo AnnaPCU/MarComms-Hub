@@ -23,6 +23,7 @@ import {
 import { calcProgress } from '@/utils/progress';
 import { makeWebinar, autoCalcDates } from '@/utils/webinar';
 import { COUNTRY_BU_MAPPING_WEBINAR, unitsForCountry } from '@/constants/markets';
+import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
@@ -128,6 +129,17 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
     if (parts.length === 2 && parts[1] === 'done' && WEBINAR_MAIL_TO_STEP[parts[0]] && onWebinarMailToggled) {
       onWebinarMailToggled(id, parts[0], val);
     }
+  };
+
+  // Varios campos de una vez (nombre, país, unidad desde el título). Usa el
+  // updater funcional para no pisar escrituras que estén en vuelo.
+  const updateFields = (id, patch) => {
+    setWebinars(prev => prev.map(w => {
+      if (w.id !== id) return w;
+      const next = { ...w, ...patch, updatedAt: new Date().toISOString() };
+      if (activeW && activeW.id === id) setActiveW(next);
+      return next;
+    }));
   };
 
   const deleteWebinarWithSync = (id) => {
@@ -391,13 +403,14 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-5">
             <button onClick={()=>setView("internal")} className="w-10 h-10 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-center transition-colors border border-slate-100"><Ico name="ArrowLeft" size={18} color="#64748b"/></button>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Modo Admin</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">{activeW.pais} / {activeW.unidadNegocio}</span>
-              </div>
-              <h1 className="text-xl font-black uppercase tracking-tight m-0 text-slate-900">{activeW.name}</h1>
-            </div>
+            <ProjectTitleEditor
+              name={activeW.name}
+              country={activeW.pais}
+              businessUnit={activeW.unidadNegocio}
+              accent="blue"
+              badge={<span className="bg-blue-500 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Modo Admin</span>}
+              onSave={(patch) => updateFields(activeW.id, { ...(patch.name !== undefined ? { name: patch.name } : {}), ...(patch.country !== undefined ? { pais: patch.country } : {}), ...(patch.businessUnit !== undefined ? { unidadNegocio: patch.businessUnit } : {}) })}
+            />
           </div>
           <div className="flex items-center gap-3">
              <button onClick={()=>setConfirmDelete(activeW)} className="w-10 h-10 bg-red-50 hover:bg-red-100 rounded-xl flex items-center justify-center transition-colors border border-red-100"><Ico name="Trash2" size={18} color="#ef4444"/></button>
@@ -440,7 +453,6 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                   </div>
                 </div>
                 <ProjectLinks
-                  plannerLink={activeW.plannerLink}
                   hubspotLink={activeW.hubspotLink}
                   onChange={(field, v) => updateField(activeW.id, field, v)}
                 />
