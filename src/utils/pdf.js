@@ -19,9 +19,9 @@ export const getProjectChecklist = (project, type) => {
   if (type === 'webinar') {
     return [
       { key: 'teamsGroup',       label: 'Grupo de Teams creado',       ...(project.teamsGroup       || {}) },
-      { key: 'ppt',              label: 'Presentación final aprobada', ...(project.ppt              || {}) },
-      { key: 'onePager',         label: 'One pager listo',             ...(project.onePager         || {}) },
-      { key: 'landingLivestorm', label: 'Landing Livestorm publicada', ...(project.landingLivestorm || {}) },
+      { key: 'ppt',              label: 'Presentación final aprobada (si aplica)', ...(project.ppt              || {}) },
+      { key: 'onePager',         label: 'One pager listo (si aplica)',...(project.onePager         || {}) },
+      { key: 'landingLivestorm', label: 'Landing de registro publicada', ...(project.landingLivestorm || {}) },
       { key: 'testDay',          label: 'Día de prueba técnica',       ...(project.testDay          || {}) },
       { key: 'bbdd',             label: 'Base de datos cargada',       ...(project.bbdd             || {}) },
       { key: 'bannerInv1',       label: 'Banner invitación 1',         ...(project.bannerInv1       || {}) },

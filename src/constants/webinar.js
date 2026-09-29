@@ -24,13 +24,13 @@ export const STEP_TO_WEBINAR_MAIL = Object.fromEntries(
 // ── Piezas de contenido del webinar (Social Media) ──
 // kind='mixed' = pieza con copy + diseño / 'design' = solo diseño
 export const WEBINAR_CONTENT_PIECES = [
-  { key: 'landingLivestorm', label: 'Landing Livestorm',            defaultOwner: 'Victoria Colombo', syncTask: 'landingLivestorm', kind: 'mixed' },
+  { key: 'landingLivestorm', label: 'Landing de registro',            defaultOwner: 'Victoria Colombo', syncTask: 'landingLivestorm', kind: 'mixed' },
   { key: 'lknAnuncio',       label: 'LKN post "anuncio"',           defaultOwner: 'Agustina Ball',  syncTask: 'lknAnuncio',       kind: 'design' },
   { key: 'lknReminder',      label: 'LKN post "1 day to go"',       defaultOwner: 'Agustina Ball',  syncTask: 'lknReminder',      kind: 'design' },
   { key: 'lknHoy',           label: 'LKN post "es hoy"',            defaultOwner: 'Agustina Ball',  syncTask: 'lknHoy',           kind: 'design' },
   { key: 'lknPost',          label: 'LKN post "recap del webinar"', defaultOwner: 'Agustina Ball',  syncTask: 'lknPost',          kind: 'design' },
-  { key: 'ppt',              label: 'PPT',                          defaultOwner: 'Agustina Ball',  syncTask: 'ppt',              kind: 'mixed' },
-  { key: 'onePager',         label: 'One pager',                    defaultOwner: 'Agustina Ball',  syncTask: 'onePager',         kind: 'mixed' },
+  { key: 'ppt',              label: 'PPT (si aplica)',                       defaultOwner: 'Agustina Ball',  syncTask: 'ppt',              kind: 'mixed' },
+  { key: 'onePager',         label: 'One pager (si aplica)',                 defaultOwner: 'Agustina Ball',  syncTask: 'onePager',         kind: 'mixed' },
   { key: 'bannerInv1',       label: 'Banner email invitación 1',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv1',       kind: 'design' },
   { key: 'bannerInv2',       label: 'Banner email invitación 2',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv2',       kind: 'design' },
   { key: 'bannerInv3',       label: 'Banner email invitación 3',    defaultOwner: 'Victoria Colombo', syncTask: 'bannerInv3',       kind: 'design' },

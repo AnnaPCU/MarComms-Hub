@@ -49,8 +49,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
       const w = rawData;
       const tasks = [
         { key: 'teamsGroup', label: 'Grupo de Teams creado' },
-        { key: 'presentacion', label: 'Presentación final aprobada' },
-        { key: 'onePager', label: 'One pager listo' },
+        { key: 'presentacion', label: 'Presentación final aprobada (si aplica)' },
+        { key: 'onePager', label: 'One pager listo (si aplica)' },
         { key: 'testDay', label: 'Día de prueba técnica' },
         { key: 'bbdd', label: 'Base de datos cargada' },
         { key: 'lknAnuncio', label: 'LinkedIn: Anuncio oficial' },

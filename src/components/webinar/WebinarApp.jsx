@@ -484,13 +484,13 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
 
                 {/* ── CONTENIDO (alineado con Social Media) ── */}
                 <div className="bg-pink-50 px-4 py-2 text-[10px] font-black text-pink-600 uppercase tracking-widest border-t-2 border-pink-100">Contenido — Mesa de Contenido y Diseño</div>
-                <TaskEditorRow title="Landing Livestorm" data={activeW.landingLivestorm} field="landingLivestorm" wId={activeW.id} updateField={updateField} hasDate={true} />
+                <TaskEditorRow title="Landing de registro" data={activeW.landingLivestorm} field="landingLivestorm" wId={activeW.id} updateField={updateField} hasDate={true} />
                 <TaskEditorRow title='LKN post "anuncio"' data={activeW.lknAnuncio} field="lknAnuncio" wId={activeW.id} updateField={updateField} hasDate={true} />
                 <TaskEditorRow title='LKN post "1 day to go"' data={activeW.lknReminder} field="lknReminder" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
                 <TaskEditorRow title='LKN post "es hoy"' data={activeW.lknHoy} field="lknHoy" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
                 <TaskEditorRow title='LKN post "recap del webinar"' data={activeW.lknPost} field="lknPost" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
-                <TaskEditorRow title="PPT" data={activeW.ppt} field="ppt" wId={activeW.id} updateField={updateField} />
-                <TaskEditorRow title="One pager" data={activeW.onePager} field="onePager" wId={activeW.id} updateField={updateField} />
+                <TaskEditorRow title="PPT (si aplica)" data={activeW.ppt} field="ppt" wId={activeW.id} updateField={updateField} />
+                <TaskEditorRow title="One pager (si aplica)" data={activeW.onePager} field="onePager" wId={activeW.id} updateField={updateField} />
                 <TaskEditorRow title="Banner email invitación 1" data={activeW.bannerInv1} field="bannerInv1" wId={activeW.id} updateField={updateField} />
                 <TaskEditorRow title="Banner email invitación 2" data={activeW.bannerInv2} field="bannerInv2" wId={activeW.id} updateField={updateField} />
                 <TaskEditorRow title="Banner email invitación 3" data={activeW.bannerInv3} field="bannerInv3" wId={activeW.id} updateField={updateField} />
