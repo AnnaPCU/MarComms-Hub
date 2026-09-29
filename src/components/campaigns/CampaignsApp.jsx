@@ -549,7 +549,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
                     {campaign.type === "paid" && (
                       /* ─── VISTA PAID MEDIA ─── */
-                      <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                      <div className="p-8 space-y-8">
                         <div className="space-y-6">
                           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración de Campaña</h3>
 
@@ -815,7 +815,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             ];
 
                         return (
-                          <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+                          <div className="p-8 space-y-8">
                             <div className="space-y-6">
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> {sectionTitle}</h3>
 
@@ -978,8 +978,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                         const pct = Math.round((totalDone / webinarSteps.length) * 100);
 
                         return (
-                          <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-                            {/* ── Columna izquierda: info linkeo ── */}
+                          <div className="p-8 space-y-8">
+                            {/* ── Info del linkeo ── */}
                             <div className="space-y-6">
                               <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-5">
                                 <div className="flex items-center gap-2 mb-3">
@@ -1019,7 +1019,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               />
                             </div>
 
-                            {/* ── Columna derecha: 5 mailings ── */}
+                            {/* ── 5 mailings ── */}
                             <div className="space-y-3">
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
                                 <Mail className="w-4 h-4" /> 5 mailings del webinar
@@ -1148,8 +1148,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                         };
 
                         return (
-                          <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-                            {/* ── Columna izquierda: Configuración ── */}
+                          <div className="p-8 space-y-8">
+                            {/* ── Configuración (arriba, a todo el ancho) ── */}
                             <div className="space-y-6">
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración General</h3>
 
@@ -1417,7 +1417,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                     </button>
                                   ))}
                                 </div>
-                                <p className="text-[9px] text-slate-400 font-medium mt-2">Podés sumar envíos extra desde la columna derecha.</p>
+                                <p className="text-[9px] text-slate-400 font-medium mt-2">Podés sumar envíos extra desde la sección de contenidos.</p>
                               </div>
 
                               {/* Paso 4: Etiquetas BBDD (múltiples) */}
@@ -1483,16 +1483,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 <input type="email" value={data.senderEmail || ""} onChange={e => updData('senderEmail', e.target.value)} placeholder="marketing@ejemplo.com" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 outline-none focus:ring-2 focus:ring-blue-400" />
                               </div>
 
-                              {/* UTM Builder Widget */}
-                              <MarcommsUtmBuilder
-                                defaultCampaignName={campaign.name}
-                                defaultCountry={campaign.country}
-                                defaultBusinessUnit={campaign.businessUnit}
-                                accentColor="purple"
-                              />
                             </div>
 
-                            {/* ── Columna derecha: Contenidos + Ejecución ── */}
+                            {/* ── Contenidos + Ejecución ── */}
                             <div className="space-y-6">
                               {/* Paso 3: Fechas + Paso 5: Contenidos */}
                               <div>
@@ -2229,6 +2222,14 @@ td a { color: #2563eb; text-decoration: none; }
                                 placeholder="Anotá feedback, ajustes, pendientes..."
                               />
                             </div>
+
+                            {/* ── UTM Generator, a todo el ancho ── */}
+                            <MarcommsUtmBuilder
+                              defaultCampaignName={campaign.name}
+                              defaultCountry={campaign.country}
+                              defaultBusinessUnit={campaign.businessUnit}
+                              accentColor="purple"
+                            />
                           </div>
                         );
                       })()

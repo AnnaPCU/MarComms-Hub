@@ -419,11 +419,12 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 space-y-6">
+      {/* Vista apilada (sep 2026): configuración arriba a todo el ancho,
+          roadmap en tres columnas debajo, UTM Generator al final. */}
+      <main className="max-w-7xl mx-auto w-full p-6 space-y-6">
            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
              <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-4 border-b border-slate-50 pb-3">Configuración General</h3>
-             <div className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Fecha Webinar</label>
                   <input type="date" value={activeW.mainDate} onChange={e=>updateField(activeW.id, "mainDate", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm" />
@@ -457,6 +458,18 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                     />
                   </div>
                 </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1 flex items-center gap-1"><Ico name="Database" size={10} color="#3b82f6"/> Deals creados en HubSpot</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={activeW.dealsCreated ?? ""}
+                    onChange={e => updateField(activeW.id, 'dealsCreated', e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    placeholder="0"
+                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-black text-slate-700 text-sm font-mono"
+                  />
+                  <p className="text-[9px] text-slate-400 font-medium ml-1">Se reporta al cliente en el resumen mensual</p>
+                </div>
                 <ProjectLinks
                   hubspotLink={activeW.hubspotLink}
                   onChange={(field, v) => updateField(activeW.id, field, v)}
@@ -470,16 +483,15 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 </div>
              </div>
            </div>
-        </div>
 
-        <div className="lg:col-span-8">
            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
              <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Roadmap de Producción</h3>
                 <span className="text-[9px] font-black text-blue-500 uppercase">{calcProgress(activeW)}% Completado</span>
              </div>
              
-             <div className="divide-y divide-slate-50">
+             <div className="grid grid-cols-1 lg:grid-cols-3 lg:divide-x divide-slate-100">
+              <div className="divide-y divide-slate-50">
                 {/* ── OPERATIVAS / TÉCNICAS ── */}
                 <div className="bg-slate-50 px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">Operativas</div>
                 <TaskEditorRow title="Equipos (Teams/Zoom)" data={activeW.teamsGroup} field="teamsGroup" wId={activeW.id} updateField={updateField} />
@@ -487,8 +499,10 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <TaskEditorRow title="Base de Datos" data={activeW.bbdd} field="bbdd" wId={activeW.id} updateField={updateField} customDropdown={["PROPIA","COMPRADA","CLIENTE"]} hasCost hasTags />
                 <TaskEditorRow title="Hubspot (Deals/Sync)" data={activeW.hubspot} field="hubspot" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
 
+              </div>
+              <div className="divide-y divide-slate-50">
                 {/* ── CONTENIDO (alineado con Social Media) ── */}
-                <div className="bg-pink-50 px-4 py-2 text-[10px] font-black text-pink-600 uppercase tracking-widest border-t-2 border-pink-100">Contenido — Mesa de Contenido y Diseño</div>
+                <div className="bg-pink-50 px-4 py-2 text-[10px] font-black text-pink-600 uppercase tracking-widest lg:border-t-0 border-t-2 border-pink-100">Contenido — Mesa de Contenido y Diseño</div>
                 <TaskEditorRow title="Landing de registro" data={activeW.landingLivestorm} field="landingLivestorm" wId={activeW.id} updateField={updateField} hasDate={true} />
                 <TaskEditorRow title='LKN post "anuncio"' data={activeW.lknAnuncio} field="lknAnuncio" wId={activeW.id} updateField={updateField} hasDate={true} />
                 <TaskEditorRow title='LKN post "1 day to go"' data={activeW.lknReminder} field="lknReminder" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
@@ -498,45 +512,26 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <TaskEditorRow title="One pager (si aplica)" data={activeW.onePager} field="onePager" wId={activeW.id} updateField={updateField} optional />
                 <TaskEditorRow title="Reporte final" data={activeW.reporte} field="reporte" wId={activeW.id} updateField={updateField} hasDate={true} isAutoDate={true} />
 
+              </div>
+              <div className="divide-y divide-slate-50">
                 {/* ── EMAILS (sincronizan con campaña linkeada; el banner es parte del email) ── */}
-                <div className="bg-blue-50 px-4 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest border-t-2 border-blue-100">Emails (sync con Campaña linkeada)</div>
+                <div className="bg-blue-50 px-4 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest lg:border-t-0 border-t-2 border-blue-100">Emails (sync con Campaña linkeada)</div>
                 <TaskEditorRow title="Email invitación 1" data={activeW.mailPre1} field="mailPre1" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
                 <TaskEditorRow title="Email invitación 2" data={activeW.mailPre2} field="mailPre2" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
                 <TaskEditorRow title="Email invitación 3" data={activeW.mailPre3} field="mailPre3" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
                 <TaskEditorRow title="Email post — Asistentes" data={activeW.mailPostAttended} field="mailPostAttended" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
                 <TaskEditorRow title="Email post — No asistidos" data={activeW.mailPostNoShow} field="mailPostNoShow" wId={activeW.id} updateField={updateField} hasDate={true} hasText={true} isAutoDate={true} />
-
-                {/* ── Deals creados ── */}
-                <div className="bg-white border border-slate-200 rounded-xl p-4 my-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Ico name="Database" size={16} color="#3b82f6"/>
-                      <h4 className="font-black text-[11px] text-slate-700 uppercase tracking-widest">Deals creados en HubSpot</h4>
-                    </div>
-                    <input
-                      type="number"
-                      min="0"
-                      value={activeW.dealsCreated ?? ""}
-                      onChange={e => updateField(activeW.id, 'dealsCreated', e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
-                      placeholder="0"
-                      className="w-24 p-2 bg-slate-50 border border-slate-200 rounded-lg text-lg font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-400 text-center"
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-400 font-medium mt-1">Se reporta al cliente en el resumen mensual</p>
-                </div>
-
-                {/* ── UTM Builder Widget ── */}
-                <div className="my-4">
-                  <MarcommsUtmBuilder
-                    defaultCampaignName={activeW.name}
-                    defaultCountry={activeW.pais}
-                    defaultBusinessUnit={activeW.unidadNegocio}
-                    accentColor="indigo"
-                  />
-                </div>
+              </div>
              </div>
            </div>
-        </div>
+
+           {/* ── UTM Generator, a todo el ancho ── */}
+           <MarcommsUtmBuilder
+             defaultCampaignName={activeW.name}
+             defaultCountry={activeW.pais}
+             defaultBusinessUnit={activeW.unidadNegocio}
+             accentColor="indigo"
+           />
       </main>
 
       {/* Modal confirmación borrado (vista detalle) */}
