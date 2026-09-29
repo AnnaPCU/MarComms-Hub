@@ -553,7 +553,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                         <div className="space-y-6">
                           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración de Campaña</h3>
 
-                          <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-4">
+                          <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
                             <div>
                               <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Nombre de la campaña</p>
                               <input
@@ -819,7 +819,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             <div className="space-y-6">
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> {sectionTitle}</h3>
 
-                              <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-4">
+                              <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
@@ -1149,11 +1149,11 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
                         return (
                           <div className="p-8 space-y-8">
-                            {/* ── Configuración (arriba, a todo el ancho) ── */}
-                            <div className="space-y-6">
+                            {/* ── Configuración (arriba, a todo el ancho; tarjetas en grilla) ── */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 items-start [&>h3]:col-span-full [&>div:first-of-type]:col-span-full">
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración General</h3>
 
-                              <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-4">
+                              <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
@@ -1493,7 +1493,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   <Mail className="w-4 h-4" /> Paso 3 & 5: Fechas + Contenidos por Envío
                                 </h3>
 
-                                <div className="space-y-3">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start [&>button]:col-span-full">
                                   {/* Renderizar los N emails base */}
                                   {[...Array(numEmails)].map((_, idx) => renderEmailBlock(idx + 1, 'base', idx, false))}
 
