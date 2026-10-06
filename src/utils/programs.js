@@ -34,7 +34,7 @@ const makeCampaign = (type, { name, budget, businessUnit, country, objective, de
 };
 
 /**
- * form.pillars = { [pillarId]: { enabled, name, date, budget } }
+ * form.pillars = { [pillarId]: { enabled, name, date, budget, billing, planId } }
  * program      = el programa ya creado en la DB (con id)
  */
 export const buildProgramProjects = (form, program) => {
@@ -45,14 +45,18 @@ export const buildProgramProjects = (form, program) => {
   Object.entries(pillars).forEach(([id, cfg]) => {
     if (!cfg || !cfg.enabled) return;
     const name = (cfg.name || '').trim() || defaultPillarName(program.name, id);
+    // Modo de cobro: USD con monto o cubierto por un plan (sin monto)
+    const coveredByPlan = cfg.billing === 'plan';
+    const billing = coveredByPlan ? { billing: 'plan', planId: cfg.planId || null } : { billing: 'usd', planId: null };
+    const budget = coveredByPlan ? '' : (cfg.budget || '');
     if (id === 'webinars') {
-      const w = makeWebinar(name, cfg.date || '', program.client || '', cfg.budget || '', common.country, common.businessUnit);
-      out.webinars.push({ ...w, programId: program.id });
+      const w = makeWebinar(name, cfg.date || '', program.client || '', budget, common.country, common.businessUnit);
+      out.webinars.push({ ...w, ...billing, programId: program.id });
     } else if (id === 'eventos') {
-      const ev = makeEvent(name, cfg.date || '', common.country, common.businessUnit, program.client || '', cfg.budget || '');
-      out.events.push({ ...ev, programId: program.id });
+      const ev = makeEvent(name, cfg.date || '', common.country, common.businessUnit, program.client || '', budget);
+      out.events.push({ ...ev, ...billing, programId: program.id });
     } else if (['email', 'paid', 'database', 'research'].includes(id)) {
-      out.campaigns.push(makeCampaign(id, { name, budget: cfg.budget, objective: program.objective, detail: program.objective, ...common }));
+      out.campaigns.push({ ...makeCampaign(id, { name, budget, objective: program.objective, detail: program.objective, ...common }), ...billing });
     }
   });
   return out;

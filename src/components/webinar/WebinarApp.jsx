@@ -17,7 +17,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, Calendar, CheckCircle2, Clock, Database,
-  DollarSign, Lock, Plus, Trash2, User,
+  DollarSign, Layers, Lock, Plus, Trash2, User,
 } from 'lucide-react';
 
 import { calcProgress } from '@/utils/progress';
@@ -25,6 +25,8 @@ import { makeWebinar, autoCalcDates } from '@/utils/webinar';
 import { COUNTRY_BU_MAPPING_WEBINAR, unitsForCountry } from '@/constants/markets';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
 import BudgetInput from '@/components/shared/BudgetInput';
+import { useBillingPlans } from '@/hooks/useBillingPlans';
+import { chargedAmount, planNameOf } from '@/utils/billing';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { WEBINAR_MAIL_TO_STEP } from '@/constants/webinar';
 
@@ -39,6 +41,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 
 export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
+  const { planById } = useBillingPlans();
   const [view,setView]=useState("internal"); 
   const [activeW,setActiveW]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -134,13 +137,12 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
 
   // Varios campos de una vez (nombre, país, unidad desde el título). Usa el
   // updater funcional para no pisar escrituras que estén en vuelo.
+  // El setActiveW va afuera del updater: React no permite actualizar otro
+  // componente mientras procesa el updater de la colección.
   const updateFields = (id, patch) => {
-    setWebinars(prev => prev.map(w => {
-      if (w.id !== id) return w;
-      const next = { ...w, ...patch, updatedAt: new Date().toISOString() };
-      if (activeW && activeW.id === id) setActiveW(next);
-      return next;
-    }));
+    const stamped = { ...patch, updatedAt: new Date().toISOString() };
+    setWebinars(prev => prev.map(w => (w.id === id ? { ...w, ...stamped } : w)));
+    if (activeW && activeW.id === id) setActiveW(a => (a ? { ...a, ...stamped } : a));
   };
 
   const deleteWebinarWithSync = (id) => {
@@ -194,7 +196,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
         {(() => {
           const webinarsActivos = webinars.filter(w => calcProgress(w) < 100);
           const webinarsCompletos = webinars.filter(w => calcProgress(w) === 100);
-          const totalFacturable = webinarsCompletos.reduce((acc, w) => acc + Number(w.monto || 0), 0);
+          const totalFacturable = webinarsCompletos.reduce((acc, w) => acc + chargedAmount(w.monto, w.billing), 0);
 
           const renderCard = (w, isCompleted = false) => (
             <div
@@ -221,7 +223,11 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 </div>
                 <h3 className={`text-lg font-black text-slate-900 uppercase leading-tight mb-2 transition-colors ${isCompleted ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`}>{w.name}</h3>
                 <p className="text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><Ico name="Calendar" size={12}/> {w.mainDate || "Sin Fecha"}</p>
-                {w.monto && Number(w.monto) > 0 && (
+                {w.billing === 'plan' ? (
+                  <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
+                    <Layers className="w-3 h-3" /> Plan: {planNameOf(w, planById)}
+                  </p>
+                ) : w.monto && Number(w.monto) > 0 && (
                   <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
                     <DollarSign className="w-3 h-3" /> Fee: ${Number(w.monto).toLocaleString()}
                   </p>
@@ -438,8 +444,9 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                   accent="blue"
                   amount={activeW.monto}
                   billing={activeW.billing}
+                  planId={activeW.planId}
                   onAmount={(v) => updateField(activeW.id, "monto", v)}
-                  onBilling={(v) => updateField(activeW.id, "billing", v)}
+                  onBillingChange={(patch) => updateFields(activeW.id, patch)}
                 />
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Asistentes Logueados</label>

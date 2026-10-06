@@ -397,24 +397,28 @@ export const generateProjectPDF = async (project, type) => {
     pdf.setFillColor(248, 250, 252);
     pdf.roundedRect(MARGIN_X, y, CONTENT_W, FOOTER_H, 3, 3, 'F');
 
-    // KPIs según tipo
+    // KPIs según tipo. Si lo cubre un plan, en vez del monto va el plan
+    // (project.planName lo completa quien llama; si no, "Plan").
+    const feeKpi = (label, amount) => (project.billing === 'plan'
+      ? { label: 'CUBIERTO POR', value: project.planName || 'Plan', color: [30, 41, 59] }
+      : { label, value: `$${(Number(amount) || 0).toLocaleString()}`, color: [30, 41, 59] });
     let kpis = [];
     if (type === 'webinar') {
       kpis = [
-        { label: 'FEE',     value: `$${(project.monto || 0).toLocaleString()}`, color: [30, 41, 59] },
+        feeKpi('FEE', project.monto),
         { label: 'DEALS HS', value: `${project.dealsCreated || 0}`,            color: [37, 99, 235] },
         { label: 'UNIDAD',  value: meta.businessUnit || '—',                   color: [30, 41, 59] },
         { label: 'ESTADO',  value: statusLabel,                                 color: statusColor },
       ];
     } else if (type === 'event') {
       kpis = [
-        { label: 'FEE',    value: `$${(project.fee || 0).toLocaleString()}`, color: [30, 41, 59] },
+        feeKpi('FEE', project.fee),
         { label: 'UNIDAD', value: meta.businessUnit || '—',                   color: [30, 41, 59] },
         { label: 'ESTADO', value: statusLabel,                                 color: statusColor },
       ];
     } else {
       kpis = [
-        { label: 'PRESUPUESTO', value: `$${(project.budget || 0).toLocaleString()}`, color: [30, 41, 59] },
+        feeKpi('PRESUPUESTO', project.budget),
         { label: 'UNIDAD',      value: meta.businessUnit || '—',                       color: [30, 41, 59] },
         { label: 'ESTADO',      value: statusLabel,                                     color: statusColor },
       ];

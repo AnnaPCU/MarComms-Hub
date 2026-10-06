@@ -18,7 +18,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AlignLeft, ArrowLeft, BarChart3, Calendar, CheckCircle2, ChevronRight,
   Circle, Clock, Copy, Database, DollarSign, Download, ExternalLink, Eye,
-  FileText, Files, Hash, Info, Link, Mail, MailWarning, MousePointer2,
+  FileText, Files, Hash, Info, Layers, Link, Mail, MailWarning, MousePointer2,
   Plus, Receipt, RefreshCw, Send, Settings, Sparkles, Tag, Trash2,
   TrendingUp, Upload, User, Users, Video, X, Zap,
 } from 'lucide-react';
@@ -39,6 +39,8 @@ import ModalPortal from '@/components/shared/ModalPortal';
 import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
 import BudgetInput from '@/components/shared/BudgetInput';
+import { useBillingPlans } from '@/hooks/useBillingPlans';
+import { chargedAmount, planNameOf } from '@/utils/billing';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
 const campaignId = () => {
@@ -52,6 +54,7 @@ const campaignId = () => {
 
 export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser, focusProjectId, onFocusHandled, embedded = false, filterType = null }) {
   const confirm = useConfirm();
+  const { planById } = useBillingPlans();
   const [activeView, setActiveView] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
@@ -105,7 +108,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [newCampData, setNewCampData] = useState({ type: "", budget: "", unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
+  const [newCampData, setNewCampData] = useState({ type: "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [newComment, setNewComment] = useState({});
   const [utmCampaignName, setUtmCampaignName] = useState({});
@@ -163,12 +166,18 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
 
   const handleStartNewCampaign = () => {
-    setNewCampData({ type: "", budget: "", unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
+    setNewCampData({ type: "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
     setShowBudgetModal(true);
   };
 
   const createCampaign = () => {
-    if (!newCampData.type || !newCampData.budget || !newCampData.unit || !newCampData.country || !newCampData.name) return;
+    const coveredByPlan = newCampData.billing === 'plan';
+    if (!newCampData.type || (!coveredByPlan && !newCampData.budget) || (coveredByPlan && !newCampData.planId) || !newCampData.unit || !newCampData.country || !newCampData.name) return;
+    // Modo de cobro: USD con monto, o cubierta por un plan (monto 0)
+    const billingFields = coveredByPlan
+      ? { billing: 'plan', planId: newCampData.planId }
+      : { billing: 'usd', planId: null };
+    const budgetValue = coveredByPlan ? 0 : parseFloat(newCampData.budget);
     
     // Validación extra para Paid Media
     if (newCampData.type === "paid" && !newCampData.objective) return;
@@ -180,7 +189,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         id: campaignId(),
         type: "paid",
         name: newCampData.name,
-        budget: parseFloat(newCampData.budget),  // Fee Marcomms
+        budget: budgetValue,  // Fee Marcomms
+        ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
         objective: newCampData.objective,
@@ -197,7 +207,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         id: campaignId(),
         type: newCampData.type,
         name: newCampData.name,
-        budget: parseFloat(newCampData.budget),
+        budget: budgetValue,
+        ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
         detail: newCampData.detail || "",
@@ -209,7 +220,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         id: campaignId(),
         type: "email",
         name: newCampData.name,
-        budget: parseFloat(newCampData.budget),
+        budget: budgetValue,
+        ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
         numEmails: 1,
@@ -229,6 +241,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
     setCampaigns([newCampaign, ...campaigns]);
     setShowBudgetModal(false);
+  };
+
+  // Varios campos en una sola escritura (ej. modo de cobro + plan). Usa el
+  // updater funcional para no pisar escrituras en vuelo.
+  const updateCampaignFields = (id, patch) => {
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
 
   const updateCampaign = (id, field, value) => {
@@ -426,7 +444,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
           const campaignsActivas = campaigns.filter(c => matchesPilar(c) && getProgress(c) < 100);
           const campaignsCompletadas = campaigns.filter(c => matchesPilar(c) && getProgress(c) === 100);
           const totalAFacturar = campaignsCompletadas.reduce((acc, c) => {
-            const fee = Number(c.budget || 0);
+            const fee = chargedAmount(c.budget, c.billing);
             const platform = Number(c.platformInvestment || 0);
             return acc + fee + platform;
           }, 0);
@@ -501,9 +519,18 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                           </div>
 
                           {/* Fee */}
-                          <div className="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg shrink-0">
-                            <DollarSign className="w-3 h-3 text-slate-400" />
-                            <span className="text-xs font-black text-slate-700 tracking-widest">{(campaign.budget || 0).toLocaleString()}</span>
+                          <div className="hidden md:flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg shrink-0 max-w-[220px]" title={campaign.billing === 'plan' ? `Cubierta por el plan: ${planNameOf(campaign, planById)}` : 'Fee en USD'}>
+                            {campaign.billing === 'plan' ? (
+                              <>
+                                <Layers className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="text-[10px] font-black text-slate-700 uppercase truncate">Plan: {planNameOf(campaign, planById)}</span>
+                              </>
+                            ) : (
+                              <>
+                                <DollarSign className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs font-black text-slate-700 tracking-widest">{(campaign.budget || 0).toLocaleString()}</span>
+                              </>
+                            )}
                           </div>
 
                           {/* Cotización validada */}
@@ -597,8 +624,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   size="sm"
                                   amount={campaign.budget}
                                   billing={campaign.billing}
+                                  planId={campaign.planId}
                                   onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
-                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
+                                  onBillingChange={(patch) => updateCampaignFields(campaign.id, patch)}
                                 />
                             </div>
 
@@ -729,7 +757,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 grid grid-cols-3 gap-2">
                               <div className="text-center">
                                 <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Fee</p>
-                                <p className="text-sm font-black text-amber-900">${(campaign.budget || 0).toLocaleString()}</p>
+                                <p className="text-sm font-black text-amber-900 truncate" title={campaign.billing === 'plan' ? planNameOf(campaign, planById) : undefined}>{campaign.billing === 'plan' ? 'Plan' : `$${(campaign.budget || 0).toLocaleString()}`}</p>
                               </div>
                               <div className="text-center border-x border-amber-200">
                                 <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Plataforma</p>
@@ -737,7 +765,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               </div>
                               <div className="text-center">
                                 <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Total</p>
-                                <p className="text-sm font-black text-amber-900">${((campaign.budget || 0) + (campaign.platformInvestment || 0)).toLocaleString()}</p>
+                                <p className="text-sm font-black text-amber-900">${(chargedAmount(campaign.budget, campaign.billing) + (campaign.platformInvestment || 0)).toLocaleString()}</p>
                               </div>
                             </div>
                           </div>
@@ -853,8 +881,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   size="sm"
                                   amount={campaign.budget}
                                   billing={campaign.billing}
+                                  planId={campaign.planId}
                                   onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
-                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
+                                  onBillingChange={(patch) => updateCampaignFields(campaign.id, patch)}
                                 />
                                 </div>
 
@@ -1178,8 +1207,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   size="sm"
                                   amount={campaign.budget}
                                   billing={campaign.billing}
+                                  planId={campaign.planId}
                                   onAmount={(v) => updateCampaign(campaign.id, 'budget', v === '' ? 0 : v)}
-                                  onBilling={(v) => updateCampaign(campaign.id, 'billing', v)}
+                                  onBillingChange={(patch) => updateCampaignFields(campaign.id, patch)}
                                 />
                                 </div>
 
@@ -2267,7 +2297,8 @@ td a { color: #2563eb; text-decoration: none; }
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {campaignsCompletadas.map(c => {
                       const s = typeStyles[c.type] || typeStyles.email;
-                      const fee = Number(c.budget || 0);
+                      const coveredByPlan = c.billing === 'plan';
+                      const fee = chargedAmount(c.budget, c.billing);
                       const platform = Number(c.platformInvestment || 0);
                       const total = fee + platform;
                       return (
@@ -2305,8 +2336,8 @@ td a { color: #2563eb; text-decoration: none; }
 
                           <div className={`${s.bg} rounded-xl p-3 ${c.type === 'paid' ? 'grid grid-cols-3' : 'grid grid-cols-1'} gap-2`}>
                             <div className="text-center">
-                              <p className={`text-[8px] font-black uppercase tracking-widest ${s.text}`}>{c.type === 'paid' ? 'Fee' : 'Monto'}</p>
-                              <p className={`text-sm font-black ${s.text}`}>${fee.toLocaleString()}</p>
+                              <p className={`text-[8px] font-black uppercase tracking-widest ${s.text}`}>{coveredByPlan ? 'Cubierta por plan' : (c.type === 'paid' ? 'Fee' : 'Monto')}</p>
+                              <p className={`text-sm font-black ${s.text} truncate`}>{coveredByPlan ? planNameOf(c, planById) : `$${fee.toLocaleString()}`}</p>
                             </div>
                             {c.type === 'paid' && (
                               <>
@@ -2552,27 +2583,15 @@ td a { color: #2563eb; text-decoration: none; }
                        </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          {newCampData.type === "paid" ? "Fee Marcomms (USD)" : "Monto ($)"}
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                            <input 
-                              type="number" 
-                              min="0"
-                              className={`w-full p-4 pl-8 bg-slate-50 border-2 border-slate-100 rounded-2xl text-xl font-black transition-all outline-none ${
-                                newCampData.type === "paid" ? "focus:border-amber-500" :
-                                newCampData.type === "database" ? "focus:border-emerald-500" :
-                                newCampData.type === "research" ? "focus:border-purple-500" :
-                                "focus:border-blue-500"
-                              }`}
-                              placeholder="0.00"
-                              value={newCampData.budget}
-                              onChange={(e) => setNewCampData({...newCampData, budget: e.target.value})}
-                            />
-                        </div>
-                    </div>
+                    <BudgetInput
+                        label={newCampData.type === "paid" ? "Fee Marcomms" : "Monto"}
+                        accent={newCampData.type === "paid" ? "amber" : "blue"}
+                        amount={newCampData.budget}
+                        billing={newCampData.billing}
+                        planId={newCampData.planId}
+                        onAmount={(v) => setNewCampData(prev => ({ ...prev, budget: v }))}
+                        onBillingChange={(patch) => setNewCampData(prev => ({ ...prev, ...patch }))}
+                    />
 
                     {/* Campos EXCLUSIVOS de Paid Media: Plataformas, Inversión, Duración */}
                     {newCampData.type === "paid" && (
@@ -2688,7 +2707,7 @@ td a { color: #2563eb; text-decoration: none; }
                     <button onClick={() => setShowBudgetModal(false)} className="flex-1 p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all">Cancelar</button>
                     <button 
                       onClick={createCampaign} 
-                      disabled={!newCampData.budget || !newCampData.name || !newCampData.unit || !newCampData.country || (newCampData.type === "paid" && (!newCampData.objective || !newCampData.platforms || newCampData.platforms.length === 0))}
+                      disabled={(newCampData.billing === 'plan' ? !newCampData.planId : !newCampData.budget) || !newCampData.name || !newCampData.unit || !newCampData.country || (newCampData.type === "paid" && (!newCampData.objective || !newCampData.platforms || newCampData.platforms.length === 0))}
                       className={`flex-1 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg disabled:opacity-50 transition-all ${
                         newCampData.type === "paid" ? "bg-amber-600 hover:bg-amber-700 shadow-amber-200" :
                         newCampData.type === "database" ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200" :

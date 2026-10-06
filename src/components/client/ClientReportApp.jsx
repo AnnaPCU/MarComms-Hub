@@ -28,10 +28,14 @@ import { unitsForCountry } from '@/constants/markets';
 import { programItems, programSummary, matchesProgramScope } from '@/utils/programs';
 import { PROGRAM_STATUS } from '@/constants/programs';
 import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
+import PlanDashboard from '@/components/client/PlanDashboard';
+import { useBillingPlans } from '@/hooks/useBillingPlans';
+import { chargedAmount, planNameOf } from '@/utils/billing';
 import { Layers } from 'lucide-react';
 
 export default function ClientReportApp({ country, scope, webinars, campaigns, events, programs = [], onOpenProgram, onBack, isPublic = false }) {
   const now = new Date();
+  const { planById } = useBillingPlans();
   // Alcance: un país (compatibilidad) o un scope del Portal Cliente
   // ({ label, countries, units, unitLabel }). Ver PORTAL_UNITS en constants/markets.
   const scopeObj = scope || { label: country, countries: [country], units: null, unitLabel: null };
@@ -162,8 +166,10 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         businessUnit: w.unidadNegocio || '—',
         client: w.client || '',
         date: w.mainDate,
-        fee: w.billing === 'plan' ? 0 : (Number(w.monto) || 0),
+        fee: chargedAmount(w.monto, w.billing),
         billing: w.billing || 'usd',
+        planId: w.planId || null,
+        planName: planNameOf(w, planById),
         deals: Number(w.dealsCreated) || 0,
         progress,
         status: progress === 100 ? 'completed' : 'active',
@@ -186,8 +192,10 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         name: c.name,
         businessUnit: c.businessUnit || '—',
         subtype: null,
-        fee: c.billing === 'plan' ? 0 : (Number(c.budget) || 0),
+        fee: chargedAmount(c.budget, c.billing),
         billing: c.billing || 'usd',
+        planId: c.planId || null,
+        planName: planNameOf(c, planById),
         platformInvestment: Number(c.platformInvestment) || 0,
         deals: Number(c.dealsCreated) || 0,
         progress,
@@ -212,8 +220,10 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         businessUnit: ev.businessUnit || '—',
         client: ev.client || '',
         date: ev.date,
-        fee: ev.billing === 'plan' ? 0 : (Number(ev.fee) || 0),
+        fee: chargedAmount(ev.fee, ev.billing),
         billing: ev.billing || 'usd',
+        planId: ev.planId || null,
+        planName: planNameOf(ev, planById),
         deals: Number(ev.dealsCreated) || 0,
         progress,
         status: progress === 100 ? 'completed' : 'active',
@@ -378,10 +388,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         </div>
 
         {view === 'plan' && (
-          <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-slate-200 text-center">
-            <p className="text-sm font-black text-slate-700 uppercase tracking-tight">Dashboard por plan</p>
-            <p className="text-xs text-slate-400 mt-1">Próximamente. La definición de planes por cliente está pendiente.</p>
-          </div>
+          <PlanDashboard items={filteredItems} serviceTypes={SERVICE_TYPES} onSelect={setSelectedItem} />
         )}
 
         {view === 'pais' && (<>
@@ -393,7 +400,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Inversión de Mkt</p>
             </div>
             <p className="text-4xl font-black text-emerald-400 tracking-tight font-mono">${totalInvestment.toLocaleString()}</p>
-            <p className="text-[10px] text-slate-400 font-medium mt-1">fee de servicios + pauta en plataforma (lo incluido en el plan no suma)</p>
+            <p className="text-[10px] text-slate-400 font-medium mt-1">fee de servicios + pauta en plataforma (lo cubierto por un plan no suma)</p>
           </div>
           <div className="md:border-r border-slate-700 md:pr-6">
             <div className="flex items-center gap-2 mb-1">
@@ -567,7 +574,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest border ${s.color}`}>
-                            {s.label}{item.subtype ? ` · ${item.subtype}` : ''}{item.billing === 'plan' ? ' · Incluido en el plan' : ''}
+                            {s.label}{item.subtype ? ` · ${item.subtype}` : ''}{item.billing === 'plan' ? ` · Plan: ${item.planName}` : ''}
                           </span>
                         </div>
                         <h4 className="font-black text-sm text-slate-800 uppercase leading-tight">{item.name}</h4>
@@ -823,7 +830,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
               {/* Botón Descargar PDF */}
               <div className="px-6 py-4 bg-white border-t border-slate-100">
                 <button
-                  onClick={() => generateProjectPDF(selectedItem.rawData, selectedItem.source)}
+                  onClick={() => generateProjectPDF({ ...selectedItem.rawData, planName: selectedItem.planName }, selectedItem.source)}
                   className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all"
                 >
                   <Download className="w-4 h-4" />

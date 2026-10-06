@@ -4,7 +4,7 @@
 // Dos pasos:
 //   1. Datos del programa: nombre, cliente, país, unidad, objetivo, fechas
 //   2. Pilares a generar: tildar cada uno; nombre opcional, fecha (webinar
-//      y evento la necesitan) y fee opcional.
+//      y evento la necesitan) y presupuesto opcional (USD o cubierto por un plan).
 // Al guardar llama onCreate(form) — App.jsx crea el programa y los pilares.
 //
 // Props: onCreate(form) (async), onClose(), currentUser
@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Layers, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
+import BudgetInput from '@/components/shared/BudgetInput';
 import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { PROGRAM_PILLARS as ALL_PROGRAM_PILLARS } from '@/constants/programs';
 import { isPillarHidden } from '@/constants/sections';
@@ -29,7 +30,7 @@ export default function ProgramWizard({ onCreate, onClose }) {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     name: '', client: '', country: '', businessUnit: '', objective: '', startDate: '', endDate: '', notes: '',
-    pillars: Object.fromEntries(PROGRAM_PILLARS.map((p) => [p.id, { enabled: false, name: '', date: '', budget: '' }])),
+    pillars: Object.fromEntries(PROGRAM_PILLARS.map((p) => [p.id, { enabled: false, name: '', date: '', budget: '', billing: 'usd', planId: null }])),
   });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const setPillar = (id, patch) => setForm((f) => ({ ...f, pillars: { ...f.pillars, [id]: { ...f.pillars[id], ...patch } } }));
@@ -116,10 +117,21 @@ export default function ProgramWizard({ onCreate, onClose }) {
                         </span>
                       </button>
                       {cfg.enabled && (
-                        <div className={`grid gap-2 mt-3 ${p.needsDate ? 'grid-cols-[1fr_150px_120px]' : 'grid-cols-[1fr_120px]'}`}>
-                          <input value={cfg.name} onChange={(e) => setPillar(p.id, { name: e.target.value })} placeholder={defaultPillarName(form.name, p.id)} className={`${inputCls} py-2 text-xs`} />
-                          {p.needsDate && <input type="date" value={cfg.date} onChange={(e) => setPillar(p.id, { date: e.target.value })} className={`${inputCls} py-2 text-xs`} title="Fecha (obligatoria)" />}
-                          <input type="number" min="0" value={cfg.budget} onChange={(e) => setPillar(p.id, { budget: e.target.value })} placeholder="Fee USD" className={`${inputCls} py-2 text-xs font-mono`} />
+                        <div className="mt-3 space-y-2">
+                          <div className={`grid gap-2 ${p.needsDate ? 'grid-cols-[1fr_150px]' : 'grid-cols-1'}`}>
+                            <input value={cfg.name} onChange={(e) => setPillar(p.id, { name: e.target.value })} placeholder={defaultPillarName(form.name, p.id)} className={`${inputCls} py-2 text-xs`} />
+                            {p.needsDate && <input type="date" value={cfg.date} onChange={(e) => setPillar(p.id, { date: e.target.value })} className={`${inputCls} py-2 text-xs`} title="Fecha (obligatoria)" />}
+                          </div>
+                          <BudgetInput
+                            label="Presupuesto (opcional)"
+                            accent="violet"
+                            size="sm"
+                            amount={cfg.budget}
+                            billing={cfg.billing}
+                            planId={cfg.planId}
+                            onAmount={(v) => setPillar(p.id, { budget: v })}
+                            onBillingChange={(patch) => setPillar(p.id, patch)}
+                          />
                         </div>
                       )}
                     </div>

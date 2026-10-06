@@ -31,6 +31,20 @@ describe('programs — armado', () => {
     expect(paid.platforms).toEqual([]);
   });
 
+  it('respeta el modo de cobro de cada pilar: USD con monto o cubierto por un plan', () => {
+    const form = { pillars: {
+      webinars: { enabled: true, date: '2026-11-05', budget: '900', billing: 'plan', planId: 'plan-ar' },
+      email:    { enabled: true, budget: '300' },
+      paid:     { enabled: true, billing: 'plan', planId: 'plan-ar', budget: '500' },
+    } };
+    const out = buildProgramProjects(form, PROGRAM);
+    expect(out.webinars[0]).toMatchObject({ billing: 'plan', planId: 'plan-ar', monto: '' });
+    const email = out.campaigns.find((c) => c.type === 'email');
+    expect(email).toMatchObject({ billing: 'usd', planId: null, budget: 300 });
+    const paid = out.campaigns.find((c) => c.type === 'paid');
+    expect(paid).toMatchObject({ billing: 'plan', planId: 'plan-ar', budget: 0 });
+  });
+
   it('missingProgramFields exige nombre, país, unidad, un pilar y fecha de webinar/evento', () => {
     expect(missingProgramFields({ name: '', country: '', businessUnit: '', pillars: {} })).toEqual(['Nombre del programa', 'País', 'Unidad de negocio', 'Al menos un pilar']);
     expect(missingProgramFields({ name: 'X', country: 'Chile', businessUnit: 'CU Certificaciones', pillars: { webinars: { enabled: true }, paid: { enabled: true } } })).toEqual(['Fecha del webinar']);

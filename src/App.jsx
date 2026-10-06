@@ -38,6 +38,7 @@ import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
 import { useCrm } from '@/hooks/useCrm';
 import { usePrograms } from '@/hooks/usePrograms';
+import { BillingPlansProvider, useBillingPlansState } from '@/hooks/useBillingPlans';
 import { buildProgramProjects } from '@/utils/programs';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -254,6 +255,8 @@ export default function App() {
 
   // ─── Programas (campaña integral que agrupa pilares) ───
   const programs = usePrograms();
+  // Planes que cubren pilares (selector de presupuesto, Portal "Por plan")
+  const billingPlans = useBillingPlansState(currentUser?.name || '');
   if (programs.error) console.error('Programs Supabase error:', programs.error);
   const [showProgramWizard, setShowProgramWizard] = useState(false);
   const [focusProgramId, setFocusProgramId] = useState(null);
@@ -768,7 +771,7 @@ export default function App() {
           type: 'Campaña', icon: Mail, color: 'bg-purple-50 text-purple-700 border-purple-200',
           title: c.name,
           subtitle: `${typeLabel} · ${c.country || '—'} · ${c.businessUnit || '—'}`,
-          extra: c.budget ? `$${Number(c.budget).toLocaleString()}` : '',
+          extra: c.billing === 'plan' ? 'Plan' : (c.budget ? `$${Number(c.budget).toLocaleString()}` : ''),
           navTo: 'campaigns'
         });
       }
@@ -826,6 +829,7 @@ export default function App() {
   }
 
   return (
+    <BillingPlansProvider value={billingPlans}>
     <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900">
       {/* Avisos: pop-ups de notificaciones nuevas + modal al loguearse */}
       <NotificationToasts toasts={toasts} onOpen={(n) => { dismissToast(n.id); openNotification(n); }} onDismiss={dismissToast} />
@@ -1164,6 +1168,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </BillingPlansProvider>
   );
 }
-

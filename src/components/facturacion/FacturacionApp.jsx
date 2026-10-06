@@ -58,6 +58,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
     // Webinars completados → Campañas
     (webinars || []).forEach(w => {
       if (!w.completedAt || !isInMonth(w.completedAt, selectedMonth)) return;
+      if (w.billing === 'plan') return; // lo cubre un plan: no se factura aparte
       if (!w.monto || Number(w.monto) === 0) return;
       rows.push({
         id: `w-${w.id}`,
@@ -76,6 +77,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
     // Campañas completadas → según tipo
     (campaigns || []).forEach(c => {
       if (!c.completedAt || !isInMonth(c.completedAt, selectedMonth)) return;
+      if (c.billing === 'plan') return; // lo cubre un plan: no se factura aparte
       const fee = Number(c.budget || 0);
       if (fee === 0) return;
       const catMap = {
@@ -107,6 +109,7 @@ export default function FacturacionApp({ onBack, webinars, campaigns, events, st
     // Eventos completados → Eventos
     (events || []).forEach(ev => {
       if (!ev.completedAt || !isInMonth(ev.completedAt, selectedMonth)) return;
+      if (ev.billing === 'plan') return; // lo cubre un plan: no se factura aparte
       const fee = Number(ev.fee || 0);
       if (fee === 0) return;
       rows.push({

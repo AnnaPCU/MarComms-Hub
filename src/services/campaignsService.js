@@ -32,7 +32,8 @@ export const fromRow = (row) => {
     updatedAt:         row.updated_at || null,
     quotationValidated: row.quotation_validated === true,
     programId:        row.program_id || null,       // programa que agrupa este pilar (migration 0021)
-    billing:          row.billing || 'usd',          // 'usd' | 'plan' (incluido en el plan mensual, migration 0022)
+    billing:          row.billing || 'usd',          // 'usd' | 'plan' (cubierto por un plan, migration 0022)
+    planId:           row.plan_id || null,          // plan que lo cubre si billing = 'plan' (migration 0023)
     // Links externos (migration 0012) — solo si la columna ya existe en la DB
     ...(row.planner_link !== undefined ? { plannerLink: row.planner_link || '' } : {}),
     ...(row.hubspot_link !== undefined ? { hubspotLink: row.hubspot_link || '' } : {}),
@@ -79,6 +80,7 @@ export const toRow = (obj) => {
   if (obj.quotationValidated !== undefined)  row.quotation_validated = !!obj.quotationValidated;
   if (obj.programId !== undefined)        row.program_id = obj.programId || null;
   if (obj.billing !== undefined)          row.billing = obj.billing === 'plan' ? 'plan' : 'usd';
+  if (obj.planId !== undefined)           row.plan_id = obj.planId || null;
   if (obj.plannerLink !== undefined)         row.planner_link = obj.plannerLink || null;
   if (obj.hubspotLink !== undefined)         row.hubspot_link = obj.hubspotLink || null;
   if (obj.content !== undefined)             row.content = obj.content || {};

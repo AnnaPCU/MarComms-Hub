@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, BarChart3, Calendar, CheckCircle2, ChevronRight,
-  Clock, DollarSign, ExternalLink, FileText, Mail, Plus, Send,
+  Clock, DollarSign, ExternalLink, FileText, Layers, Mail, Plus, Send,
   Settings, Share2, Sparkles, Target, Trash2, User, X,
 } from 'lucide-react';
 
@@ -23,6 +23,8 @@ import { makeEvent, recalcEventDates } from '@/utils/events';
 import { MARKETS, unitsForCountry } from '@/constants/markets';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
 import BudgetInput from '@/components/shared/BudgetInput';
+import { useBillingPlans } from '@/hooks/useBillingPlans';
+import { chargedAmount, planNameOf } from '@/utils/billing';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 
@@ -38,7 +40,9 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
   const [activeEvent, setActiveEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [newEvent, setNewEvent] = useState({ name: "", date: "", country: "", businessUnit: "", client: "", fee: "" });
+  const EMPTY_NEW_EVENT = { name: "", date: "", country: "", businessUnit: "", client: "", fee: "", billing: "usd", planId: null };
+  const [newEvent, setNewEvent] = useState(EMPTY_NEW_EVENT);
+  const { planById } = useBillingPlans();
   const [newCustomTask, setNewCustomTask] = useState({});
   const [newParticipant, setNewParticipant] = useState({});
 
@@ -95,20 +99,22 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
 
   const createEvent = () => {
     if (!newEvent.name || !newEvent.date) return;
-    const ev = makeEvent(newEvent.name, newEvent.date, newEvent.country, newEvent.businessUnit, newEvent.client, newEvent.fee);
+    const isPlan = newEvent.billing === 'plan';
+    const ev = {
+      ...makeEvent(newEvent.name, newEvent.date, newEvent.country, newEvent.businessUnit, newEvent.client, isPlan ? 0 : newEvent.fee),
+      billing: isPlan ? 'plan' : 'usd',
+      planId: isPlan ? newEvent.planId : null,
+    };
     setEvents([ev, ...events]);
-    setNewEvent({ name: "", date: "", country: "", businessUnit: "", client: "", fee: "" });
+    setNewEvent(EMPTY_NEW_EVENT);
     setShowCreateModal(false);
   };
 
   // Varios campos de una vez (nombre, país, unidad desde el título)
+  // El setActiveEvent va afuera del updater (ver updateFields en WebinarApp).
   const updateEventFields = (id, patch) => {
-    setEvents(prev => prev.map(e => {
-      if (e.id !== id) return e;
-      const next = { ...e, ...patch };
-      if (activeEvent && activeEvent.id === id) setActiveEvent(next);
-      return next;
-    }));
+    setEvents(prev => prev.map(e => (e.id === id ? { ...e, ...patch } : e)));
+    if (activeEvent && activeEvent.id === id) setActiveEvent(a => (a ? { ...a, ...patch } : a));
   };
 
   const updateEvent = (id, field, value) => {
@@ -292,7 +298,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
           {(() => {
             const eventsActivos = events.filter(ev => calcEventProgress(ev) < 100);
             const eventsCompletados = events.filter(ev => calcEventProgress(ev) === 100);
-            const totalFacturable = eventsCompletados.reduce((acc, ev) => acc + Number(ev.fee || 0), 0);
+            const totalFacturable = eventsCompletados.reduce((acc, ev) => acc + chargedAmount(ev.fee, ev.billing), 0);
 
             const renderEventCard = (ev, isCompleted = false) => {
               const prog = calcEventProgress(ev);
@@ -325,7 +331,9 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
                       <Calendar className="w-3 h-3" /> {ev.date || "Sin Fecha"}
                     </p>
                     <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-orange-600'}`}>
-                      <DollarSign className="w-3 h-3" /> Fee: ${(ev.fee || 0).toLocaleString()}
+                      {ev.billing === 'plan'
+                        ? <><Layers className="w-3 h-3" /> Plan: {planNameOf(ev, planById)}</>
+                        : <><DollarSign className="w-3 h-3" /> Fee: ${(ev.fee || 0).toLocaleString()}</>}
                     </p>
                     <div className="mb-3">
                       <QuotationBadge
@@ -474,19 +482,16 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fee Marcomms (USD)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="0.00"
-                      value={newEvent.fee}
-                      onChange={e => setNewEvent({...newEvent, fee: e.target.value})}
-                      className="w-full p-4 pl-8 bg-slate-50 border-2 border-slate-100 rounded-2xl text-xl font-black outline-none focus:border-orange-500 transition-all"
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-400 font-medium ml-1">Se sumará automáticamente a la facturación del país.</p>
+                  <BudgetInput
+                    label="Fee Marcomms"
+                    accent="orange"
+                    amount={newEvent.fee}
+                    billing={newEvent.billing}
+                    planId={newEvent.planId}
+                    onAmount={(v) => setNewEvent(prev => ({ ...prev, fee: v }))}
+                    onBillingChange={(patch) => setNewEvent(prev => ({ ...prev, ...patch }))}
+                  />
+                  {newEvent.billing !== 'plan' && <p className="text-[9px] text-slate-400 font-medium ml-1">Se sumará automáticamente a la facturación del país.</p>}
                 </div>
                 <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl">
                   <p className="text-[10px] font-bold text-orange-700 leading-relaxed">
@@ -566,7 +571,9 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
           <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-4 border-b border-slate-50 pb-3 flex items-center justify-between">
             <span>Configuración del Evento</span>
             <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-[9px] font-black border border-orange-100 flex items-center gap-1.5">
-              <DollarSign className="w-3 h-3" /> Fee: ${(ev.fee || 0).toLocaleString()}
+              {ev.billing === 'plan'
+                ? <><Layers className="w-3 h-3" /> Plan: {planNameOf(ev, planById)}</>
+                : <><DollarSign className="w-3 h-3" /> Fee: ${(ev.fee || 0).toLocaleString()}</>}
             </span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
@@ -600,8 +607,9 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
                 accent="orange"
                 amount={ev.fee || 0}
                 billing={ev.billing}
+                planId={ev.planId}
                 onAmount={(v) => updateEvent(ev.id, "fee", v === '' ? 0 : v)}
-                onBilling={(v) => updateEvent(ev.id, "billing", v)}
+                onBillingChange={(patch) => updateEventFields(ev.id, patch)}
               />
               {ev.billing !== 'plan' && <p className="text-[9px] text-orange-600 font-bold mt-1">Va a facturación</p>}
             </div>
