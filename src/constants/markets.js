@@ -27,6 +27,24 @@ export const MARKETS = {
   USA:        ['Control Union', 'Peterson Solutions', 'BELE'],
 };
 
+// Variantes de nombre de país → clave del Hub (la de MARKETS). Se usa para
+// que los textos libres (ej. nombres de planes) usen el mismo nomenclador
+// que el Portal Cliente: "Estados Unidos" → "USA", "México" → "Mexico".
+export const COUNTRY_ALIASES = {
+  'Estados Unidos de América': 'USA',
+  'Estados Unidos': 'USA',
+  'United States': 'USA',
+  'EE. UU.': 'USA',
+  'EE.UU.': 'USA',
+  'EEUU': 'USA',
+  'US': 'USA',
+  'México': 'Mexico',
+  'Perú': 'Peru',
+  'Canadá': 'Canada',
+  'Brazil': 'Brasil',
+  'República Dominicana': 'RD',
+};
+
 // Mapping específico para webinars (subset que usa el módulo webinar)
 export const COUNTRY_BU_MAPPING_WEBINAR = { ...MARKETS };
 

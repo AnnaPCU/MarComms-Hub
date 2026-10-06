@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   billingSelectValue, parseBillingSelect, chargedAmount, planNameOf,
   findPlanByName, cleanPlanName, groupItemsByPlan, isPlanCovered, UNASSIGNED_PLAN_LABEL,
+  normalizeCountryNames,
 } from './billing';
 
 const PLANS = [
@@ -37,6 +38,15 @@ describe('montos y nombres', () => {
     expect(findPlanByName(PLANS, '  control union   ARGENTINA ')?.id).toBe('a');
     expect(findPlanByName(PLANS, 'Otro')).toBeNull();
     expect(cleanPlanName('  Plan   nuevo ')).toBe('Plan nuevo');
+  });
+  it('usa los nombres de país del Hub (como el Portal Cliente)', () => {
+    expect(cleanPlanName('Control Union Estados Unidos Orgánico')).toBe('Control Union USA Orgánico');
+    expect(cleanPlanName('control union EE.UU. orgánico')).toBe('control union USA orgánico');
+    expect(cleanPlanName('Peterson Solutions México')).toBe('Peterson Solutions Mexico');
+    expect(cleanPlanName('CU Estados Unidos de América')).toBe('CU USA');
+    expect(normalizeCountryNames('Control Union USA')).toBe('Control Union USA');
+    expect(normalizeCountryNames('Plan Peruano')).toBe('Plan Peruano'); // no toca palabras que contienen el alias
+    expect(normalizeCountryNames('Plan Usuarios')).toBe('Plan Usuarios');
   });
 });
 

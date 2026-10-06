@@ -23,7 +23,7 @@ import { Check, X } from 'lucide-react';
 
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import {
-  NEW_PLAN_VALUE, UNASSIGNED_PLAN_LABEL, billingSelectValue, parseBillingSelect,
+  NEW_PLAN_VALUE, UNASSIGNED_PLAN_LABEL, billingSelectValue, cleanPlanName, parseBillingSelect,
 } from '@/utils/billing';
 
 const RING = {
@@ -131,6 +131,11 @@ export default function BudgetInput({
             </div>
           )}
         </div>
+      )}
+      {adding && newName.trim() && cleanPlanName(newName) !== newName.trim().replace(/\s+/g, ' ') && (
+        <p className="text-[9px] font-medium text-slate-400 ml-1">
+          Se guarda como <span className="font-black text-slate-600">{cleanPlanName(newName)}</span> (mismo nombre de país que el Portal Cliente).
+        </p>
       )}
       {error && <p className="text-[9px] font-bold text-red-500 ml-1">{error}</p>}
       {!adding && isPlan && (

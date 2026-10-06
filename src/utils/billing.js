@@ -7,6 +7,8 @@
 // Lo cubierto por un plan no suma a la inversión ni a la facturación.
 // ════════════════════════════════════════════════════════════════════
 
+import { COUNTRY_ALIASES } from '@/constants/markets';
+
 export const USD_VALUE = 'usd';
 export const NEW_PLAN_VALUE = '__new_plan__';
 const PLAN_PREFIX = 'plan:';
@@ -44,7 +46,18 @@ const normalize = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase
 export const findPlanByName = (plans, name) =>
   (plans || []).find((p) => normalize(p.name) === normalize(name)) || null;
 
-export const cleanPlanName = (name) => String(name || '').trim().replace(/\s+/g, ' ');
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Alias más largos primero ("Estados Unidos de América" antes que "Estados Unidos")
+const COUNTRY_ALIAS_RE = Object.keys(COUNTRY_ALIASES)
+  .sort((a, b) => b.length - a.length)
+  .map((alias) => [new RegExp(`(?<![\\p{L}.])${escapeRe(alias)}(?![\\p{L}])`, 'giu'), COUNTRY_ALIASES[alias]]);
+
+// Reemplaza variantes de país por la clave del Hub ("Estados Unidos" → "USA")
+export const normalizeCountryNames = (text) =>
+  COUNTRY_ALIAS_RE.reduce((acc, [re, key]) => acc.replace(re, key), String(text || ''));
+
+// Nombre de plan prolijo: sin espacios de más y con el país como figura en el Hub
+export const cleanPlanName = (name) => normalizeCountryNames(String(name || '').trim().replace(/\s+/g, ' '));
 
 // Agrupa ítems del Portal por plan. Devuelve:
 //   { groups: [{ id, name, items }], usdItems }
