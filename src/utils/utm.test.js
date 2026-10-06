@@ -18,6 +18,8 @@ describe('utm — armado', () => {
 
   it('varios países se unen con guion en el utm_campaign', () => {
     expect(buildUtmCampaign({ ...FORM, country: ['Argentina', 'Chile'] })).toBe('cu_warrants_argentina-chile_marcomms_warrants_mayo_2026');
+    // Estados Unidos mantiene el código "usa" de los links ya publicados
+    expect(buildUtmCampaign({ ...FORM, country: ['Estados Unidos', 'Mexico'] })).toBe('cu_warrants_usa-mexico_marcomms_warrants_mayo_2026');
     expect(buildUtmCampaign({ ...FORM, country: 'Argentina, Chile' })).toBe('cu_warrants_argentina-chile_marcomms_warrants_mayo_2026');
     expect(missingUtmFields({ ...FORM, country: [] })).toEqual(['País']);
   });

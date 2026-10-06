@@ -24,7 +24,10 @@ export const COUNTRY_SEPARATOR = ', ';
 // Acepta array o string "Argentina, Chile" → ['Argentina', 'Chile']
 export const countriesOf = (value) => (Array.isArray(value) ? value : String(value || '').split(',').map((c) => c.trim())).filter(Boolean);
 export const countriesLabel = (value) => countriesOf(value).join(COUNTRY_SEPARATOR);
-const countrySegment = (value) => countriesOf(value).map((c) => slugifyUtm(c)).filter(Boolean).join('-');
+// Código de país dentro del utm_campaign. Estados Unidos sigue saliendo como
+// "usa" (igual que los links ya publicados) para no partir los reportes.
+const UTM_COUNTRY_CODES = { 'Estados Unidos': 'usa' };
+const countrySegment = (value) => countriesOf(value).map((c) => UTM_COUNTRY_CODES[c] || slugifyUtm(c)).filter(Boolean).join('-');
 
 export const buildUtmCampaign = ({ businessUnit, country, campaignName }) =>
   [slugifyUtm(businessUnit), countrySegment(country), slugifyUtm(UTM_IDENTIFIER), slugifyUtm(campaignName)].filter(Boolean).join('_');

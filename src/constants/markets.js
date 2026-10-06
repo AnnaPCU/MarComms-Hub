@@ -24,20 +24,20 @@ export const MARKETS = {
   Ptech:      ['Peterson Solutions'],
   RD:         ['Control Union'],
   Uruguay:    ['Control Union', 'Peterson Solutions'],
-  USA:        ['Control Union', 'Peterson Solutions', 'BELE'],
+  'Estados Unidos': ['Control Union', 'Peterson Solutions', 'BELE'],
 };
 
-// Variantes de nombre de país → clave del Hub (la de MARKETS). Se usa para
-// que los textos libres (ej. nombres de planes) usen el mismo nomenclador
-// que el Portal Cliente: "Estados Unidos" → "USA", "México" → "Mexico".
+// Variantes de nombre de país → clave del Hub (la de MARKETS). Todo el Hub
+// usa los nombres en español; esto evita que textos libres (ej. nombres de
+// planes) entren con otra variante: "USA" / "EE.UU." → "Estados Unidos".
 export const COUNTRY_ALIASES = {
-  'Estados Unidos de América': 'USA',
-  'Estados Unidos': 'USA',
-  'United States': 'USA',
-  'EE. UU.': 'USA',
-  'EE.UU.': 'USA',
-  'EEUU': 'USA',
-  'US': 'USA',
+  'Estados Unidos de América': 'Estados Unidos',
+  'United States': 'Estados Unidos',
+  'EE. UU.': 'Estados Unidos',
+  'EE.UU.': 'Estados Unidos',
+  'EEUU': 'Estados Unidos',
+  'USA': 'Estados Unidos',
+  'US': 'Estados Unidos',
   'México': 'Mexico',
   'Perú': 'Peru',
   'Canadá': 'Canada',
@@ -111,7 +111,7 @@ const COUNTRY_COLORS = {
   Ptech:     'violet',
   RD:        'blue',
   Uruguay:   'violet',
-  USA:       'slate',
+  'Estados Unidos': 'slate',
 };
 
 /**
@@ -123,7 +123,7 @@ const COUNTRY_COLORS = {
 export const MARKETS_LIST = Object.keys(MARKETS)
   .sort()
   .map((key) => ({
-    id:       key.toLowerCase(),
+    id:       key.toLowerCase().replace(/\s+/g, '-'),
     pais:     COUNTRY_DISPLAY[key] || key,
     key,                                      // clave canónica (para lookups en MARKETS)
     empresas: MARKETS[key],
@@ -149,11 +149,11 @@ const countriesWithAnyUnit = (units) =>
 
 const CU_COUNTRIES = countriesWithAnyUnit(CU_UNITS);
 const PS_COUNTRIES = countriesWithAnyUnit(PS_UNITS);
-// Iberoamérica = Latinoamérica + Iberia (todo lo de Peterson salvo USA)
-const PS_IBEROAMERICA = PS_COUNTRIES.filter((c) => c !== 'USA');
+// Iberoamérica = Latinoamérica + Iberia (todo lo de Peterson salvo Estados Unidos)
+const PS_IBEROAMERICA = PS_COUNTRIES.filter((c) => c !== 'Estados Unidos');
 
 const countryScope = (prefix, c) => ({
-  id: `${prefix}-${c.toLowerCase()}`, label: COUNTRY_DISPLAY[c] || c, kind: 'country', countries: [c],
+  id: `${prefix}-${c.toLowerCase().replace(/\s+/g, '-')}`, label: COUNTRY_DISPLAY[c] || c, kind: 'country', countries: [c],
 });
 
 export const PORTAL_UNITS = [

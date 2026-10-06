@@ -52,7 +52,7 @@ const COUNTRY_ALIAS_RE = Object.keys(COUNTRY_ALIASES)
   .sort((a, b) => b.length - a.length)
   .map((alias) => [new RegExp(`(?<![\\p{L}.])${escapeRe(alias)}(?![\\p{L}])`, 'giu'), COUNTRY_ALIASES[alias]]);
 
-// Reemplaza variantes de país por la clave del Hub ("Estados Unidos" → "USA")
+// Reemplaza variantes de país por la clave del Hub ("USA" → "Estados Unidos")
 export const normalizeCountryNames = (text) =>
   COUNTRY_ALIAS_RE.reduce((acc, [re, key]) => acc.replace(re, key), String(text || ''));
 

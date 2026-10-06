@@ -20,6 +20,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 ### Lenguaje y tono
 - **Toda la UI en español argentino** (no neutro, no español de España)
+- Nombres de países en español ("Estados Unidos", no "USA"). En los UTMs, Estados Unidos sale como código `usa` para no partir los reportes (`UTM_COUNTRY_CODES` en `src/utils/utm.js`)
 - Comentarios en español también
 - Variables en inglés (`webinar`, `campaign`, no `seminario`, `campaña`)
 - Strings de UI: usar "vos" (no "tú"), "cliquear", "tildar", "subir archivo", etc.
@@ -103,7 +104,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones: todas corridas en producción hasta la 0024 (plan de USA con el nombre de país del Hub, oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
+   - Migraciones: todas corridas en producción hasta la 0025 (país "USA" → "Estados Unidos" en datos y planes, oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
@@ -190,7 +191,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). `WORLD_DAY_COUNTRIES`: países donde repercute más cada día (sin entrada = global, todas las cuentas). Lógica y cuentas sugeridas en `src/utils/worldDays.js` |
 | `src/constants/programs.js` | Programas: pilares que se pueden generar y estados. Un programa agrupa webinar/evento/campañas por `programId` (migration 0021). Lógica en `src/utils/programs.js` (armado de pilares, progreso), datos en `src/hooks/usePrograms.js` + `src/services/programsService.js`, UI en `src/components/programs/`. La creación (programa + pilares) se orquesta en `App.jsx` → `createProgramWithPillars` |
 | `src/constants/crm.js` | CRM: unidades, tipos y estados de entrenamiento, checklist de adopción y entidades por defecto (del Excel "HubSpot Users - Seats"). Lógica en `src/utils/crm.js`, datos en `src/hooks/useCrm.js` + `src/services/crmService.js`, UI en `src/components/crm/` |
-| `src/hooks/useBillingPlans.jsx` | Planes que cubren pilares (tabla `billing_plans`, migration 0023): "Control Union Argentina", etc. Los nombres usan el país como figura en el Hub (`COUNTRY_ALIASES` en `constants/markets.js`: "Estados Unidos" → "USA") Cada pilar tiene `billing` ('usd' \| 'plan') + `planId`. El selector es `src/components/shared/BudgetInput.jsx` (permite agregar planes), helpers en `src/utils/billing.js`, y la pestaña "Por plan" del Portal en `src/components/client/PlanDashboard.jsx`. Lo cubierto por un plan no suma a inversión ni facturación |
+| `src/hooks/useBillingPlans.jsx` | Planes que cubren pilares (tabla `billing_plans`, migration 0023): "Control Union Argentina", etc. Los nombres usan el país como figura en el Hub, en español (`COUNTRY_ALIASES` en `constants/markets.js`: "USA" / "EE.UU." → "Estados Unidos"). Cada pilar tiene `billing` ('usd' \| 'plan') + `planId`. El selector es `src/components/shared/BudgetInput.jsx` (permite agregar planes), helpers en `src/utils/billing.js`, y la pestaña "Por plan" del Portal en `src/components/client/PlanDashboard.jsx`. Lo cubierto por un plan no suma a inversión ni facturación |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |
 | `src/utils/pdf.js` | `generateProjectPDF` con jsPDF nativo |

@@ -40,11 +40,11 @@ describe('montos y nombres', () => {
     expect(cleanPlanName('  Plan   nuevo ')).toBe('Plan nuevo');
   });
   it('usa los nombres de país del Hub (como el Portal Cliente)', () => {
-    expect(cleanPlanName('Control Union Estados Unidos Orgánico')).toBe('Control Union USA Orgánico');
-    expect(cleanPlanName('control union EE.UU. orgánico')).toBe('control union USA orgánico');
+    expect(cleanPlanName('Control Union USA Orgánico')).toBe('Control Union Estados Unidos Orgánico');
+    expect(cleanPlanName('control union EE.UU. orgánico')).toBe('control union Estados Unidos orgánico');
     expect(cleanPlanName('Peterson Solutions México')).toBe('Peterson Solutions Mexico');
-    expect(cleanPlanName('CU Estados Unidos de América')).toBe('CU USA');
-    expect(normalizeCountryNames('Control Union USA')).toBe('Control Union USA');
+    expect(cleanPlanName('CU Estados Unidos de América')).toBe('CU Estados Unidos');
+    expect(normalizeCountryNames('Control Union Estados Unidos')).toBe('Control Union Estados Unidos');
     expect(normalizeCountryNames('Plan Peruano')).toBe('Plan Peruano'); // no toca palabras que contienen el alias
     expect(normalizeCountryNames('Plan Usuarios')).toBe('Plan Usuarios');
   });
