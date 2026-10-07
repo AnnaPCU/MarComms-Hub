@@ -16,7 +16,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  ArrowLeft, Bell, Calendar, CheckCircle2, ChevronRight, Clock, Database, FileText, Globe, Globe2, Layers, LayoutDashboard, Link2, LogOut, Mail, Moon, PanelLeftClose, PanelLeftOpen, Plus, Receipt, Search, Sparkles, Sun, Trophy, Video, X,
+  ArrowLeft, Bell, Calendar, CheckCircle2, ChevronRight, Clock, FileText, Globe, Globe2, Layers, LayoutDashboard, Link2, LogOut, Mail, Moon, PanelLeftClose, PanelLeftOpen, Plus, Receipt, Search, Sparkles, Sun, Target, Trophy, Video, X,
 } from 'lucide-react';
 
 // Constants
@@ -36,7 +36,7 @@ import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
-import { useCrm } from '@/hooks/useCrm';
+import { useMarketingPlans } from '@/hooks/useMarketingPlans';
 import { usePrograms } from '@/hooks/usePrograms';
 import { BillingPlansProvider, useBillingPlansState } from '@/hooks/useBillingPlans';
 import { buildProgramProjects } from '@/utils/programs';
@@ -61,7 +61,7 @@ import ClientReportApp from '@/components/client/ClientReportApp';
 import PortalHome from '@/components/client/PortalHome';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 import ExtrasApp from '@/components/extras/ExtrasApp';
-import CrmApp from '@/components/crm/CrmApp';
+import MarketingPlansApp from '@/components/plans/MarketingPlansApp';
 import ProgramsApp from '@/components/programs/ProgramsApp';
 import ProgramWizard from '@/components/programs/ProgramWizard';
 
@@ -250,8 +250,8 @@ export default function App() {
   // ─── Social Media: cuentas y posteos de LinkedIn (Supabase + realtime) ───
   const social = useSocialPosts();
   if (social.error) console.error('SocialPosts Supabase error:', social.error);
-  const crm = useCrm();
-  if (crm.error) console.error('CRM Supabase error:', crm.error);
+  // Planes de Marketing (réplica del Excel de seguimiento; reemplaza al CRM)
+  const marketingPlans = useMarketingPlans();
 
   // ─── Programas (campaña integral que agrupa pilares) ───
   const programs = usePrograms();
@@ -387,7 +387,7 @@ export default function App() {
     { id: 'programs', title: 'Programas', description: 'Campañas integrales: un objetivo con varios pilares (webinar, evento, email, paid, BBDD, investigación).', icon: <Layers className="w-8 h-8 text-violet-600" />, stats: `${programs.programs.length} ${programs.programs.length === 1 ? 'programa' : 'programas'}`, color: 'bg-violet-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
-    { id: 'crm', title: 'CRM', description: 'Entrenamientos del CRM HubSpot a los clientes internos: realizados, cobrados y adopción por entidad.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${crm.trainings.length} entrenamientos`, color: 'bg-sky-50' },
+    { id: 'marketing_plans', title: 'Planes de Marketing', description: 'Seguimiento de los planes por país: avance, tareas, reuniones y responsables. Se actualiza importando el Excel.', icon: <Target className="w-8 h-8 text-sky-600" />, stats: `${marketingPlans.plans.length} ${marketingPlans.plans.length === 1 ? 'plan' : 'planes'}`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
@@ -620,11 +620,12 @@ export default function App() {
       );
     }
 
-    if (currentSection === 'crm') {
+    if (currentSection === 'marketing_plans') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-          <CrmApp
-            crm={crm}
+          <MarketingPlansApp
+            key={sectionEpoch}
+            data={marketingPlans}
             currentUser={currentUser}
             onBack={() => goToSection('main')}
           />

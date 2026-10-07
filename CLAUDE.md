@@ -10,7 +10,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 - ~8 usuarios internos (no exposición pública)
 - Idioma: **100% Español argentino**
-- Maneja: webinars, pilares (campañas), eventos, programas (campaña integral que agrupa pilares), Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país, CRM (entrenamientos del CRM HubSpot a los clientes internos)
+- Maneja: webinars, pilares (campañas), eventos, programas (campaña integral que agrupa pilares), Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país, Planes de Marketing (seguimiento de los planes por país, importado desde el Excel; reemplazó a la sección CRM en oct 2026)
 - Stack: **React 18 + Vite + Tailwind**
 - Backend: **pendiente** (plan en `BACKEND_PLAN.md`)
 
@@ -89,7 +89,7 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 | Social Media (ex Content Hub) | Rosa / Rose | `from-pink-500 to-rose-500` |
 | Facturación (oculta, ver `constants/sections.js`) | Esmeralda / Teal | `from-emerald-500 to-teal-500` |
 | Portal Cliente (ex Países + Portal) | Cyan / Teal | `from-cyan-500 to-teal-500` |
-| CRM (entrenamientos HubSpot) | Sky / Azul | `from-sky-500 to-blue-600` |
+| Planes de Marketing (ex CRM) | Sky / Azul | `from-sky-500 to-blue-600` |
 | Programas (campaña integral de pilares) | Violeta / Fucsia | `from-violet-600 to-fuchsia-600` |
 | Mi Semana (oculta, ver `constants/sections.js`) | Naranja / Ámbar | `from-orange-500 to-amber-500` |
 
@@ -104,7 +104,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones: todas corridas en producción hasta la 0026 (UTMs guardados con "usa" → "estados_unidos", oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
+   - Migraciones: todas corridas en producción hasta la 0027 (Planes de Marketing, oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
@@ -190,7 +190,7 @@ Mantené consistencia con esta paleta al agregar features.
 | `src/constants/socialPosts.js` | Hoja de posteos de LinkedIn: estados, planes, cuentas por defecto. Lógica de semanas y avisos en `src/utils/socialPosts.js`. UI en `src/components/social/PostsSheet.jsx` (las columnas se muestran como "Posteo 1..n", sin fechas; por debajo siguen siendo semanas lun–dom) |
 | `src/constants/worldDays.js` | Calendario de días mundiales + temáticas (Social Media). `WORLD_DAY_COUNTRIES`: países donde repercute más cada día (sin entrada = global, todas las cuentas). Lógica y cuentas sugeridas en `src/utils/worldDays.js` |
 | `src/constants/programs.js` | Programas: pilares que se pueden generar y estados. Un programa agrupa webinar/evento/campañas por `programId` (migration 0021). Lógica en `src/utils/programs.js` (armado de pilares, progreso), datos en `src/hooks/usePrograms.js` + `src/services/programsService.js`, UI en `src/components/programs/`. La creación (programa + pilares) se orquesta en `App.jsx` → `createProgramWithPillars` |
-| `src/constants/crm.js` | CRM: unidades, tipos y estados de entrenamiento, checklist de adopción y entidades por defecto (del Excel "HubSpot Users - Seats"). Lógica en `src/utils/crm.js`, datos en `src/hooks/useCrm.js` + `src/services/crmService.js`, UI en `src/components/crm/` |
+| `src/constants/marketingPlans.js` | Planes de Marketing: réplica del Excel "Seguimiento Planes Marketing" (estados, prioridades, encabezados que reconoce el import). Lectura del Excel y cálculos en `src/utils/marketingPlans.js` (se guía por los encabezados, no por posiciones; las pestañas que se importan son las de la columna «Pestaña del plan» del Resumen General) + `src/utils/xlsxGrid.js` (`xlsx` con import dinámico). Datos en `src/hooks/useMarketingPlans.js` + `src/services/marketingPlansService.js` (tablas `marketing_plans` y `marketing_plan_imports`, migration 0027, con realtime). UI en `src/components/plans/`. El Excel es la fuente de verdad: importar reemplaza los planes (los que no están en el Excel se borran). La sección CRM se sacó del Hub; sus tablas `crm_entities` / `crm_trainings` siguen en la base |
 | `src/hooks/useBillingPlans.jsx` | Planes que cubren pilares (tabla `billing_plans`, migration 0023): "Control Union Argentina", etc. Los nombres usan el país como figura en el Hub, en español (`COUNTRY_ALIASES` en `constants/markets.js`: "USA" / "EE.UU." → "Estados Unidos"). Cada pilar tiene `billing` ('usd' \| 'plan') + `planId`. El selector es `src/components/shared/BudgetInput.jsx` (permite agregar planes), helpers en `src/utils/billing.js`, y la pestaña "Por plan" del Portal en `src/components/client/PlanDashboard.jsx`. Lo cubierto por un plan no suma a inversión ni facturación |
 | `src/hooks/useNotificationAlerts.js` | Capa de avisos: modal al loguearse, toasts, título de pestaña, Notification API. Helpers en `src/utils/notificationAlerts.js` |
 | `src/data/demo*.js` | Data inicial (futuro: seed de Supabase) |

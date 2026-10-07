@@ -112,7 +112,7 @@ body {
    ════════════════════════════════════════════════════════════════════ */
 html.dark { color-scheme: dark; background:#0b1220; }
 .dark body { background:#0b1220; color:#e2e8f0; }
-.dark .bg-\[\#F8FAFC\], .dark .bg-slate-50, .dark .bg-slate-50\/50, .dark .bg-slate-50\/60, .dark .bg-slate-50\/30 { background-color:#0f1729; }
+.dark .bg-\[\#F8FAFC\], .dark .bg-slate-50, .dark .bg-slate-50\/50, .dark .bg-slate-50\/60, .dark .bg-slate-50\/30, .dark .bg-slate-50\/70 { background-color:#0f1729; }
 .dark .bg-white, .dark .bg-white\/90, .dark .bg-white\/60 { background-color:#131c31; }
 .dark .bg-white\/70 { background-color:rgba(11,18,32,.85); }
 .dark .bg-slate-100, .dark .bg-slate-100\/50, .dark .bg-slate-100\/60 { background-color:#1b2540; }
