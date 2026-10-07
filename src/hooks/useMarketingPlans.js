@@ -13,7 +13,7 @@ import {
   listMarketingPlans, listPlanImports, importMarketingPlans, subscribeMarketingPlans,
 } from '@/services/marketingPlansService';
 
-export const useMarketingPlans = () => {
+export const useMarketingPlans = ({ enabled = true } = {}) => {
   const [plans, setPlans] = useState([]);
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,13 +30,13 @@ export const useMarketingPlans = () => {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { refetch(); }, [refetch]);
-  useEffect(() => subscribeMarketingPlans(() => {
+  useEffect(() => { if (enabled) refetch(); else setLoading(false); }, [refetch, enabled]);
+  useEffect(() => (!enabled ? undefined : subscribeMarketingPlans(() => {
     if (importingRef.current) return;
     // Una importación genera varios eventos seguidos: refresco una vez
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(refetch, 400);
-  }), [refetch]);
+  })), [refetch, enabled]);
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const importPlans = useCallback(async (newPlans, meta) => {

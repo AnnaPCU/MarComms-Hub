@@ -15,7 +15,10 @@
 //   - Las notificaciones que navegan a esa sección no se muestran
 // ════════════════════════════════════════════════════════════════════
 
-export const HIDDEN_SECTIONS = ['my_week', 'facturacion', 'success_cases'];
+// "marketing_plans" (Planes de Marketing) se oculta en oct 2026: se armó con
+// el Excel equivocado; en su lugar va "crm" (Facturación HubSpot). El
+// código y las tablas siguen: sacalo de la lista para mostrarlo.
+export const HIDDEN_SECTIONS = ['my_week', 'facturacion', 'success_cases', 'marketing_plans'];
 
 export const isSectionHidden = (id) => HIDDEN_SECTIONS.includes(id);
 
