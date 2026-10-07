@@ -20,7 +20,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 ### Lenguaje y tono
 - **Toda la UI en español argentino** (no neutro, no español de España)
-- Nombres de países en español ("Estados Unidos", no "USA"). En los UTMs, Estados Unidos sale como código `usa` para no partir los reportes (`UTM_COUNTRY_CODES` en `src/utils/utm.js`)
+- Nombres de países en español ("Estados Unidos", no "USA"), también dentro de los UTMs (`estados_unidos`)
 - Comentarios en español también
 - Variables en inglés (`webinar`, `campaign`, no `seminario`, `campaña`)
 - Strings de UI: usar "vos" (no "tú"), "cliquear", "tildar", "subir archivo", etc.
@@ -104,7 +104,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
-   - Migraciones: todas corridas en producción hasta la 0025 (país "USA" → "Estados Unidos" en datos y planes, oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
+   - Migraciones: todas corridas en producción hasta la 0026 (UTMs guardados con "usa" → "estados_unidos", oct 2026). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase) y además se guardan en `supabase/migrations/`.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
    - La herramienta se movió al sitio de reportes de Anna (proyecto aparte)
