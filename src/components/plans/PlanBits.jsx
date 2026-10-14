@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
-import { PLAN_TASK_STATUSES, PLAN_TASK_STATUS_BY_ID } from '@/constants/planTasks';
+import { PLAN_TASK_STATUS_BY_ID } from '@/constants/planTasks';
 import { splitLinks } from '@/utils/planTasks';
 
 export const pctLabel = (pct) => `${Math.round((pct || 0) * 100)}%`;
@@ -24,17 +24,6 @@ export function ProgressBar({ pct, className = 'h-2' }) {
   return (
     <div className={`w-full bg-slate-100 rounded-full overflow-hidden ${className}`}>
       <div className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full transition-all" style={{ width: pctLabel(pct) }} />
-    </div>
-  );
-}
-
-// Barra apilada por estado (cuántas tareas hay en cada uno)
-export function StatusStack({ byStatus, total }) {
-  if (!total) return <div className="h-1.5 rounded-full bg-slate-100" />;
-  const parts = PLAN_TASK_STATUSES.map((s) => ({ ...s, n: byStatus[s.id] || 0 })).filter((s) => s.n > 0);
-  return (
-    <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-100" title={parts.map((p) => `${p.label}: ${p.n}`).join(' · ')}>
-      {parts.map((p) => <div key={p.id} className={p.solid} style={{ width: `${(p.n / total) * 100}%` }} />)}
     </div>
   );
 }

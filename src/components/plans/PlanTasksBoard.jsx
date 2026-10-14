@@ -10,6 +10,8 @@
 //   - "+ Agregar tarea" al pie de cada mes → carga directa (Enter guarda,
 //     Esc cancela).
 //   - Responsables: todo el equipo (más quien figure en alguna tarea).
+//   - En el mes actual, aviso de tareas sin completar de meses anteriores
+//     (clic en un mes → muestra solo las abiertas de ese mes).
 //
 // Deadline oculto mientras SHOW_TASK_DEADLINE sea false (constants/planTasks).
 //
@@ -22,7 +24,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 
 import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS } from '@/constants/planTasks';
-import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthLabel, monthOptions, taskStats } from '@/utils/planTasks';
+import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthLabel, monthOptions, pendingFromPreviousMonths, taskStats } from '@/utils/planTasks';
 import { formatDate } from '@/utils/date';
 import { StatusBadge, TaskLinks } from './PlanBits';
 import TaskEditor from './TaskEditor';
@@ -47,6 +49,8 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
   const [flashError, setFlashError] = useState('');
 
   const months = useMemo(() => monthFilterOptions(tasks, todayIso, month), [tasks, todayIso, month]);
+  const pendingBefore = useMemo(() => pendingFromPreviousMonths(tasks, todayIso), [tasks, todayIso]);
+  const pendingBeforeCount = pendingBefore.reduce((n, m) => n + m.count, 0);
   // Todo el equipo + quien figure en alguna tarea (ej. un externo) + el elegido
   const owners = useMemo(() => [...new Set([...teamNames, ...tasks.map((t) => t.owner), owner].filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'es')), [teamNames, tasks, owner]);
@@ -112,6 +116,23 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
       </div>
 
       {flashError && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 text-xs font-bold">{flashError}</div>}
+
+      {month === currentMonth && pendingBeforeCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2 text-[11px] font-bold flex flex-wrap items-center gap-x-2 gap-y-1">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            {pendingBeforeCount === 1 ? 'Queda 1 tarea sin completar' : `Quedan ${pendingBeforeCount} tareas sin completar`} de meses anteriores:
+          </span>
+          {pendingBefore.map((m, i) => (
+            <React.Fragment key={m.key}>
+              {i > 0 && <span className="text-amber-400">·</span>}
+              <button onClick={() => { setMonth(m.key); setStatus('open'); }} className="underline underline-offset-2 hover:no-underline" title={`Ver las abiertas de ${m.label}`}>
+                {m.label} ({m.count})
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
 
       {/* Tabla */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">

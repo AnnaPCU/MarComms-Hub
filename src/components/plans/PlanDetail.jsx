@@ -16,7 +16,7 @@ import { ArrowLeft, ClipboardList, Layers } from 'lucide-react';
 import { SHOW_TASK_DEADLINE } from '@/constants/planTasks';
 import { taskStats, isTaskOverdue, planBrand } from '@/utils/planTasks';
 import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
-import { Kpi, ProgressBar, SectionTitle, StatusStack, pctLabel } from './PlanBits';
+import { Kpi, ProgressBar, SectionTitle, pctLabel } from './PlanBits';
 import PlanTasksBoard from './PlanTasksBoard';
 
 export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNames, currentUser, createTask, updateTask, removeTask, onOpenPillar, onBack }) {
@@ -42,9 +42,8 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
         <Kpi label="% avance" value={pctLabel(s.pct)} accent="text-emerald-700" hint="del plan: completadas / (completadas + abiertas)" />
         {SHOW_TASK_DEADLINE && <Kpi label="Vencidas" value={overdue} accent={overdue ? 'text-red-600' : 'text-slate-800'} hint="abiertas con deadline pasado" />}
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4">
         <ProgressBar pct={s.pct} />
-        <StatusStack byStatus={s.byStatus} total={s.total} />
       </div>
 
       <section>

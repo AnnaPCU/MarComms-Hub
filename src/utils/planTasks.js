@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════════
 //   Meses:     monthLabel, monthOptions, monthFilterOptions
 //   Tareas:    taskStats, isTaskOpen, isTaskOverdue, filterTasks,
-//              groupTasksByMonth, splitLinks
+//              groupTasksByMonth, pendingFromPreviousMonths, splitLinks
 //   Planes:    planBrand, planPillarItems (pilares que cubre cada plan —
 //              lo que antes era la pestaña "Por plan" del Portal Cliente)
 //
@@ -95,6 +95,19 @@ export const groupTasksByMonth = (tasks = []) => {
       label: monthLabel(key),
       tasks: list.sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || String(a.createdAt || '').localeCompare(String(b.createdAt || ''))),
     }));
+};
+
+// Tareas sin completar (ni canceladas) de meses anteriores al actual, por
+// mes: [{ key: '2026-09', label: 'Septiembre 2026', count: 2 }]. Para el
+// aviso de la tabla cuando ya empezó un mes nuevo.
+export const pendingFromPreviousMonths = (tasks = [], todayIso) => {
+  const current = todayIso.slice(0, 7);
+  const counts = new Map();
+  tasks.forEach((t) => {
+    if (!isTaskOpen(t) || !t.monthKey || !MONTH_KEY_RE.test(t.monthKey) || t.monthKey >= current) return;
+    counts.set(t.monthKey, (counts.get(t.monthKey) || 0) + 1);
+  });
+  return [...counts.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, count]) => ({ key, label: monthLabel(key), count }));
 };
 
 // "https://a.com\nNDC - Reporte" → [{ type: 'url', value }, { type: 'text', value }]

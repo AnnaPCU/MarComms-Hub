@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   monthLabel, monthOptions, monthFilterOptions, taskStats, isTaskOverdue, filterTasks, groupTasksByMonth, splitLinks,
+  pendingFromPreviousMonths,
   planBrand, planPillarItems,
 } from './planTasks';
 
@@ -56,6 +57,19 @@ describe('tareas', () => {
     expect(monthFilterOptions([{ id: 1, monthKey: '2026-10' }], TODAY, 'none').map((o) => o.value)).toEqual(['all', '2026-10', 'none']);
   });
 
+  it('aviso de tareas sin completar de meses anteriores', () => {
+    const list = [
+      { monthKey: '2026-08', status: 'Pendiente' }, { monthKey: '2026-09', status: 'En curso' },
+      { monthKey: '2026-09', status: 'Bloqueado' }, { monthKey: '2026-09', status: 'Completado' },
+      { monthKey: '2026-09', status: 'Cancelado' }, { monthKey: '2026-10', status: 'Pendiente' },
+      { monthKey: null, status: 'Pendiente' },
+    ];
+    expect(pendingFromPreviousMonths(list, TODAY)).toEqual([
+      { key: '2026-08', label: 'Agosto 2026', count: 1 },
+      { key: '2026-09', label: 'Septiembre 2026', count: 2 },
+    ]);
+    expect(pendingFromPreviousMonths(list, '2026-08-01')).toEqual([]);
+  });
   it('links: URLs y textos, el link es opcional', () => {
     expect(splitLinks('https://a.com\nNDC - Reporte https://b.com')).toEqual([
       { type: 'url', value: 'https://a.com' }, { type: 'text', value: 'NDC - Reporte' }, { type: 'url', value: 'https://b.com' },

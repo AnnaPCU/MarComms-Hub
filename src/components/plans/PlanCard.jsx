@@ -8,7 +8,7 @@ import React from 'react';
 import { AlertTriangle, ChevronRight, Layers } from 'lucide-react';
 import { SHOW_TASK_DEADLINE } from '@/constants/planTasks';
 import { taskStats, isTaskOverdue } from '@/utils/planTasks';
-import { ProgressBar, StatusStack, pctLabel } from './PlanBits';
+import { ProgressBar, pctLabel } from './PlanBits';
 
 export default function PlanCard({ plan, tasks, pillarsCount, todayIso, onOpen }) {
   const s = taskStats(tasks);
@@ -37,7 +37,6 @@ export default function PlanCard({ plan, tasks, pillarsCount, todayIso, onOpen }
       </div>
 
       <ProgressBar pct={s.pct} />
-      <StatusStack byStatus={s.byStatus} total={s.total} />
 
       <div className="flex flex-wrap gap-1.5 pt-1">
         <span className="bg-slate-50 text-slate-600 px-2 py-1 rounded-lg text-[10px] font-black border border-slate-200">{s.total} {s.total === 1 ? 'tarea' : 'tareas'}</span>
