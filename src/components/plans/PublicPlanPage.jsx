@@ -4,7 +4,8 @@
 // Se abre sin login (ver main.jsx). Lee el plan con get_public_plan
 // (migration 0030), que devuelve solo el nombre y las tareas sin
 // Responsable ni Deadline. Se actualiza sola cada minuto y al volver a
-// la pestaña.
+// la pestaña. Respeta el modo oscuro si se activó en el Hub (useTheme);
+// si no, en claro.
 //
 // Si está embebida en el Hub (vista previa en un iframe), le avisa al Hub
 // su alto para que el recuadro no tenga scroll propio.
@@ -12,6 +13,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getPublicPlan } from '@/services/planTasksService';
+import { useTheme } from '@/hooks/useTheme';
 import { todayIso as getTodayIso } from '@/utils/date';
 import PlanExternalView from './PlanExternalView';
 
@@ -21,14 +23,15 @@ const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;
 
 function Message({ title, text }) {
   return (
-    <div className="max-w-md mx-auto mt-24 text-center px-6" style={{ fontFamily: 'Ubuntu, Calibri, sans-serif', color: '#4f6566' }}>
-      <p className="text-lg font-bold" style={{ color: '#1b1e42' }}>{title}</p>
-      <p className="text-sm mt-2">{text}</p>
+    <div className="max-w-md mx-auto mt-24 text-center px-6" style={{ fontFamily: 'Ubuntu, Calibri, sans-serif' }}>
+      <p className="text-lg font-bold text-slate-800">{title}</p>
+      <p className="text-sm mt-2 text-slate-500">{text}</p>
     </div>
   );
 }
 
 export default function PublicPlanPage({ token }) {
+  const { resolved: theme } = useTheme();
   const validToken = TOKEN_RE.test(String(token || ''));
   const [state, setState] = useState({ status: validToken ? 'loading' : 'notfound', plan: null, updatedAt: null });
   const rootRef = useRef(null);
@@ -83,7 +86,7 @@ export default function PublicPlanPage({ token }) {
       {state.status === 'error' && <Message title="No se pudo cargar el plan" text="Probá de nuevo en unos minutos." />}
       {state.status === 'ok' && (
         <div className="max-w-6xl mx-auto">
-          <PlanExternalView plan={state.plan} tasks={state.plan.tasks} todayIso={getTodayIso()} updatedAt={state.updatedAt} />
+          <PlanExternalView plan={state.plan} tasks={state.plan.tasks} todayIso={getTodayIso()} updatedAt={state.updatedAt} dark={theme === 'dark'} />
         </div>
       )}
     </div>

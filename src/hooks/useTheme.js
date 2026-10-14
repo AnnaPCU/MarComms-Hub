@@ -8,6 +8,9 @@
 // Preferencia guardada en localStorage: 'light' | 'dark'.
 // Por defecto es CLARO para todos: el modo oscuro solo se activa si la
 // persona lo elige (no se sigue la preferencia del sistema operativo).
+// Lo usan el Hub y el link externo de los planes (PublicPlanPage): si se
+// cambia en una pestaña, las demás del mismo navegador (y la vista previa
+// del link dentro del Hub) se actualizan solas.
 //
 // Devuelve { theme, resolved, setTheme, toggle }
 //   theme    — la preferencia ('light' | 'dark')
@@ -34,6 +37,15 @@ export const useTheme = () => {
     root.classList.toggle('dark', resolved === 'dark');
     root.style.colorScheme = resolved;
   }, [resolved]);
+
+  // Cambios hechos en otra pestaña o en el Hub que contiene esta página
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY || e.key === null) setThemeState(readStored());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const setTheme = useCallback((next) => {
     const value = next === 'dark' ? 'dark' : 'light';

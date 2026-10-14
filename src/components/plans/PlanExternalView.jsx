@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════════
 // La usa el link externo (PublicPlanPage, sin login). La "Vista externa"
 // del Hub muestra ese mismo link en un iframe, así lo que se ve en el Hub
-// es exactamente lo que ve el cliente (y el modo oscuro del Hub no la toca).
+// es exactamente lo que ve el cliente.
 //
 //   - Con la identidad de la marca del plan (logo, colores, tagline al
 //     pie). Control Union y Peterson Solutions nunca se mezclan.
@@ -11,7 +11,10 @@
 //   - Abre en el mes actual; el selector permite ver otro mes o todos.
 //   - En el celular las tareas se ven como tarjetas (sin scroll lateral).
 //
-// Props: plan ({ name }), tasks, todayIso, updatedAt (opcional, ISO)
+// Modo oscuro: si la persona lo activó en el Hub (dark = true) usa los
+// colores oscuros de la marca; el cliente, por defecto, lo ve en claro.
+//
+// Props: plan ({ name }), tasks, todayIso, updatedAt (opcional, ISO), dark
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -48,7 +51,7 @@ function TaskCard({ t, open, onToggle, c }) {
           ))}
         </dl>
       )}
-      {t.link && <div className="mt-2"><TaskLinks value={t.link} color={c.dark} /></div>}
+      {t.link && <div className="mt-2"><TaskLinks value={t.link} color={c.link} /></div>}
       {fields.length > 0 && (
         <button onClick={onToggle} className="mt-1.5 text-[11px] font-bold underline" style={{ color: c.grey }}>{open ? 'Ver menos' : 'Ver todo'}</button>
       )}
@@ -56,9 +59,9 @@ function TaskCard({ t, open, onToggle, c }) {
   );
 }
 
-export default function PlanExternalView({ plan, tasks, todayIso, updatedAt }) {
+export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dark = false }) {
   const theme = brandTheme(planBrand(plan.name));
-  const c = theme.colors;
+  const c = dark ? theme.darkColors : theme.colors;
   const [month, setMonth] = useState(todayIso.slice(0, 7));
   const [expanded, setExpanded] = useState(() => new Set());
   const options = useMemo(() => monthFilterOptions(tasks, todayIso), [tasks, todayIso]);
@@ -73,7 +76,12 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt }) {
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" style={{ fontFamily: 'Ubuntu, Calibri, "DM Sans", sans-serif', color: c.text }}>
       {/* Encabezado: logo solo (la tagline va al pie) */}
       <header className="px-6 sm:px-8 pt-6 pb-5 border-b border-slate-100">
-        {theme.logo && <img src={theme.logo} alt={theme.name} className="h-7 sm:h-8 w-auto mb-5" />}
+        {theme.logo && (
+          // En oscuro el logo va sobre blanco: sus colores son para fondo claro
+          <span className={`inline-block mb-5 ${dark ? 'rounded-xl px-3 py-2' : ''}`} style={dark ? { background: '#ffffff' } : undefined}>
+            <img src={theme.logo} alt={theme.name} className="h-7 sm:h-8 w-auto block" />
+          </span>
+        )}
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.grey }}>{theme.title}</p>
         <h1 className="text-2xl sm:text-3xl font-bold leading-tight mt-1" style={{ color: c.dark }}>{plan.name}</h1>
         <p className="text-sm mt-1">{theme.intro}</p>
@@ -170,7 +178,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt }) {
                         <td className="px-3 py-3"><LongText value={t.objective} open={open} /></td>
                         <td className="px-3 py-3"><LongText value={t.result} open={open} /></td>
                         <td className="px-3 py-3"><LongText value={t.detail} open={open} /></td>
-                        <td className="px-3 py-3"><TaskLinks value={t.link} color={c.dark} /></td>
+                        <td className="px-3 py-3"><TaskLinks value={t.link} color={c.link} /></td>
                       </tr>
                     );
                   })}

@@ -126,7 +126,7 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
       {view === 'external' ? (
         url ? (
           <div className="space-y-2">
-            <p className="text-[11px] font-bold text-slate-500 px-1">Así lo ve el cliente con el link: sin responsables, sin edición y con la marca del plan. Se actualiza solo.</p>
+            <p className="text-[11px] font-bold text-slate-500 px-1">Así lo ve el cliente con el link: sin responsables, sin edición y con la marca del plan. Se actualiza solo. En tu navegador sigue tu modo claro u oscuro; el cliente lo ve en claro.</p>
             <ExternalPreview key={url} url={url} />
           </div>
         ) : (
