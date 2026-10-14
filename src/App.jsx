@@ -36,7 +36,7 @@ import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
 import { useSocialPosts } from '@/hooks/useSocialPosts';
-import { useMarketingPlans } from '@/hooks/useMarketingPlans';
+import { usePlanTasks } from '@/hooks/usePlanTasks';
 import { useHubspotBilling } from '@/hooks/useHubspotBilling';
 import { usePrograms } from '@/hooks/usePrograms';
 import { BillingPlansProvider, useBillingPlansState } from '@/hooks/useBillingPlans';
@@ -62,7 +62,7 @@ import ClientReportApp from '@/components/client/ClientReportApp';
 import PortalHome from '@/components/client/PortalHome';
 import SuccessCasesApp from '@/components/success/SuccessCasesApp';
 import ExtrasApp from '@/components/extras/ExtrasApp';
-import MarketingPlansApp from '@/components/plans/MarketingPlansApp';
+import PlansApp from '@/components/plans/PlansApp';
 import HubspotBillingApp from '@/components/hubspot/HubspotBillingApp';
 import ProgramsApp from '@/components/programs/ProgramsApp';
 import ProgramWizard from '@/components/programs/ProgramWizard';
@@ -254,12 +254,13 @@ export default function App() {
   if (social.error) console.error('SocialPosts Supabase error:', social.error);
   // CRM HubSpot: facturación de licencias por entidad (réplica del Excel)
   const hubspotBilling = useHubspotBilling();
-  // Planes de Marketing (oculto por ahora, ver HIDDEN_SECTIONS)
-  const marketingPlans = useMarketingPlans({ enabled: !isSectionHidden('marketing_plans') });
+  // Planes: tareas de cada plan (réplica de "3) TAREAS" del Excel de seguimiento)
+  const planTasks = usePlanTasks();
+  if (planTasks.error) console.error('PlanTasks Supabase error:', planTasks.error);
 
   // ─── Programas (campaña integral que agrupa pilares) ───
   const programs = usePrograms();
-  // Planes que cubren pilares (selector de presupuesto, Portal "Por plan")
+  // Planes que cubren pilares (selector de presupuesto y sección Planes)
   const billingPlans = useBillingPlansState(currentUser?.name || '');
   if (programs.error) console.error('Programs Supabase error:', programs.error);
   const [showProgramWizard, setShowProgramWizard] = useState(false);
@@ -387,12 +388,12 @@ export default function App() {
   };
 
   const sections = [
-    { id: 'client_portal', title: 'Portal Cliente', description: 'Dashboard por país y por plan: Control Union Certificaciones y Peterson Solutions.', icon: <Globe2 className="w-8 h-8 text-teal-600" />, stats: `${PORTAL_UNITS.reduce((n, u) => n + u.scopes.length, 0)} dashboards`, color: 'bg-teal-50' },
+    { id: 'client_portal', title: 'Portal Cliente', description: 'Dashboard por país: Control Union Certificaciones y Peterson Solutions.', icon: <Globe2 className="w-8 h-8 text-teal-600" />, stats: `${PORTAL_UNITS.reduce((n, u) => n + u.scopes.length, 0)} dashboards`, color: 'bg-teal-50' },
+    { id: 'plans', title: 'Planes', description: 'Seguimiento en tiempo real de las tareas de cada plan y de los pilares que cubre. Vista interna y externa.', icon: <Target className="w-8 h-8 text-emerald-600" />, stats: `${billingPlans.plans.length} ${billingPlans.plans.length === 1 ? 'plan' : 'planes'}`, color: 'bg-emerald-50' },
     { id: 'programs', title: 'Programas', description: 'Campañas integrales: un objetivo con varios pilares (webinar, evento, email, paid, BBDD, investigación).', icon: <Layers className="w-8 h-8 text-violet-600" />, stats: `${programs.programs.length} ${programs.programs.length === 1 ? 'programa' : 'programas'}`, color: 'bg-violet-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'crm', title: 'CRM HubSpot', description: 'Facturación mensual de licencias HubSpot por entidad: totales, Sales Pro / Core, usuarios y variaciones. Se actualiza importando el Excel.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${hubspotBilling.entities.length} entidades`, color: 'bg-sky-50' },
-    { id: 'marketing_plans', title: 'Planes de Marketing', description: 'Seguimiento de los planes por país: avance, tareas, reuniones y responsables. Se actualiza importando el Excel.', icon: <Target className="w-8 h-8 text-sky-600" />, stats: `${marketingPlans.plans.length} ${marketingPlans.plans.length === 1 ? 'plan' : 'planes'}`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
@@ -507,7 +508,7 @@ export default function App() {
               <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3">
                 <Globe2 className="w-8 h-8 text-teal-600" /> Portal Cliente
               </h1>
-              <p className="text-slate-500 font-medium mt-1">Elegí la unidad y el alcance para abrir su dashboard. Los planes por cliente llegan próximamente.</p>
+              <p className="text-slate-500 font-medium mt-1">Elegí la unidad y el alcance para abrir su dashboard. Lo que cubre cada plan está en la sección Planes.</p>
             </div>
           </div>
           <PortalHome
@@ -638,13 +639,18 @@ export default function App() {
       );
     }
 
-    if (currentSection === 'marketing_plans') {
+    if (currentSection === 'plans') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-          <MarketingPlansApp
+          <PlansApp
             key={sectionEpoch}
-            data={marketingPlans}
+            planTasks={planTasks}
+            webinars={globalWebinars}
+            campaigns={globalCampaigns}
+            events={globalEvents}
+            teamNames={livePeople}
             currentUser={currentUser}
+            onOpenProject={navigateToProject}
             onBack={() => goToSection('main')}
           />
         </div>

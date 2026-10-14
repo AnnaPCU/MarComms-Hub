@@ -58,23 +58,3 @@ export const normalizeCountryNames = (text) =>
 
 // Nombre de plan prolijo: sin espacios de más y con el país como figura en el Hub
 export const cleanPlanName = (name) => normalizeCountryNames(String(name || '').trim().replace(/\s+/g, ' '));
-
-// Agrupa ítems del Portal por plan. Devuelve:
-//   { groups: [{ id, name, items }], usdItems }
-// Los grupos salen en el orden de `plans` (los sin ítems también, para que
-// se vea qué plan no tiene pilares en el período) y al final, si hay, el de
-// pilares en 'plan' sin plan asignado.
-export const groupItemsByPlan = (items, plans) => {
-  const byPlan = new Map((plans || []).map((p) => [String(p.id), []]));
-  const unassigned = [];
-  const usdItems = [];
-  (items || []).forEach((item) => {
-    if (!isPlanCovered(item)) { usdItems.push(item); return; }
-    const key = item.planId ? String(item.planId) : null;
-    if (key && byPlan.has(key)) byPlan.get(key).push(item);
-    else unassigned.push(item);
-  });
-  const groups = (plans || []).map((p) => ({ id: String(p.id), name: p.name, items: byPlan.get(String(p.id)) }));
-  if (unassigned.length) groups.push({ id: 'unassigned', name: UNASSIGNED_PLAN_LABEL, items: unassigned });
-  return { groups, usdItems };
-};

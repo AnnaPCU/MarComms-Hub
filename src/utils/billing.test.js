@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   billingSelectValue, parseBillingSelect, chargedAmount, planNameOf,
-  findPlanByName, cleanPlanName, groupItemsByPlan, isPlanCovered, UNASSIGNED_PLAN_LABEL,
+  findPlanByName, cleanPlanName, isPlanCovered, UNASSIGNED_PLAN_LABEL,
   normalizeCountryNames,
 } from './billing';
 
@@ -47,19 +47,5 @@ describe('montos y nombres', () => {
     expect(normalizeCountryNames('Control Union Estados Unidos')).toBe('Control Union Estados Unidos');
     expect(normalizeCountryNames('Plan Peruano')).toBe('Plan Peruano'); // no toca palabras que contienen el alias
     expect(normalizeCountryNames('Plan Usuarios')).toBe('Plan Usuarios');
-  });
-});
-
-describe('agrupar por plan', () => {
-  it('reparte por plan, deja los USD aparte y junta los sin plan', () => {
-    const items = [
-      { id: 1, billing: 'plan', planId: 'a' },
-      { id: 2, billing: 'usd' },
-      { id: 3, billing: 'plan', planId: null },
-      { id: 4, billing: 'plan', planId: 'a' },
-    ];
-    const { groups, usdItems } = groupItemsByPlan(items, PLANS);
-    expect(groups.map((g) => [g.id, g.items.length])).toEqual([['a', 2], ['b', 0], ['unassigned', 1]]);
-    expect(usdItems.map((i) => i.id)).toEqual([2]);
   });
 });

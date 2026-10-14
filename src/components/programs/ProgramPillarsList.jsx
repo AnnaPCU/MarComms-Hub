@@ -1,12 +1,13 @@
 // ════════════════════════════════════════════════════════════════════
 // ProgramPillarsList — Pilares de un programa con su progreso
 // ════════════════════════════════════════════════════════════════════
-// Reutilizado por el detalle de Programas y por el Portal Cliente.
+// Reutilizado por el detalle de Programas, el Portal Cliente y Planes.
 //
 // Props:
-//   items          — de programItems() (utils/programs)
+//   items          — de programItems() (utils/programs) o planPillarItems()
 //   onOpen(item)   — abrir el pilar (opcional)
 //   compact        — filas más chicas (Portal)
+//   emptyText      — texto cuando no hay pilares
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
@@ -22,9 +23,9 @@ const PILLAR_TONE = {
 };
 const barTone = (p) => (p === 100 ? 'bg-emerald-500' : p >= 50 ? 'bg-violet-500' : p > 0 ? 'bg-amber-500' : 'bg-slate-300');
 
-export default function ProgramPillarsList({ items, onOpen, compact = false }) {
+export default function ProgramPillarsList({ items, onOpen, compact = false, emptyText = 'Este programa todavía no tiene pilares vinculados.' }) {
   if (!items || items.length === 0) {
-    return <p className="text-[11px] text-slate-400 font-medium italic py-2">Este programa todavía no tiene pilares vinculados.</p>;
+    return <p className="text-[11px] text-slate-400 font-medium italic py-2">{emptyText}</p>;
   }
   return (
     <ul className={compact ? 'space-y-1' : 'space-y-2'}>

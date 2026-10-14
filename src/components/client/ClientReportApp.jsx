@@ -28,7 +28,6 @@ import { unitsForCountry } from '@/constants/markets';
 import { programItems, programSummary, matchesProgramScope } from '@/utils/programs';
 import { PROGRAM_STATUS } from '@/constants/programs';
 import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
-import PlanDashboard from '@/components/client/PlanDashboard';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
 import { Layers } from 'lucide-react';
@@ -40,7 +39,6 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
   // ({ label, countries, units, unitLabel }). Ver PORTAL_UNITS en constants/markets.
   const scopeObj = scope || { label: country, countries: [country], units: null, unitLabel: null };
   const inScope = (c, bu) => scopeObj.countries.includes(c) && (!scopeObj.units || scopeObj.units.length === 0 || scopeObj.units.includes(bu));
-  const [view, setView] = useState('pais'); // pais | plan
   const [selectedMonth, setSelectedMonth] = useState("all"); // "all" | "YYYY-MM"
   const [selectedService, setSelectedService] = useState("all"); // all | id de pilar (PILLARS)
   const [selectedBU, setSelectedBU] = useState("all");
@@ -371,27 +369,6 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
       </header>
 
       <main className="max-w-7xl mx-auto w-full p-6 space-y-6">
-        {/* Vista: por país / por plan */}
-        <div className="bg-white border-2 border-slate-100 rounded-2xl p-1.5 inline-flex gap-1 shadow-sm">
-          {[
-            { id: 'pais', label: scopeObj.countries.length > 1 ? 'Por país' : 'Dashboard' },
-            { id: 'plan', label: 'Por plan' },
-          ].map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              className={`px-4 py-2 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all ${view === t.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {view === 'plan' && (
-          <PlanDashboard items={filteredItems} serviceTypes={SERVICE_TYPES} onSelect={setSelectedItem} />
-        )}
-
-        {view === 'pais' && (<>
         {/* Inversión de Mkt vs ROI */}
         <div className="bg-slate-900 rounded-2xl p-6 text-white grid grid-cols-1 md:grid-cols-3 gap-6 shadow-xl">
           <div className="md:border-r border-slate-700 md:pr-6">
@@ -679,7 +656,6 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
             </div>
           )}
         </section>
-        </>)}
       </main>
 
       {/* Modal de Checklist del Servicio */}
