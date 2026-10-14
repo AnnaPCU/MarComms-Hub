@@ -10,6 +10,11 @@
 //   * solo en la vista interna. Sin "Fecha" ni "Prioridad".
 // ════════════════════════════════════════════════════════════════════
 
+// Deadline: oculto en todo el front por ahora (pedido oct 2026). La columna
+// sigue en la tabla `plan_tasks`; poner en true para volver a mostrarlo
+// (tabla, editor, avisos de vencidas).
+export const SHOW_TASK_DEADLINE = false;
+
 // Estados del Excel (hoja Listas). Los ids son los textos tal cual.
 export const PLAN_TASK_STATUSES = [
   { id: 'Pendiente',  label: 'Pendiente',  chip: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400',   solid: 'bg-amber-400' },

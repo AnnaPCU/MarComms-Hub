@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
 import { workbookToGrids } from './xlsxGrid';
 import {
-  monthLabel, inferMonthKey, monthOptions, taskStats, isTaskOverdue, filterTasks, groupTasksByMonth, splitLinks,
+  monthLabel, inferMonthKey, monthOptions, monthFilterOptions, taskStats, isTaskOverdue, filterTasks, groupTasksByMonth, splitLinks,
   planBrand, planPillarItems, parsePlanTasksWorkbook, suggestPlanForSheet, resolveOwner, buildTaskImport,
 } from './planTasks';
 import { nextTaskStatus } from '@/constants/planTasks';
@@ -153,6 +153,44 @@ describe('importación del Excel', () => {
     const again = buildTaskImport({ sheets, mapping: { 'CU Argentina': 'ar' }, existingTasks: fresh.toInsert, mode: 'add' });
     expect(again.toInsert).toHaveLength(0);
     expect(again.summary[0]).toMatchObject({ incoming: 2, toAdd: 0, duplicates: 2 });
+  });
+
+  it('el año sale de la «Fecha» del Excel, no del día en que se importa', () => {
+    const wb2 = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Marca', 'Control Union', 'Mes de inicio', 'Agosto'],
+      ['Mes', 'Fecha', 'Acción / Tarea', 'Estado', 'LINK'],
+      ['Agosto', 46239, 'A', 'Completado', 'Reporte.html'],   // 46239 = 2026-08-05
+      ['Agosto', null, 'B', 'Completado'],                  // sin fecha: usa la de la fila anterior
+      ['Enero', 46400, 'C', 'Pendiente'],                   // 46400 = 2027-01-13
+    ]);
+    ws.E3.l = { Target: 'https://x.com/a?b=1&amp;c=2' };
+    XLSX.utils.book_append_sheet(wb2, ws, 'CU Argentina');
+    const r = parsePlanTasksWorkbook(workbookToGrids(XLSX, wb2), { todayIso: '2027-02-10' });
+    expect(r.sheets[0].tasks.map((t) => t.monthKey)).toEqual(['2026-08', '2026-08', '2027-01']);
+    expect(r.sheets[0].tasks[0].link).toBe('Reporte.html\nhttps://x.com/a?b=1&c=2');
+    // Sin columna Fecha: manda el «Mes de inicio» del plan
+    const wb3 = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb3, XLSX.utils.aoa_to_sheet([
+      ['Mes de inicio', 'Agosto'], ['Mes', 'Acción / Tarea', 'Estado'], ['Agosto', 'X', 'Pendiente'], ['Enero', 'Y', 'Pendiente'],
+    ]), 'CU Canada');
+    const r3 = parsePlanTasksWorkbook(workbookToGrids(XLSX, wb3), { todayIso: '2027-02-10' });
+    expect(r3.sheets[0].tasks.map((t) => t.monthKey)).toEqual(['2026-08', '2027-01']);
+  });
+
+  it('filtro por mes: arranca en el mes actual y ofrece los meses con tareas', () => {
+    const list = [{ id: 1, monthKey: '2026-08' }, { id: 2, monthKey: '2026-10' }, { id: 3, monthKey: null }];
+    expect(monthFilterOptions(list, TODAY).map((o) => o.value)).toEqual(['all', '2026-08', '2026-10', 'none']);
+    expect(monthFilterOptions([], TODAY).map((o) => o.label)).toEqual(['Todos los meses', 'Octubre 2026']);
+    expect(filterTasks(list, { month: '2026-10' }).map((t) => t.id)).toEqual([2]);
+    expect(filterTasks(list, { month: 'none' }).map((t) => t.id)).toEqual([3]);
+    expect(filterTasks(list, { month: 'all' })).toHaveLength(3);
+  });
+
+  it('en la vista externa no se busca por responsable', () => {
+    const list = [{ title: 'Reunion', owner: 'Felipe Señorans' }, { title: 'Evento Felipe', owner: '' }];
+    expect(filterTasks(list, { query: 'felipe' })).toHaveLength(2);
+    expect(filterTasks(list, { query: 'felipe', searchOwner: false }).map((t) => t.title)).toEqual(['Evento Felipe']);
   });
 
   it('filas vacías en el medio de la tabla no cortan la lectura', () => {

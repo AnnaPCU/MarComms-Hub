@@ -1,17 +1,18 @@
 // ════════════════════════════════════════════════════════════════════
 // PlanCard — Tarjeta de un plan en la vista general de Planes
 // ════════════════════════════════════════════════════════════════════
-// Props: plan, tasks (las del plan), pillarsCount, mode, todayIso, onOpen(plan)
+// Props: plan, tasks (las del plan), pillarsCount, todayIso, onOpen(plan)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
 import { AlertTriangle, ChevronRight, Layers } from 'lucide-react';
+import { SHOW_TASK_DEADLINE } from '@/constants/planTasks';
 import { taskStats, isTaskOverdue } from '@/utils/planTasks';
 import { ProgressBar, StatusStack, pctLabel } from './PlanBits';
 
-export default function PlanCard({ plan, tasks, pillarsCount, mode, todayIso, onOpen }) {
+export default function PlanCard({ plan, tasks, pillarsCount, todayIso, onOpen }) {
   const s = taskStats(tasks);
-  const overdue = mode === 'internal' ? tasks.filter((t) => isTaskOverdue(t, todayIso)).length : 0;
+  const overdue = SHOW_TASK_DEADLINE ? tasks.filter((t) => isTaskOverdue(t, todayIso)).length : 0;
   return (
     <button
       type="button"

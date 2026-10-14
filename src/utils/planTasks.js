@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // planTasks — Lógica de la sección Planes (sin React ni Supabase)
 // ════════════════════════════════════════════════════════════════════
-//   Meses:     monthLabel, inferMonthKey, monthOptions
+//   Meses:     monthLabel, inferMonthKey, monthOptions, monthFilterOptions
 //   Tareas:    taskStats, isTaskOpen, isTaskOverdue, filterTasks,
 //              groupTasksByMonth, splitLinks
 //   Planes:    planBrand, planPillarItems (pilares que cubre cada plan —
@@ -32,16 +32,29 @@ export const monthLabel = (key) => {
 const keyOf = (y, m) => `${y}-${pad(m + 1)}`;          // m: 0-11
 const monthsBetween = (a, b) => (Number(b.slice(0, 4)) - Number(a.slice(0, 4))) * 12 + (Number(b.slice(5, 7)) - Number(a.slice(5, 7)));
 
-// "Octubre" (el Excel no tiene año) → el 'YYYY-MM' más cercano a hoy;
-// ante empate, el futuro. Ej. en octubre 2026: Enero → 2027-01, Agosto → 2026-08.
-export const inferMonthKey = (name, todayIso) => {
+// "Octubre" (el Excel no tiene año) → el 'YYYY-MM' más cercano a la fecha
+// de referencia; ante empate, el futuro. Ej. con referencia en octubre 2026:
+// Enero → 2027-01, Agosto → 2026-08. En la importación la referencia sale
+// del propio Excel (ver monthAnchors), no del día en que se importa.
+export const inferMonthKey = (name, refIso) => {
   const m = MONTHS_ES.findIndex((x) => norm(x) === norm(name));
   if (m < 0) return null;
-  const today = `${todayIso.slice(0, 7)}`;
-  const y = Number(today.slice(0, 4));
+  const ref = `${refIso.slice(0, 7)}`;
+  const y = Number(ref.slice(0, 4));
   return [y - 1, y, y + 1]
     .map((yy) => keyOf(yy, m))
-    .sort((a, b) => Math.abs(monthsBetween(today, a)) - Math.abs(monthsBetween(today, b)) || monthsBetween(today, b) - monthsBetween(today, a))[0];
+    .sort((a, b) => Math.abs(monthsBetween(ref, a)) - Math.abs(monthsBetween(ref, b)) || monthsBetween(ref, b) - monthsBetween(ref, a))[0];
+};
+
+// "Mes de inicio" de un plan → la última vez que ese mes empezó, como mucho
+// el mes que viene (un plan se importa cuando ya arrancó o está por arrancar).
+// Ej. hoy febrero 2027: Agosto → 2026-08; hoy octubre 2026: Noviembre → 2026-11.
+export const inferStartMonthKey = (name, todayIso) => {
+  const m = MONTHS_ES.findIndex((x) => norm(x) === norm(name));
+  if (m < 0) return null;
+  const limit = todayIso.slice(0, 7);
+  const y = Number(limit.slice(0, 4));
+  return [y + 1, y, y - 1].map((yy) => keyOf(yy, m)).find((k) => monthsBetween(limit, k) <= 1);
 };
 
 // Opciones del selector de mes: 6 meses atrás → 12 adelante (+ los que ya usan las tareas)
@@ -68,13 +81,31 @@ export const taskStats = (tasks = []) => {
   return { total: tasks.length, completed, open, cancelled, byStatus, pct: completed + open === 0 ? 0 : completed / (completed + open) };
 };
 
-// filtros: status 'open' | 'all' | id de estado; owner ('' = todos); query libre
-export const filterTasks = (tasks = [], { status = 'all', owner = '', query = '' } = {}) => {
+// Selector de mes de la tabla: arranca en el mes actual y ofrece los meses
+// que tienen tareas (+ "Sin mes" si hay) y "Todos los meses".
+//   value: 'all' | 'YYYY-MM' | 'none'
+export const monthFilterOptions = (tasks = [], todayIso) => {
+  const keys = new Set([todayIso.slice(0, 7)]);
+  let withoutMonth = false;
+  tasks.forEach((t) => { if (t.monthKey && MONTH_KEY_RE.test(t.monthKey)) keys.add(t.monthKey); else withoutMonth = true; });
+  return [
+    { value: 'all', label: 'Todos los meses' },
+    ...[...keys].sort().map((k) => ({ value: k, label: monthLabel(k) })),
+    ...(withoutMonth ? [{ value: 'none', label: 'Sin mes' }] : []),
+  ];
+};
+
+// filtros: month 'all' | 'YYYY-MM' | 'none'; status 'open' | 'all' | id de
+// estado; owner ('' = todos); query libre. searchOwner = false en la vista
+// externa: el Responsable no se ve, así que tampoco se puede buscar por él.
+export const filterTasks = (tasks = [], { month = 'all', status = 'all', owner = '', query = '', searchOwner = true } = {}) => {
   const q = norm(query);
+  const hasMonth = (t) => !!t.monthKey && MONTH_KEY_RE.test(t.monthKey);
   return tasks
+    .filter((t) => (month === 'all' ? true : month === 'none' ? !hasMonth(t) : t.monthKey === month))
     .filter((t) => (status === 'all' ? true : status === 'open' ? isTaskOpen(t) : t.status === status))
     .filter((t) => !owner || t.owner === owner)
-    .filter((t) => !q || [t.title, t.objective, t.result, t.detail, t.owner].some((v) => norm(v).includes(q)));
+    .filter((t) => !q || [t.title, t.objective, t.result, t.detail, ...(searchOwner ? [t.owner] : [])].some((v) => norm(v).includes(q)));
 };
 
 export const groupTasksByMonth = (tasks = []) => {
@@ -138,9 +169,30 @@ const excelDate = (v) => {
   return ISO_RE.test(s) ? s : '';
 };
 
-const parseSheetTasks = (sheet, grid, todayIso) => {
+// Referencia para el año de cada fila. El Excel solo dice "Agosto", así
+// que se usa, en orden: la «Fecha» de la fila (no se importa, pero dice el
+// año), la de la fila anterior, la primera «Fecha» de la pestaña, el «Mes
+// de inicio» del plan y, como último recurso, hoy. Así reimportar el mismo
+// Excel meses después no corre las tareas de año ni las duplica.
+const startAnchorOf = (rows, headerRow, todayIso) => {
+  for (const row of rows.slice(0, headerRow)) {
+    if (!row) continue;
+    const i = row.findIndex((v) => norm(v) === 'mes de inicio');
+    if (i < 0) continue;
+    for (let c = i + 1; c < row.length; c += 1) {
+      const v = text(row[c]);
+      if (!v) continue;
+      const k = inferStartMonthKey(v, todayIso);
+      return k ? `${k}-15` : null;
+    }
+  }
+  return null;
+};
+
+const parseSheetTasks = (sheet, grid, linkGrid, todayIso) => {
   const warnings = [];
   const rows = grid || [];
+  const linkRows = linkGrid || [];
   const headerRow = rows.findIndex((row) => row && row.some((v) => EXCEL_TASK_HEADERS[norm(v)] === 'title'));
   if (headerRow < 0) return null;
   const header = rows[headerRow];
@@ -154,14 +206,27 @@ const parseSheetTasks = (sheet, grid, todayIso) => {
     if (f === 'link' || (linkIdx >= 0 && c > linkIdx && !f && !EXCEL_IGNORED_HEADERS.includes(h))) linkCols.push(c);
     else if (f && cols[f] === undefined) cols[f] = c;
   }
+  const fechaCol = header.findIndex((v) => norm(v) === 'fecha');
+  const fechaOf = (row) => (fechaCol >= 0 && row ? excelDate(row[fechaCol]) : '');
+  const firstFecha = fechaCol >= 0 ? rows.slice(headerRow + 1).map(fechaOf).find(Boolean) || '' : '';
+  const fallbackAnchor = firstFecha || startAnchorOf(rows, headerRow, todayIso) || todayIso;
+  let lastFecha = '';
+  // Hipervínculo con texto ("Reporte.html") → "texto\nURL"; si el texto ya es la URL, queda la URL
+  const linkValue = (r, c, row) => {
+    const shown = text(row[c]);
+    const target = linkRows[r] && linkRows[r][c];
+    if (!target || target === shown) return shown;
+    return shown && !/^https?:\/\//i.test(shown) ? `${shown}\n${target}` : target;
+  };
   const tasks = []; let skipped = 0; let emptyStatus = 0; const badMonths = new Set(); const badStatus = new Set();
-  rows.slice(headerRow + 1).forEach((row) => {
-    if (!row) return;
+  rows.forEach((row, r) => {
+    if (r <= headerRow || !row) return;
     const get = (f) => (cols[f] === undefined ? undefined : row[cols[f]]);
     const title = text(get('title'));
     if (!title) { if (row.some((v) => text(v))) skipped += 1; return; }
+    lastFecha = fechaOf(row) || lastFecha;
     const monthRaw = text(get('month'));
-    const monthKey = monthRaw ? inferMonthKey(monthRaw, todayIso) : null;
+    const monthKey = monthRaw ? inferMonthKey(monthRaw, lastFecha || fallbackAnchor) : null;
     if (monthRaw && !monthKey) badMonths.add(monthRaw);
     let status = text(get('status'));
     if (!status) { status = DEFAULT_TASK_STATUS; emptyStatus += 1; }
@@ -173,7 +238,7 @@ const parseSheetTasks = (sheet, grid, todayIso) => {
       monthKey, title, owner: text(get('owner')), status,
       deadline: get('deadline') !== undefined ? excelDate(get('deadline')) : '',
       objective: text(get('objective')), result: text(get('result')), detail: text(get('detail')),
-      link: linkCols.map((c) => text(row[c])).filter(Boolean).join('\n'),
+      link: linkCols.map((c) => linkValue(r, c, row)).filter(Boolean).join('\n'),
     });
   });
   if (skipped) warnings.push(`«${sheet}»: ${skipped} fila${skipped === 1 ? '' : 's'} sin «Acción / Tarea» no se importa${skipped === 1 ? '' : 'n'}.`);
@@ -183,10 +248,10 @@ const parseSheetTasks = (sheet, grid, todayIso) => {
   return { sheet, tasks, warnings };
 };
 
-export const parsePlanTasksWorkbook = ({ sheetNames, grids }, { todayIso }) => {
+export const parsePlanTasksWorkbook = ({ sheetNames, grids, links = {} }, { todayIso }) => {
   const sheets = sheetNames
     .filter((n) => !EXCEL_NON_PLAN_SHEETS.some((x) => norm(x) === norm(n)))
-    .map((n) => parseSheetTasks(n, grids[n], todayIso))
+    .map((n) => parseSheetTasks(n, grids[n], links[n], todayIso))
     .filter(Boolean);
   const warnings = sheets.flatMap((s) => s.warnings);
   if (!sheets.length) warnings.push('No se encontró ninguna pestaña con la tabla de tareas («Acción / Tarea»). ¿Es el Excel de Seguimiento de Planes de Marketing?');

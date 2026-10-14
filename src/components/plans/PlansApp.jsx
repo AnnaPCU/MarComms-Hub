@@ -8,10 +8,9 @@
 //   - los pilares que cubre (lo que antes estaba en Portal Cliente →
 //     "Por plan")
 //
-// Dos vistas:
-//   - Interna: todas las columnas, edición, importar Excel, nuevo plan.
-//   - Externa: para mostrarle al cliente. Sin Responsable ni Deadline,
-//     solo lectura.
+// Esta pantalla es interna (importar Excel, nuevo plan, edición). La
+// vista externa es por plan: el link que se le pasa al cliente
+// (/?plan=<token>), que se ve desde el detalle de cada plan.
 //
 // Las tarjetas se agrupan por marca: Control Union y Peterson Solutions
 // nunca se mezclan en un mismo bloque.
@@ -22,7 +21,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Eye, Lock, Plus, Target, Upload, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Plus, Target, Upload, X } from 'lucide-react';
 
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { planBrand, planPillarItems, taskStats } from '@/utils/planTasks';
@@ -33,21 +32,17 @@ import PlanDetail from './PlanDetail';
 import TasksImportModal from './TasksImportModal';
 
 const BRAND_ORDER = ['Control Union', 'Peterson Solutions', ''];
-const VIEWS = [
-  { id: 'internal', label: 'Vista interna', icon: Lock },
-  { id: 'external', label: 'Vista externa', icon: Eye },
-];
 
 export default function PlansApp({ planTasks, webinars, campaigns, events, teamNames = [], currentUser, onOpenProject, onBack }) {
-  const { plans, loading: plansLoading, addPlan } = useBillingPlans();
+  const { plans, loading: plansLoading, addPlan, rotatePublicToken } = useBillingPlans();
   const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask, importTasks } = planTasks;
-  const [mode, setMode] = useState('internal');
   const [openId, setOpenId] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [newPlan, setNewPlan] = useState(null); // { name, saving, error }
   const [flash, setFlash] = useState('');
   const todayIso = getTodayIso();
-  const internal = mode === 'internal';
+  // Sin las tareas del Hub cargadas no se puede saber cuáles ya están: no se importa
+  const canImport = !tasksLoading && !error;
 
   const tasksByPlan = useMemo(() => {
     const m = new Map();
@@ -96,31 +91,18 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
               <p className="text-[10px] text-emerald-50 font-bold uppercase tracking-widest truncate">Seguimiento de tareas por plan · en tiempo real</p>
             </div>
           </div>
-          <div className="bg-white/15 rounded-xl p-1 flex gap-1" role="tablist" aria-label="Vista">
-            {VIEWS.map((v) => {
-              const Icon = v.icon;
-              const active = mode === v.id;
-              return (
-                <button key={v.id} role="tab" aria-selected={active} onClick={() => setMode(v.id)} className={`px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition-all ${active ? 'bg-white text-emerald-700 shadow-sm' : 'text-white hover:bg-white/15'}`}>
-                  <Icon className="w-3.5 h-3.5" /> {v.label}
-                </button>
-              );
-            })}
-          </div>
-          {internal && (
-            <button onClick={() => setShowImport(true)} className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md">
-              <Upload className="w-4 h-4" /> Importar Excel
-            </button>
-          )}
+          <button
+            onClick={() => setShowImport(true)}
+            disabled={!canImport}
+            title={canImport ? undefined : 'Esperá a que carguen las tareas del Hub para poder importar sin duplicar'}
+            className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Upload className="w-4 h-4" /> Importar Excel
+          </button>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">
-        {!internal && (
-          <div className="bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-[11px] font-bold text-emerald-800 flex items-center gap-2">
-            <Eye className="w-4 h-4 shrink-0" /> Vista externa: así lo ve el cliente. Sin responsables ni deadlines y sin edición.
-          </div>
-        )}
         {flash && <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-2.5 text-xs font-black flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {flash}</div>}
         {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">No se pudieron cargar o guardar las tareas en Supabase. Revisá la consola.</div>}
 
@@ -131,7 +113,6 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
             plan={openPlan}
             tasks={tasksByPlan.get(String(openPlan.id)) || []}
             pillarItems={pillarsByPlan.get(String(openPlan.id)) || []}
-            mode={mode}
             todayIso={todayIso}
             teamNames={teamNames}
             currentUser={currentUser}
@@ -139,54 +120,51 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
             updateTask={updateTask}
             removeTask={removeTask}
             onOpenPillar={(it) => onOpenProject && onOpenProject('campaigns', it.id)}
+            onRotateToken={rotatePublicToken}
             onBack={() => setOpenId(null)}
           />
         ) : (
           <>
-            {/* Totales de todos los planes: solo internos (mezclan marcas) */}
-            {internal && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Kpi label="Planes" value={plans.length} />
-                <Kpi label="Tareas" value={stats.total} />
-                <Kpi label="Completadas" value={stats.completed} accent="text-emerald-600" hint={`${stats.open} abiertas`} />
-                <Kpi label="% avance" value={pctLabel(stats.pct)} accent="text-emerald-700" hint="completadas / (completadas + abiertas)" />
-              </div>
-            )}
+            {/* Totales de todos los planes (interno: mezcla marcas) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Kpi label="Planes" value={plans.length} />
+              <Kpi label="Tareas" value={stats.total} />
+              <Kpi label="Completadas" value={stats.completed} accent="text-emerald-600" hint={`${stats.open} abiertas`} />
+              <Kpi label="% avance" value={pctLabel(stats.pct)} accent="text-emerald-700" hint="completadas / (completadas + abiertas)" />
+            </div>
 
-            {internal && (
-              <div className="flex items-center gap-2 flex-wrap">
-                {newPlan ? (
-                  <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm">
-                    <input
-                      autoFocus
-                      value={newPlan.name}
-                      onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value, error: '' })}
-                      onKeyDown={(e) => { if (e.key === 'Enter') createPlan(); if (e.key === 'Escape') setNewPlan(null); }}
-                      placeholder="Ej: Control Union Chile"
-                      className="w-64 text-xs font-bold text-slate-800 bg-transparent px-2 py-1.5 outline-none"
-                    />
-                    <button onClick={createPlan} disabled={!newPlan.name.trim() || newPlan.saving} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest disabled:opacity-40">{newPlan.saving ? 'Creando…' : 'Crear'}</button>
-                    <button onClick={() => setNewPlan(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar"><X className="w-3.5 h-3.5" /></button>
-                  </div>
-                ) : (
-                  <button onClick={() => setNewPlan({ name: '', saving: false, error: '' })} className="bg-white border border-slate-200 hover:border-emerald-400 text-slate-700 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
-                    <Plus className="w-3.5 h-3.5" /> Nuevo plan
-                  </button>
-                )}
-                {newPlan?.error && <span className="text-[11px] font-bold text-red-600">{newPlan.error}</span>}
-                {unassignedPillars > 0 && !plansLoading && (
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5" /> {unassignedPillars} {unassignedPillars === 1 ? 'pilar está cubierto' : 'pilares están cubiertos'} por un plan «Sin especificar»: elegí el plan en el presupuesto del pilar.
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {newPlan ? (
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1.5 shadow-sm">
+                  <input
+                    autoFocus
+                    value={newPlan.name}
+                    onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value, error: '' })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') createPlan(); if (e.key === 'Escape') setNewPlan(null); }}
+                    placeholder="Ej: Control Union Chile"
+                    className="w-64 text-xs font-bold text-slate-800 bg-transparent px-2 py-1.5 outline-none"
+                  />
+                  <button onClick={createPlan} disabled={!newPlan.name.trim() || newPlan.saving} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest disabled:opacity-40">{newPlan.saving ? 'Creando…' : 'Crear'}</button>
+                  <button onClick={() => setNewPlan(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <button onClick={() => setNewPlan({ name: '', saving: false, error: '' })} className="bg-white border border-slate-200 hover:border-emerald-400 text-slate-700 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
+                  <Plus className="w-3.5 h-3.5" /> Nuevo plan
+                </button>
+              )}
+              {newPlan?.error && <span className="text-[11px] font-bold text-red-600">{newPlan.error}</span>}
+              {unassignedPillars > 0 && !plansLoading && (
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" /> {unassignedPillars} {unassignedPillars === 1 ? 'pilar está cubierto' : 'pilares están cubiertos'} por un plan «Sin especificar»: elegí el plan en el presupuesto del pilar.
+                </span>
+              )}
+            </div>
 
             {plans.length === 0 ? (
               <div className="bg-white rounded-3xl p-12 border-2 border-dashed border-slate-200 text-center">
                 <Target className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
                 <p className="text-sm font-black text-slate-700 uppercase tracking-tight">Todavía no hay planes</p>
-                <p className="text-xs text-slate-400 mt-1">Creá el primero con «Nuevo plan» (vista interna).</p>
+                <p className="text-xs text-slate-400 mt-1">Creá el primero con «Nuevo plan».</p>
               </div>
             ) : groups.map((g) => (
               <section key={g.brand || 'otros'} className="space-y-3">
@@ -198,7 +176,6 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
                       plan={p}
                       tasks={tasksByPlan.get(String(p.id)) || []}
                       pillarsCount={(pillarsByPlan.get(String(p.id)) || []).length}
-                      mode={mode}
                       todayIso={todayIso}
                       onOpen={(pl) => setOpenId(pl.id)}
                     />

@@ -1,8 +1,9 @@
 // ════════════════════════════════════════════════════════════════════
-// PlanTasksBoard — Tabla de tareas de un plan (sección "3) TAREAS" del Excel)
+// PlanTasksBoard — Tabla de tareas de un plan (vista interna)
 // ════════════════════════════════════════════════════════════════════
-// Una fila por tarea, agrupadas por mes. Se edita en tiempo real como la
-// hoja de Social Media:
+// Réplica de la sección "3) TAREAS" del Excel. Se edita en tiempo real
+// como la hoja de Social Media:
+//   - Abre en el mes actual; el selector de mes permite ver otro o todos.
 //   - Clic en el estado → pasa al siguiente (Pendiente → En curso →
 //     Completado). Bloqueado y Cancelado se eligen en el editor.
 //   - Clic en la tarea → abre el editor completo.
@@ -10,19 +11,19 @@
 //     Esc cancela).
 //   - La flecha de cada fila muestra los textos largos completos.
 //
-// Vista interna: todas las columnas. Vista externa: sin Responsable ni
-// Deadline y solo lectura.
+// Deadline oculto mientras SHOW_TASK_DEADLINE sea false (constants/planTasks).
+// La vista externa es el link del plan (PublicPlanPage).
 //
 // Props:
-//   plan, tasks (las del plan), mode ('internal' | 'external'), todayIso,
-//   teamNames, currentUser, createTask / updateTask / removeTask
+//   plan, tasks (las del plan), todayIso, teamNames, currentUser,
+//   createTask / updateTask / removeTask
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 
-import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, nextTaskStatus } from '@/constants/planTasks';
-import { filterTasks, groupTasksByMonth, isTaskOverdue, monthOptions, taskStats } from '@/utils/planTasks';
+import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS, nextTaskStatus } from '@/constants/planTasks';
+import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthOptions, taskStats } from '@/utils/planTasks';
 import { formatDate } from '@/utils/date';
 import { StatusBadge, TaskLinks } from './PlanBits';
 import TaskEditor from './TaskEditor';
@@ -35,8 +36,9 @@ function LongText({ value, open }) {
   return <p className={`text-[11px] text-slate-600 leading-snug whitespace-pre-line ${open ? '' : 'line-clamp-3'}`}>{value}</p>;
 }
 
-export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask }) {
-  const internal = mode === 'internal';
+export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask }) {
+  const currentMonth = todayIso.slice(0, 7);
+  const [month, setMonth] = useState(currentMonth);
   const [status, setStatus] = useState('all');
   const [owner, setOwner] = useState('');
   const [query, setQuery] = useState('');
@@ -45,13 +47,23 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
   const [quick, setQuick] = useState(null);    // { monthKey, title, saving }
   const [flashError, setFlashError] = useState('');
 
-  const owners = useMemo(() => [...new Set(tasks.map((t) => t.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), [tasks]);
-  const shown = filterTasks(tasks, { status, owner: internal ? owner : '', query });
+  const months = useMemo(() => monthFilterOptions(tasks, todayIso), [tasks, todayIso]);
+  const owners = useMemo(() => {
+    const list = [...new Set(tasks.map((t) => t.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    // Si el responsable elegido ya no tiene tareas, se sigue mostrando para poder sacarlo
+    return owner && !list.includes(owner) ? [owner, ...list] : list;
+  }, [tasks, owner]);
+  const shown = filterTasks(tasks, { month, status, owner, query });
   const groups = groupTasksByMonth(shown);
-  const filtering = status !== 'all' || (internal && owner) || query.trim();
+  // El mes elegido sin tareas igual muestra su fila para poder cargar la primera
+  if (!groups.length && month !== 'all' && status === 'all' && !owner && !query.trim()) {
+    groups.push({ key: month === 'none' ? null : month, label: months.find((o) => o.value === month)?.label || '', tasks: [] });
+  }
+  const filtering = status !== 'all' || owner || query.trim();
   const nextPosition = tasks.reduce((m, t) => Math.max(m, (t.position ?? 0) + 1), 0);
-  const monthKeys = useMemo(() => monthOptions(todayIso, tasks.map((t) => t.monthKey)), [todayIso, tasks]);
-  const colCount = internal ? 9 : 7;
+  const editorMonths = useMemo(() => monthOptions(todayIso, tasks.map((t) => t.monthKey)), [todayIso, tasks]);
+  const colCount = SHOW_TASK_DEADLINE ? 9 : 8;
+  const stats = taskStats(tasks);
 
   const showError = (msg) => { setFlashError(msg); setTimeout(() => setFlashError(''), 6000); };
   const toggleRow = (id) => setExpanded((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -74,64 +86,61 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
   };
 
   const saveEditor = async (data) => {
-    if (editor.task) await updateTask(editor.task.id, data);
+    if (editor.task) { if (Object.keys(data).length) await updateTask(editor.task.id, data); }
     else await createTask({ ...data, planId: plan.id, position: nextPosition, createdBy: currentUser?.name || '' });
     setEditor(null);
   };
-
-  const stats = taskStats(tasks);
 
   return (
     <div className="space-y-3">
       {/* Filtros */}
       <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-2">
+        <select value={month} onChange={(e) => setMonth(e.target.value)} className={selectCls} title="Mes">
+          {months.map((o) => <option key={o.value} value={o.value}>{o.value === currentMonth ? `${o.label} (este mes)` : o.label}</option>)}
+        </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
           <option value="all">Todos los estados</option>
           <option value="open">Abiertas (sin completar)</option>
           {PLAN_TASK_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </select>
-        {internal && (
-          <select value={owner} onChange={(e) => setOwner(e.target.value)} className={selectCls}>
-            <option value="">Todos los responsables</option>
-            {owners.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-        )}
+        <select value={owner} onChange={(e) => setOwner(e.target.value)} className={selectCls}>
+          <option value="">Todos los responsables</option>
+          {owners.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
         <div className="relative flex-1 min-w-[180px]">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar en tareas, objetivos, detalle…" className="w-full bg-white border border-slate-200 pl-8 pr-3 py-2 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-300" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar en tareas, objetivos, detalle, responsable…" className="w-full bg-white border border-slate-200 pl-8 pr-3 py-2 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-300" />
         </div>
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
           <span className="font-mono text-slate-700">{shown.length}</span> de <span className="font-mono text-slate-700">{stats.total}</span> tareas
         </span>
-        {internal && (
-          <button onClick={() => setEditor({ defaults: { monthKey: todayIso.slice(0, 7) } })} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Nueva tarea
-          </button>
-        )}
+        <button onClick={() => setEditor({ defaults: { monthKey: month === 'all' || month === 'none' ? currentMonth : month } })} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
+          <Plus className="w-3.5 h-3.5" /> Nueva tarea
+        </button>
       </div>
 
       {flashError && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2 text-xs font-bold">{flashError}</div>}
 
       {/* Tabla */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
-        <table className="w-full border-collapse text-xs table-fixed" style={{ minWidth: internal ? 1180 : 960 }}>
+        <table className="w-full border-collapse text-xs table-fixed" style={{ minWidth: SHOW_TASK_DEADLINE ? 1180 : 1080 }}>
           <colgroup>
             <col style={{ width: 28 }} />
             <col style={{ width: 230 }} />
-            {internal && <col style={{ width: 130 }} />}
-            {internal && <col style={{ width: 100 }} />}
+            <col style={{ width: 130 }} />
+            {SHOW_TASK_DEADLINE && <col style={{ width: 100 }} />}
             <col style={{ width: 118 }} />
             <col />
             <col style={{ width: 150 }} />
             <col />
-            <col style={{ width: 120 }} />
+            <col style={{ width: 140 }} />
           </colgroup>
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
               <th className="px-1" />
               <th className={thCls}>Acción / Tarea</th>
-              {internal && <th className={thCls}>Responsable</th>}
-              {internal && <th className={thCls}>Deadline</th>}
+              <th className={thCls}>Responsable</th>
+              {SHOW_TASK_DEADLINE && <th className={thCls}>Deadline</th>}
               <th className={thCls}>Estado</th>
               <th className={thCls}>Objetivo</th>
               <th className={thCls}>Resultado</th>
@@ -142,7 +151,7 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
           <tbody>
             {groups.length === 0 && (
               <tr><td colSpan={colCount} className="px-4 py-10 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                {filtering ? 'Ninguna tarea coincide con los filtros' : internal ? 'Este plan todavía no tiene tareas: cargá la primera con «Nueva tarea» o importá el Excel.' : 'Este plan todavía no tiene tareas cargadas.'}
+                {filtering ? 'Ninguna tarea coincide con los filtros' : 'Este plan todavía no tiene tareas: cargá la primera con «Nueva tarea» o importá el Excel.'}
               </td></tr>
             )}
             {groups.map((g) => {
@@ -153,28 +162,26 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
                   <tr className="bg-emerald-50/60 border-y border-emerald-100">
                     <td colSpan={colCount} className="px-3 py-1.5">
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800">{g.label}</span>
-                      <span className="ml-2 text-[10px] font-bold text-emerald-700/70">{gs.completed} de {gs.completed + gs.open} completadas{gs.cancelled ? ` · ${gs.cancelled} canceladas` : ''}</span>
+                      <span className="ml-2 text-[10px] font-bold text-emerald-700/70">
+                        {g.tasks.length ? `${gs.completed} de ${gs.completed + gs.open} completadas${gs.cancelled ? ` · ${gs.cancelled} canceladas` : ''}` : 'sin tareas todavía'}
+                      </span>
                     </td>
                   </tr>
                   {g.tasks.map((t) => {
                     const open = expanded.has(t.id);
-                    const overdue = internal && isTaskOverdue(t, todayIso);
+                    const overdue = SHOW_TASK_DEADLINE && isTaskOverdue(t, todayIso);
                     return (
-                      <tr key={t.id} className={`border-b border-slate-100 align-top hover:bg-slate-50/50 ${t.status === 'Cancelado' ? 'opacity-60' : ''}`}>
+                      <tr key={t.id} className={`border-b border-slate-100 align-top hover:bg-slate-50/50 ${t.status === CANCELLED_TASK_STATUS ? 'opacity-60' : ''}`}>
                         <td className="px-1 py-2.5 text-center">
                           <button onClick={() => toggleRow(t.id)} className="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 inline-flex items-center justify-center" title={open ? 'Achicar' : 'Ver todo el texto'}>
                             {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           </button>
                         </td>
                         <td className="px-3 py-2.5">
-                          {internal ? (
-                            <button onClick={() => setEditor({ task: t })} className="text-left font-black text-slate-800 text-xs leading-snug hover:text-emerald-700" title="Editar tarea">{t.title}</button>
-                          ) : (
-                            <p className="font-black text-slate-800 text-xs leading-snug">{t.title}</p>
-                          )}
+                          <button onClick={() => setEditor({ task: t })} className="text-left font-black text-slate-800 text-xs leading-snug hover:text-emerald-700" title="Editar tarea">{t.title}</button>
                         </td>
-                        {internal && <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600">{t.owner || <span className="text-slate-300">—</span>}</td>}
-                        {internal && (
+                        <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600">{t.owner || <span className="text-slate-300">—</span>}</td>
+                        {SHOW_TASK_DEADLINE && (
                           <td className="px-3 py-2.5">
                             {t.deadline ? (
                               <span className={`font-mono text-[11px] font-black ${overdue ? 'text-red-600' : 'text-slate-600'}`} title={overdue ? 'Vencida' : undefined}>
@@ -184,11 +191,9 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
                           </td>
                         )}
                         <td className="px-3 py-2.5">
-                          {internal ? (
-                            <button onClick={() => rotateStatus(t)} title="Clic para pasar al siguiente estado" className="hover:brightness-95">
-                              <StatusBadge status={t.status} />
-                            </button>
-                          ) : <StatusBadge status={t.status} />}
+                          <button onClick={() => rotateStatus(t)} title="Clic para pasar al siguiente estado" className="hover:brightness-95">
+                            <StatusBadge status={t.status} />
+                          </button>
                         </td>
                         <td className="px-3 py-2.5"><LongText value={t.objective} open={open} /></td>
                         <td className="px-3 py-2.5"><LongText value={t.result} open={open} /></td>
@@ -197,31 +202,29 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
                       </tr>
                     );
                   })}
-                  {internal && (
-                    <tr className="border-b border-slate-100">
-                      <td />
-                      <td colSpan={colCount - 1} className="px-3 py-1.5">
-                        {quickHere ? (
-                          <div className="flex items-center gap-1.5 max-w-xl">
-                            <input
-                              autoFocus
-                              value={quick.title}
-                              onChange={(e) => setQuick({ ...quick, title: e.target.value })}
-                              onKeyDown={(e) => { if (e.key === 'Enter') saveQuick(); if (e.key === 'Escape') setQuick(null); }}
-                              placeholder={`Nueva tarea en ${g.label}…`}
-                              className="flex-1 text-xs font-bold text-slate-800 bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-emerald-200"
-                            />
-                            <button onClick={saveQuick} disabled={!quick.title.trim() || quick.saving} className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center disabled:opacity-40" title="Guardar (Enter)"><Check className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => setQuick(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar (Esc)"><X className="w-3.5 h-3.5" /></button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setQuick({ monthKey: g.key, title: '', saving: false })} className="text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-emerald-700 flex items-center gap-1">
-                            <Plus className="w-3 h-3" /> Agregar tarea
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                  <tr className="border-b border-slate-100">
+                    <td />
+                    <td colSpan={colCount - 1} className="px-3 py-1.5">
+                      {quickHere ? (
+                        <div className="flex items-center gap-1.5 max-w-xl">
+                          <input
+                            autoFocus
+                            value={quick.title}
+                            onChange={(e) => setQuick({ ...quick, title: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === 'Enter') saveQuick(); if (e.key === 'Escape') setQuick(null); }}
+                            placeholder={`Nueva tarea en ${g.label}…`}
+                            className="flex-1 text-xs font-bold text-slate-800 bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-emerald-200"
+                          />
+                          <button onClick={saveQuick} disabled={!quick.title.trim() || quick.saving} className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center disabled:opacity-40" title="Guardar (Enter)"><Check className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setQuick(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar (Esc)"><X className="w-3.5 h-3.5" /></button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setQuick({ monthKey: g.key, title: '', saving: false })} className="text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-emerald-700 flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> Agregar tarea
+                        </button>
+                      )}
+                    </td>
+                  </tr>
                 </React.Fragment>
               );
             })}
@@ -229,18 +232,16 @@ export default function PlanTasksBoard({ plan, tasks, mode, todayIso, teamNames 
         </table>
       </div>
 
-      {internal && (
-        <p className="px-1 text-[10px] font-bold text-slate-400">
-          Clic en el estado para pasar al siguiente (Pendiente → En curso → Completado). Clic en la tarea para editarla. «Agregar tarea» carga directo en el mes.
-        </p>
-      )}
+      <p className="px-1 text-[10px] font-bold text-slate-400">
+        Clic en el estado para pasar al siguiente (Pendiente → En curso → Completado). Clic en la tarea para editarla. «Agregar tarea» carga directo en el mes.
+      </p>
 
       {editor && (
         <TaskEditor
           task={editor.task || null}
           plan={plan}
           defaults={editor.defaults}
-          monthKeys={monthKeys}
+          monthKeys={editorMonths}
           teamNames={teamNames}
           onSave={saveEditor}
           onDelete={editor.task ? async () => {

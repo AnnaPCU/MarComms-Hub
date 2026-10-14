@@ -58,19 +58,28 @@ export function SectionTitle({ children, right }) {
   );
 }
 
-// Columna Link: puede traer varios links y textos sueltos (como en el Excel)
-export function TaskLinks({ value }) {
+// Columna Link: puede traer varios links y textos sueltos (como en el Excel).
+// Un texto seguido de una URL ("Reporte.html" + vínculo) se muestra como
+// un link con ese nombre. `color` para las vistas con marca (link externo).
+export function TaskLinks({ value, color }) {
   const parts = splitLinks(value);
   if (!parts.length) return <span className="text-slate-300">—</span>;
+  const items = [];
+  parts.forEach((p, i) => {
+    const prev = items[items.length - 1];
+    if (p.type === 'url' && prev && prev.type === 'text' && !prev.url) prev.url = p.value;
+    else items.push({ ...p, key: i, url: p.type === 'url' ? p.value : null });
+  });
   let n = 0;
   return (
-    <div className="flex flex-col gap-0.5">
-      {parts.map((p, i) => (p.type === 'url' ? (
-        <a key={i} href={p.value} target="_blank" rel="noopener noreferrer" title={p.value} className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 hover:underline whitespace-nowrap">
-          <ExternalLink className="w-3 h-3" /> Link {(n += 1)}
+    <div className="flex flex-col gap-0.5 min-w-0">
+      {items.map((it) => (it.url ? (
+        <a key={it.key} href={it.url} target="_blank" rel="noopener noreferrer" title={it.url} style={color ? { color } : undefined} className={`inline-flex items-start gap-1 text-[10px] font-black hover:underline ${color ? '' : 'text-emerald-700'}`}>
+          <ExternalLink className="w-3 h-3 shrink-0 mt-px" />
+          <span className="break-all line-clamp-2">{it.type === 'text' ? it.value : `Link ${(n += 1)}`}</span>
         </a>
       ) : (
-        <span key={i} className="text-[10px] text-slate-500 leading-snug">{p.value}</span>
+        <span key={it.key} className="text-[10px] text-slate-500 leading-snug">{it.value}</span>
       )))}
     </div>
   );

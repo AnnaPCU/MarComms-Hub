@@ -1,9 +1,12 @@
 // ════════════════════════════════════════════════════════════════════
 // TaskEditor — Alta / edición de una tarea de un plan (vista interna)
 // ════════════════════════════════════════════════════════════════════
-// Columnas del Excel: Mes · Acción / Tarea · Responsable · Deadline ·
-// Estado · Objetivo · Resultado · Detalle · Link (opcional). Solo el
-// título es obligatorio.
+// Columnas del Excel: Mes · Acción / Tarea · Responsable · Estado ·
+// Objetivo · Resultado · Detalle · Link (opcional). Solo el título es
+// obligatorio. Deadline oculto mientras SHOW_TASK_DEADLINE sea false.
+//
+// Al editar se guardan solo los campos que cambiaron, así no se pisa lo
+// que otra persona cambió mientras el editor estaba abierto.
 //
 // Props:
 //   task          — tarea existente o null (nueva)
@@ -11,14 +14,16 @@
 //   defaults      — valores iniciales para una tarea nueva ({ monthKey })
 //   monthKeys     — opciones del selector de mes ('YYYY-MM')
 //   teamNames     — sugerencias para Responsable
-//   onSave(data), onDelete() | null, onClose()
+//   onSave(data) — tarea nueva: todos los campos; existente: solo los que
+//                  cambiaron (puede venir vacío)
+//   onDelete() | null, onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
-import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS } from '@/constants/planTasks';
+import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE } from '@/constants/planTasks';
 import { monthLabel } from '@/utils/planTasks';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-300';
@@ -48,7 +53,10 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
     if (!canSave) return;
     setSaving(true); setError('');
     try {
-      await onSave({ ...form, title: form.title.trim(), owner: form.owner.trim(), link: form.link.trim(), monthKey: form.monthKey || null });
+      const data = { ...form, title: form.title.trim(), owner: form.owner.trim(), link: form.link.trim(), monthKey: form.monthKey || null };
+      if (!task) { await onSave(data); return; }
+      const changed = Object.fromEntries(Object.entries(data).filter(([k, v]) => (v || '') !== (task[k] || '')));
+      await onSave(changed);
     } catch (_e) {
       setError('No se pudo guardar la tarea. Probá de nuevo; si sigue fallando, revisá la consola.');
       setSaving(false);
@@ -108,7 +116,7 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className={`grid grid-cols-1 ${SHOW_TASK_DEADLINE ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
               <div className="space-y-1">
                 <label className={labelCls}>Mes</label>
                 <select value={form.monthKey} onChange={(e) => set('monthKey', e.target.value)} className={inputCls}>
@@ -121,10 +129,12 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
                 <input list="plan-task-owners" value={form.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Nombre…" className={inputCls} />
                 <datalist id="plan-task-owners">{teamNames.map((n) => <option key={n} value={n} />)}</datalist>
               </div>
-              <div className="space-y-1">
-                <label className={labelCls}>Deadline <span className="normal-case tracking-normal font-bold text-slate-300">(interno)</span></label>
-                <input type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} className={inputCls} />
-              </div>
+              {SHOW_TASK_DEADLINE && (
+                <div className="space-y-1">
+                  <label className={labelCls}>Deadline <span className="normal-case tracking-normal font-bold text-slate-300">(interno)</span></label>
+                  <input type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} className={inputCls} />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
