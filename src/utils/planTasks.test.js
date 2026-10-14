@@ -51,6 +51,9 @@ describe('tareas', () => {
     expect(filterTasks(list, { month: '2026-10' }).map((t) => t.id)).toEqual([2]);
     expect(filterTasks(list, { month: 'none' }).map((t) => t.id)).toEqual([3]);
     expect(filterTasks(list, { month: 'all' })).toHaveLength(3);
+    // El mes elegido sigue en la lista aunque se haya quedado sin tareas
+    expect(monthFilterOptions(list, TODAY, '2026-09').map((o) => o.value)).toEqual(['all', '2026-08', '2026-09', '2026-10', 'none']);
+    expect(monthFilterOptions([{ id: 1, monthKey: '2026-10' }], TODAY, 'none').map((o) => o.value)).toEqual(['all', '2026-10', 'none']);
   });
 
   it('links: URLs y textos, el link es opcional', () => {

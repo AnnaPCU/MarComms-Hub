@@ -32,7 +32,7 @@ export default function PlanCard({ plan, tasks, pillarsCount, todayIso, onOpen }
         <div className="text-right text-[10px] font-bold text-slate-500 leading-relaxed">
           <p><span className="font-mono font-black text-slate-800">{s.completed}</span> completadas</p>
           <p><span className="font-mono font-black text-slate-800">{s.open}</span> abiertas</p>
-          {s.cancelled > 0 && <p><span className="font-mono font-black text-slate-800">{s.cancelled}</span> canceladas</p>}
+          {s.cancelled > 0 && <p><span className="font-mono font-black text-slate-800">{s.cancelled}</span> {s.cancelled === 1 ? 'cancelada' : 'canceladas'}</p>}
         </div>
       </div>
 

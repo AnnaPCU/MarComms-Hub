@@ -38,7 +38,7 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
       <div className={`grid grid-cols-2 ${SHOW_TASK_DEADLINE ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3`}>
         <Kpi label="Tareas" value={s.total} />
         <Kpi label="Completadas" value={s.completed} accent="text-emerald-600" />
-        <Kpi label="Abiertas" value={s.open} accent="text-amber-600" hint={s.cancelled ? `${s.cancelled} canceladas (no cuentan)` : undefined} />
+        <Kpi label="Abiertas" value={s.open} accent="text-amber-600" hint={s.cancelled ? `${s.cancelled} ${s.cancelled === 1 ? 'cancelada (no cuenta)' : 'canceladas (no cuentan)'}` : undefined} />
         <Kpi label="% avance" value={pctLabel(s.pct)} accent="text-emerald-700" hint="del plan: completadas / (completadas + abiertas)" />
         {SHOW_TASK_DEADLINE && <Kpi label="Vencidas" value={overdue} accent={overdue ? 'text-red-600' : 'text-slate-800'} hint="abiertas con deadline pasado" />}
       </div>

@@ -22,7 +22,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 
 import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS } from '@/constants/planTasks';
-import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthOptions, taskStats } from '@/utils/planTasks';
+import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthLabel, monthOptions, taskStats } from '@/utils/planTasks';
 import { formatDate } from '@/utils/date';
 import { StatusBadge, TaskLinks } from './PlanBits';
 import TaskEditor from './TaskEditor';
@@ -46,7 +46,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
   const [quick, setQuick] = useState(null);    // { monthKey, title, saving }
   const [flashError, setFlashError] = useState('');
 
-  const months = useMemo(() => monthFilterOptions(tasks, todayIso), [tasks, todayIso]);
+  const months = useMemo(() => monthFilterOptions(tasks, todayIso, month), [tasks, todayIso, month]);
   // Todo el equipo + quien figure en alguna tarea (ej. un externo) + el elegido
   const owners = useMemo(() => [...new Set([...teamNames, ...tasks.map((t) => t.owner), owner].filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'es')), [teamNames, tasks, owner]);
@@ -54,7 +54,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
   const groups = groupTasksByMonth(shown);
   // El mes elegido sin tareas igual muestra su fila para poder cargar la primera
   if (!groups.length && month !== 'all' && status === 'all' && !owner && !query.trim()) {
-    groups.push({ key: month === 'none' ? null : month, label: months.find((o) => o.value === month)?.label || '', tasks: [] });
+    groups.push({ key: month === 'none' ? null : month, label: monthLabel(month === 'none' ? null : month), tasks: [] });
   }
   const filtering = status !== 'all' || owner || query.trim();
   const nextPosition = tasks.reduce((m, t) => Math.max(m, (t.position ?? 0) + 1), 0);
@@ -155,7 +155,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
                     <td colSpan={colCount} className="px-3 py-1.5">
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800">{g.label}</span>
                       <span className="ml-2 text-[10px] font-bold text-emerald-700/70">
-                        {g.tasks.length ? `${gs.completed} de ${gs.completed + gs.open} completadas${gs.cancelled ? ` · ${gs.cancelled} canceladas` : ''}` : 'sin tareas todavía'}
+                        {g.tasks.length ? `${gs.completed} de ${gs.completed + gs.open} completadas${gs.cancelled ? ` · ${gs.cancelled} ${gs.cancelled === 1 ? 'cancelada' : 'canceladas'}` : ''}` : 'sin tareas todavía'}
                       </span>
                     </td>
                   </tr>

@@ -53,11 +53,14 @@ export const taskStats = (tasks = []) => {
 };
 
 // Selector de mes de la tabla: arranca en el mes actual y ofrece los meses
-// que tienen tareas (+ "Sin mes" si hay) y "Todos los meses".
+// que tienen tareas (+ "Sin mes" si hay) y "Todos los meses". `selected`
+// (el mes elegido) siempre queda en la lista, aunque se haya quedado sin
+// tareas (ej. se movió la última a otro mes).
 //   value: 'all' | 'YYYY-MM' | 'none'
-export const monthFilterOptions = (tasks = [], todayIso) => {
+export const monthFilterOptions = (tasks = [], todayIso, selected = '') => {
   const keys = new Set([todayIso.slice(0, 7)]);
-  let withoutMonth = false;
+  if (MONTH_KEY_RE.test(selected)) keys.add(selected);
+  let withoutMonth = selected === 'none';
   tasks.forEach((t) => { if (t.monthKey && MONTH_KEY_RE.test(t.monthKey)) keys.add(t.monthKey); else withoutMonth = true; });
   return [
     { value: 'all', label: 'Todos los meses' },
