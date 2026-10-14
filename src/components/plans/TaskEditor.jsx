@@ -13,7 +13,7 @@
 //   plan          — plan al que pertenece
 //   defaults      — valores iniciales para una tarea nueva ({ monthKey })
 //   monthKeys     — opciones del selector de mes ('YYYY-MM')
-//   teamNames     — sugerencias para Responsable
+//   teamNames     — el equipo: opciones de Responsable
 //   onSave(data) — tarea nueva: todos los campos; existente: solo los que
 //                  cambiaron (puede venir vacío)
 //   onDelete() | null, onClose()
@@ -48,6 +48,8 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const canSave = form.title.trim().length > 0 && !saving;
   const months = form.monthKey && !monthKeys.includes(form.monthKey) ? [...monthKeys, form.monthKey].sort() : monthKeys;
+  // Todo el equipo; si la tarea ya tenía a alguien de afuera (del Excel), también
+  const ownerOptions = [...new Set([...teamNames, task?.owner].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 
   const submit = async () => {
     if (!canSave) return;
@@ -125,13 +127,15 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
                 </select>
               </div>
               <div className="space-y-1">
-                <label className={labelCls}>Responsable <span className="normal-case tracking-normal font-bold text-slate-300">(interno)</span></label>
-                <input list="plan-task-owners" value={form.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Nombre…" className={inputCls} />
-                <datalist id="plan-task-owners">{teamNames.map((n) => <option key={n} value={n} />)}</datalist>
+                <label className={labelCls}>Responsable</label>
+                <select value={form.owner} onChange={(e) => set('owner', e.target.value)} className={inputCls}>
+                  <option value="">Sin responsable</option>
+                  {ownerOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
               </div>
               {SHOW_TASK_DEADLINE && (
                 <div className="space-y-1">
-                  <label className={labelCls}>Deadline <span className="normal-case tracking-normal font-bold text-slate-300">(interno)</span></label>
+                  <label className={labelCls}>Deadline</label>
                   <input type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)} className={inputCls} />
                 </div>
               )}

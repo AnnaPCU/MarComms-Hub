@@ -6,15 +6,14 @@
 // (BudgetInput, Portal Cliente, tarjetas) lo lee con useBillingPlans().
 //
 // Devuelve: plans (ordenados por nombre), planById (Map id → plan),
-//           loading, error, addPlan(nombre) → plan (crea o reutiliza),
-//           rotatePublicToken(id) → plan (link externo nuevo, sección Planes)
+//           loading, error, addPlan(nombre) → plan (crea o reutiliza)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { listBillingPlans, createBillingPlan, rotatePlanPublicToken, subscribeBillingPlans } from '@/services/billingPlansService';
+import { listBillingPlans, createBillingPlan, subscribeBillingPlans } from '@/services/billingPlansService';
 import { cleanPlanName, findPlanByName } from '@/utils/billing';
 
-const EMPTY = { plans: [], planById: new Map(), loading: false, error: null, addPlan: async () => null, rotatePublicToken: async () => null };
+const EMPTY = { plans: [], planById: new Map(), loading: false, error: null, addPlan: async () => null };
 const BillingPlansContext = createContext(EMPTY);
 
 export const useBillingPlansState = (currentUserName = '') => {
@@ -58,15 +57,9 @@ export const useBillingPlansState = (currentUserName = '') => {
     }
   }, [plans, currentUserName]);
 
-  const rotatePublicToken = useCallback(async (id) => {
-    const plan = await rotatePlanPublicToken(id);
-    setPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
-    return plan;
-  }, []);
-
   const planById = useMemo(() => new Map(plans.map((p) => [String(p.id), p])), [plans]);
 
-  return useMemo(() => ({ plans, planById, loading, error, addPlan, rotatePublicToken }), [plans, planById, loading, error, addPlan, rotatePublicToken]);
+  return useMemo(() => ({ plans, planById, loading, error, addPlan }), [plans, planById, loading, error, addPlan]);
 };
 
 export function BillingPlansProvider({ value, children }) {

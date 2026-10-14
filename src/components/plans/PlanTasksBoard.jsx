@@ -4,15 +4,14 @@
 // Réplica de la sección "3) TAREAS" del Excel. Se edita en tiempo real
 // como la hoja de Social Media:
 //   - Abre en el mes actual; el selector de mes permite ver otro o todos.
-//   - Clic en el estado → pasa al siguiente (Pendiente → En curso →
-//     Completado). Bloqueado y Cancelado se eligen en el editor.
-//   - Clic en la tarea → abre el editor completo.
+//   - Clic en cualquier parte de una tarea → abre el editor (siempre).
+//     Solo la flecha (ver el texto completo) y los links tienen su propia
+//     acción.
 //   - "+ Agregar tarea" al pie de cada mes → carga directa (Enter guarda,
 //     Esc cancela).
-//   - La flecha de cada fila muestra los textos largos completos.
+//   - Responsables: todo el equipo (más quien figure en alguna tarea).
 //
 // Deadline oculto mientras SHOW_TASK_DEADLINE sea false (constants/planTasks).
-// La vista externa es el link del plan (PublicPlanPage).
 //
 // Props:
 //   plan, tasks (las del plan), todayIso, teamNames, currentUser,
@@ -22,7 +21,7 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 
-import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS, nextTaskStatus } from '@/constants/planTasks';
+import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS } from '@/constants/planTasks';
 import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthOptions, taskStats } from '@/utils/planTasks';
 import { formatDate } from '@/utils/date';
 import { StatusBadge, TaskLinks } from './PlanBits';
@@ -48,11 +47,9 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
   const [flashError, setFlashError] = useState('');
 
   const months = useMemo(() => monthFilterOptions(tasks, todayIso), [tasks, todayIso]);
-  const owners = useMemo(() => {
-    const list = [...new Set(tasks.map((t) => t.owner).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-    // Si el responsable elegido ya no tiene tareas, se sigue mostrando para poder sacarlo
-    return owner && !list.includes(owner) ? [owner, ...list] : list;
-  }, [tasks, owner]);
+  // Todo el equipo + quien figure en alguna tarea (ej. un externo) + el elegido
+  const owners = useMemo(() => [...new Set([...teamNames, ...tasks.map((t) => t.owner), owner].filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es')), [teamNames, tasks, owner]);
   const shown = filterTasks(tasks, { month, status, owner, query });
   const groups = groupTasksByMonth(shown);
   // El mes elegido sin tareas igual muestra su fila para poder cargar la primera
@@ -67,11 +64,6 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
 
   const showError = (msg) => { setFlashError(msg); setTimeout(() => setFlashError(''), 6000); };
   const toggleRow = (id) => setExpanded((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-
-  const rotateStatus = async (task) => {
-    try { await updateTask(task.id, { status: nextTaskStatus(task.status) }); }
-    catch (_e) { showError('No se pudo cambiar el estado. Probá de nuevo.'); }
-  };
 
   const saveQuick = async () => {
     if (!quick || !quick.title.trim() || quick.saving) return;
@@ -151,7 +143,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
           <tbody>
             {groups.length === 0 && (
               <tr><td colSpan={colCount} className="px-4 py-10 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                {filtering ? 'Ninguna tarea coincide con los filtros' : 'Este plan todavía no tiene tareas: cargá la primera con «Nueva tarea» o importá el Excel.'}
+                {filtering ? 'Ninguna tarea coincide con los filtros' : 'Este plan todavía no tiene tareas: cargá la primera con «Nueva tarea».'}
               </td></tr>
             )}
             {groups.map((g) => {
@@ -171,14 +163,14 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
                     const open = expanded.has(t.id);
                     const overdue = SHOW_TASK_DEADLINE && isTaskOverdue(t, todayIso);
                     return (
-                      <tr key={t.id} className={`border-b border-slate-100 align-top hover:bg-slate-50/50 ${t.status === CANCELLED_TASK_STATUS ? 'opacity-60' : ''}`}>
+                      <tr key={t.id} onClick={() => setEditor({ task: t })} title="Clic para editar la tarea" className={`border-b border-slate-100 align-top hover:bg-slate-50/50 cursor-pointer ${t.status === CANCELLED_TASK_STATUS ? 'opacity-60' : ''}`}>
                         <td className="px-1 py-2.5 text-center">
-                          <button onClick={() => toggleRow(t.id)} className="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 inline-flex items-center justify-center" title={open ? 'Achicar' : 'Ver todo el texto'}>
+                          <button onClick={(e) => { e.stopPropagation(); toggleRow(t.id); }} className="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 inline-flex items-center justify-center" title={open ? 'Achicar' : 'Ver todo el texto'}>
                             {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                           </button>
                         </td>
                         <td className="px-3 py-2.5">
-                          <button onClick={() => setEditor({ task: t })} className="text-left font-black text-slate-800 text-xs leading-snug hover:text-emerald-700" title="Editar tarea">{t.title}</button>
+                          <p className="font-black text-slate-800 text-xs leading-snug">{t.title}</p>
                         </td>
                         <td className="px-3 py-2.5 text-[11px] font-bold text-slate-600">{t.owner || <span className="text-slate-300">—</span>}</td>
                         {SHOW_TASK_DEADLINE && (
@@ -190,11 +182,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
                             ) : <span className="text-slate-300">—</span>}
                           </td>
                         )}
-                        <td className="px-3 py-2.5">
-                          <button onClick={() => rotateStatus(t)} title="Clic para pasar al siguiente estado" className="hover:brightness-95">
-                            <StatusBadge status={t.status} />
-                          </button>
-                        </td>
+                        <td className="px-3 py-2.5"><StatusBadge status={t.status} /></td>
                         <td className="px-3 py-2.5"><LongText value={t.objective} open={open} /></td>
                         <td className="px-3 py-2.5"><LongText value={t.result} open={open} /></td>
                         <td className="px-3 py-2.5"><LongText value={t.detail} open={open} /></td>
@@ -233,7 +221,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
       </div>
 
       <p className="px-1 text-[10px] font-bold text-slate-400">
-        Clic en el estado para pasar al siguiente (Pendiente → En curso → Completado). Clic en la tarea para editarla. «Agregar tarea» carga directo en el mes.
+        Clic en cualquier parte de una tarea para editarla (estado, responsable, textos, link). «Agregar tarea» carga directo en el mes.
       </p>
 
       {editor && (

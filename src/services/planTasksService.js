@@ -72,53 +72,6 @@ export const deleteTask = async (id) => {
   return true;
 };
 
-// ── Importación del Excel ──
-// Las nuevas se insertan todas juntas (un solo insert = todo o nada). En
-// modo "reemplazar", recién después se borran las que había en esos planes
-// (por id): si algo falla en el medio, en el peor caso quedan repetidas,
-// nunca un plan vacío.
-export const importTasks = async ({ toInsert = [], replacePlanIds = [] }) => {
-  let oldIds = [];
-  if (replacePlanIds.length) {
-    const { data, error } = await supabase.from(TABLE).select('id').in('plan_id', replacePlanIds);
-    if (error) throw error;
-    oldIds = (data || []).map((r) => r.id);
-  }
-  if (toInsert.length) {
-    const { error } = await supabase.from(TABLE).insert(toInsert.map(taskToRow));
-    if (error) throw error;
-  }
-  if (oldIds.length) {
-    const { error } = await supabase.from(TABLE).delete().in('id', oldIds);
-    if (error) throw error;
-  }
-  return toInsert.length;
-};
-
-// ── Link externo (migration 0030) ──
-// Lo único que lee la página externa: nombre del plan y tareas sin
-// Responsable ni Deadline. Devuelve null si el token no existe.
-export const getPublicPlan = async (token) => {
-  const { data, error } = await supabase.rpc('get_public_plan', { p_token: token });
-  if (error) throw error;
-  if (!data) return null;
-  return {
-    name: data.name || '',
-    tasks: (data.tasks || []).map((t) => ({
-      id: t.id,
-      monthKey: t.monthKey || null,
-      title: t.title || '',
-      status: t.status || DEFAULT_TASK_STATUS,
-      objective: t.objective || '',
-      result: t.result || '',
-      detail: t.detail || '',
-      link: t.link || '',
-      position: t.position ?? 0,
-      createdAt: t.createdAt || null,
-    })),
-  };
-};
-
 // ── Realtime ──
 export const subscribePlanTasks = (onChange) => {
   const channel = supabase

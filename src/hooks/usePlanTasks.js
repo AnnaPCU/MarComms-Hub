@@ -4,7 +4,6 @@
 // Devuelve:
 //   tasks, loading, error, refetch
 //   createTask(obj) / updateTask(id, patch) / removeTask(id)
-//   importTasks({ toInsert, replacePlanIds })  — importación del Excel
 //
 // updateTask es optimista (el cambio de estado se ve al toque, como en
 // la hoja de Social Media) y si falla vuelve a traer lo que hay en la base.
@@ -13,7 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  listTasks, createTask, updateTask, deleteTask, importTasks, subscribePlanTasks,
+  listTasks, createTask, updateTask, deleteTask, subscribePlanTasks,
 } from '@/services/planTasksService';
 
 export const usePlanTasks = (options = {}) => {
@@ -37,7 +36,7 @@ export const usePlanTasks = (options = {}) => {
 
   useEffect(() => { refetch(); }, [refetch]);
 
-  // Una importación dispara muchos eventos juntos: se agrupan en un refetch
+  // Varios cambios seguidos (ej. de otra persona) se agrupan en un refetch
   useEffect(() => {
     if (!realtime) return undefined;
     const unsubscribe = subscribePlanTasks(() => {
@@ -63,7 +62,6 @@ export const usePlanTasks = (options = {}) => {
     return {
       createTask: wrap(createTask),
       removeTask: wrap(deleteTask),
-      importTasks: wrap(importTasks),
       updateTask: async (id, patch) => {
         setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
         return wrap(updateTask)(id, patch);

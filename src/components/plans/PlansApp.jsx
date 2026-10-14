@@ -8,9 +8,8 @@
 //   - los pilares que cubre (lo que antes estaba en Portal Cliente →
 //     "Por plan")
 //
-// Esta pantalla es interna (importar Excel, nuevo plan, edición). La
-// vista externa es por plan: el link que se le pasa al cliente
-// (/?plan=<token>), que se ve desde el detalle de cada plan.
+// Pantalla interna: nuevo plan y edición de tareas. Todo se carga y edita
+// desde acá (la carga inicial del Excel se hizo una sola vez, oct 2026).
 //
 // Las tarjetas se agrupan por marca: Control Union y Peterson Solutions
 // nunca se mezclan en un mismo bloque.
@@ -21,7 +20,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Plus, Target, Upload, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Plus, Target, X } from 'lucide-react';
 
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { planBrand, planPillarItems, taskStats } from '@/utils/planTasks';
@@ -29,20 +28,16 @@ import { todayIso as getTodayIso } from '@/utils/date';
 import { Kpi, pctLabel } from './PlanBits';
 import PlanCard from './PlanCard';
 import PlanDetail from './PlanDetail';
-import TasksImportModal from './TasksImportModal';
 
 const BRAND_ORDER = ['Control Union', 'Peterson Solutions', ''];
 
 export default function PlansApp({ planTasks, webinars, campaigns, events, teamNames = [], currentUser, onOpenProject, onBack }) {
-  const { plans, loading: plansLoading, addPlan, rotatePublicToken } = useBillingPlans();
-  const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask, importTasks } = planTasks;
+  const { plans, loading: plansLoading, addPlan } = useBillingPlans();
+  const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask } = planTasks;
   const [openId, setOpenId] = useState(null);
-  const [showImport, setShowImport] = useState(false);
   const [newPlan, setNewPlan] = useState(null); // { name, saving, error }
   const [flash, setFlash] = useState('');
   const todayIso = getTodayIso();
-  // Sin las tareas del Hub cargadas no se puede saber cuáles ya están: no se importa
-  const canImport = !tasksLoading && !error;
 
   const tasksByPlan = useMemo(() => {
     const m = new Map();
@@ -91,14 +86,6 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
               <p className="text-[10px] text-emerald-50 font-bold uppercase tracking-widest truncate">Seguimiento de tareas por plan · en tiempo real</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowImport(true)}
-            disabled={!canImport}
-            title={canImport ? undefined : 'Esperá a que carguen las tareas del Hub para poder importar sin duplicar'}
-            className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <Upload className="w-4 h-4" /> Importar Excel
-          </button>
         </div>
       </header>
 
@@ -120,7 +107,6 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
             updateTask={updateTask}
             removeTask={removeTask}
             onOpenPillar={(it) => onOpenProject && onOpenProject('campaigns', it.id)}
-            onRotateToken={rotatePublicToken}
             onBack={() => setOpenId(null)}
           />
         ) : (
@@ -186,18 +172,6 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
           </>
         )}
       </main>
-
-      {showImport && (
-        <TasksImportModal
-          plans={plans}
-          tasks={tasks}
-          teamNames={teamNames}
-          currentUser={currentUser}
-          onImport={importTasks}
-          onDone={(msg) => { setShowImport(false); showFlash(msg); }}
-          onClose={() => setShowImport(false)}
-        />
-      )}
     </div>
   );
 }
