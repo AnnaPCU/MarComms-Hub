@@ -4,7 +4,10 @@
 // Réplica del Excel "Facturacion_HUBSPOT" como dashboard (oct 2026, en el
 // lugar de la vieja sección CRM): total facturado por mes, variación,
 // licencias Sales Pro / Core, una fila por entidad con su detalle y
-// usuarios, y una lista de lo que no cuadra en el Excel.
+// usuarios, y una lista de lo que no cuadra en el Excel. Las advertencias
+// (aviso del TOTAL y "Para revisar en el Excel") se pueden borrar, con
+// confirmación; quedan borradas para todo el equipo hasta la próxima
+// importación.
 // Los datos se actualizan importando el Excel (BillingImportModal); el
 // realtime de Supabase hace que todos lo vean al instante.
 //
@@ -14,22 +17,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Database, FileSpreadsheet, Upload } from 'lucide-react';
 
+import { useConfirm } from '@/hooks/useConfirm';
 import { brandOfEntity } from '@/constants/hubspotBilling';
 import { monthTotals, latestBilledMonth, previousMonth, monthOf, licensesOf, totalCheck } from '@/utils/hubspotBilling';
 import { Delta, Kpi, money } from './BillingBits';
 import MonthlyChart from './MonthlyChart';
 import EntitiesTable from './EntitiesTable';
-import ReviewPanel from './ReviewPanel';
+import ReviewPanel, { DismissButton, totalWarningId } from './ReviewPanel';
 import BillingImportModal from './BillingImportModal';
 
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function HubspotBillingApp({ data, currentUser, onBack }) {
-  const { entities, imports, meta, loading, error, importExcel } = data;
+  const { entities, imports, meta, dismissed, loading, error, importExcel, dismissWarning } = data;
+  const confirm = useConfirm();
   const [brand, setBrand] = useState('');
   const [month, setMonth] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [flash, setFlash] = useState('');
+  const [dismissError, setDismissError] = useState('');
 
   const visible = useMemo(() => entities.filter((e) => !brand || brandOfEntity(e.key) === brand), [entities, brand]);
   const latest = latestBilledMonth(entities);
@@ -43,6 +49,19 @@ export default function HubspotBillingApp({ data, currentUser, onBack }) {
   const lic = visible.reduce((acc, e) => { const l = licensesOf(monthOf(e, current)); acc.sp += l.salesPro; acc.core += l.core; return acc; }, { sp: 0, core: 0 });
   const tCheck = !brand ? totalCheck(entities, meta, current) : null;
   const lastImport = imports[0];
+  const showTotalWarning = tCheck && tCheck.diff !== 0 && !dismissed.has(totalWarningId(current));
+
+  const handleDismiss = async (warningId) => {
+    const ok = await confirm({
+      title: '¿Borrar esta advertencia?',
+      message: 'Deja de verse para todo el equipo. Si se vuelve a importar el Excel y sigue sin cuadrar, aparece de nuevo.',
+      confirmText: 'Borrar', tone: 'warning',
+    });
+    if (!ok) return;
+    setDismissError('');
+    try { await dismissWarning(warningId); }
+    catch (err) { console.error('[HubspotBillingApp] dismiss error:', err); setDismissError('No se pudo borrar la advertencia. Probá de nuevo.'); }
+  };
 
   const handleImport = async (newEntities, newMeta, { fileName }) => {
     const s = await importExcel(newEntities, newMeta, { fileName, importedBy: currentUser?.name || '' });
@@ -73,6 +92,7 @@ export default function HubspotBillingApp({ data, currentUser, onBack }) {
 
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">
         {flash && <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-2.5 text-xs font-black flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {flash}</div>}
+        {dismissError && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">{dismissError}</div>}
         {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">No se pudieron cargar los datos desde Supabase. Revisá la consola.</div>}
 
         {loading ? (
@@ -103,17 +123,16 @@ export default function HubspotBillingApp({ data, currentUser, onBack }) {
               <Kpi label="Acumulado del año" value={money(totals.reduce((a, t) => a + t.total, 0))} hint={`${totals.filter((t) => t.total > 0).length} meses facturados`} />
             </div>
 
-            {tCheck && tCheck.diff !== 0 && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs font-bold flex items-start gap-2">
+            {showTotalWarning && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl pl-4 pr-2 py-2.5 text-xs font-bold flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>El TOTAL del Excel para {current} dice {money(tCheck.excel)}, pero las entidades suman {money(tCheck.computed)}{tCheck.missing.length ? `: la fórmula no incluye ${tCheck.missing.join(', ')}` : ''}. Acá se muestra la suma real.</span>
+                <span className="flex-1 min-w-0">El TOTAL del Excel para {current} dice {money(tCheck.excel)}, pero las entidades suman {money(tCheck.computed)}{tCheck.missing.length ? `: la fórmula no incluye ${tCheck.missing.join(', ')}` : ''}. Acá se muestra la suma real.</span>
+                <DismissButton onClick={() => handleDismiss(totalWarningId(current))} />
               </div>
             )}
 
-            <div className="grid lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2"><MonthlyChart totals={totals} selected={current} onSelect={setMonth} /></div>
-              <ReviewPanel entities={visible} meta={meta} month={current} />
-            </div>
+            <MonthlyChart totals={totals} selected={current} onSelect={setMonth} />
+            <ReviewPanel entities={visible} meta={meta} month={current} dismissed={dismissed} onDismiss={handleDismiss} />
 
             <EntitiesTable entities={visible} month={current} meta={meta} />
           </>

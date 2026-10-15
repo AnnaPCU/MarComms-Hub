@@ -80,6 +80,18 @@ export const importBilling = async (entities, meta, { fileName, importedBy }) =>
   return summary;
 };
 
+// Advertencias borradas a mano ("Para revisar en el Excel" y el aviso del
+// TOTAL): se guardan en la meta de la última importación, así las ve borradas
+// todo el equipo. Una importación nueva arranca sin advertencias borradas.
+export const dismissImportWarning = async (importId, warningId) => {
+  const { data, error } = await supabase.from(IMPORTS).select('meta').eq('id', importId).single();
+  if (error) throw error;
+  const meta = data?.meta || {};
+  const dismissed = Array.from(new Set([...(meta.dismissedWarnings || []), warningId]));
+  const { error: updateError } = await supabase.from(IMPORTS).update({ meta: { ...meta, dismissedWarnings: dismissed } }).eq('id', importId);
+  if (updateError) throw updateError;
+};
+
 export const subscribeBilling = (onChange) => {
   const channel = supabase
     .channel('hubspot-billing-realtime')

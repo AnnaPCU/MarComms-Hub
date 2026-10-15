@@ -2,11 +2,12 @@
 // useHubspotBilling — Facturación HubSpot (Supabase + realtime)
 // ════════════════════════════════════════════════════════════════════
 // Devuelve: entities, imports, meta (de la última importación), loading,
-//           error, refetch, importExcel(entities, meta, { fileName, importedBy })
+//           error, refetch, importExcel(entities, meta, { fileName, importedBy }),
+//           dismissed (Set de ids de advertencias borradas), dismissWarning(id)
 // ════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { listBillingEntities, listBillingImports, importBilling, subscribeBilling } from '@/services/hubspotBillingService';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { listBillingEntities, listBillingImports, importBilling, dismissImportWarning, subscribeBilling } from '@/services/hubspotBillingService';
 import { DEFAULT_UNIT_PRICES } from '@/constants/hubspotBilling';
 
 export const useHubspotBilling = () => {
@@ -40,6 +41,16 @@ export const useHubspotBilling = () => {
     finally { importingRef.current = false; await refetch(); }
   }, [refetch]);
 
-  const meta = imports.find((i) => i.meta)?.meta || { unitPrices: DEFAULT_UNIT_PRICES, excelTotals: {}, summaryPrices: [] };
-  return { entities, imports, meta, loading, error, refetch, importExcel };
+  const metaImport = imports.find((i) => i.meta);
+  const meta = metaImport?.meta || { unitPrices: DEFAULT_UNIT_PRICES, excelTotals: {}, summaryPrices: [] };
+  const dismissedList = meta.dismissedWarnings;
+  const dismissed = useMemo(() => new Set(dismissedList || []), [dismissedList]);
+
+  const dismissWarning = useCallback(async (warningId) => {
+    if (!metaImport) throw new Error('No hay importación donde guardar la advertencia borrada');
+    await dismissImportWarning(metaImport.id, warningId);
+    await refetch();
+  }, [metaImport, refetch]);
+
+  return { entities, imports, meta, dismissed, loading, error, refetch, importExcel, dismissWarning };
 };
