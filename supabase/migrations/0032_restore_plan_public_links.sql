@@ -12,8 +12,8 @@
 --    el nombre del plan y las tareas con las columnas de la vista externa.
 --    Es security definer para no depender de las políticas de las tablas.
 --
--- Se puede correr más de una vez. Aplicada a mano desde el SQL Editor de
--- Supabase (oct 2026).
+-- Se puede correr más de una vez. Se corre a mano desde el SQL Editor de
+-- Supabase (oct 2026); ver en CLAUDE.md si ya está aplicada.
 -- ════════════════════════════════════════════════════════════════════
 
 alter table public.billing_plans

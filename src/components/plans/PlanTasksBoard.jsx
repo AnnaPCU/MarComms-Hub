@@ -39,7 +39,10 @@ function LongText({ value, open }) {
 
 export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask }) {
   const currentMonth = todayIso.slice(0, 7);
-  const [month, setMonth] = useState(currentMonth);
+  // Sigue al mes actual (aunque la pestaña quede abierta y cambie el mes)
+  // hasta que la persona elige otro
+  const [pickedMonth, setMonth] = useState(null);
+  const month = pickedMonth ?? currentMonth;
   const [status, setStatus] = useState('all');
   const [owner, setOwner] = useState('');
   const [query, setQuery] = useState('');

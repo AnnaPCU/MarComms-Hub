@@ -5,10 +5,10 @@
 // Planes Marketing", editable en tiempo real como la hoja de Social Media.
 //
 // Columnas (pedido oct 2026):
-//   Mes · Acción / Tarea · Responsable · Deadline · Estado · Objetivo ·
+//   Mes · Acción / Tarea · Responsable* · Deadline* · Estado · Objetivo ·
 //   Resultado · Detalle (ex "Comentario") · Link (opcional)
-//   Sin "Fecha" ni "Prioridad". Solo vista interna (la vista externa se
-//   descartó en oct 2026).
+//   * solo en la vista interna: el link externo del plan no los muestra.
+//   Sin "Fecha" ni "Prioridad".
 // ════════════════════════════════════════════════════════════════════
 
 // Deadline: oculto en todo el front por ahora (pedido oct 2026). La columna

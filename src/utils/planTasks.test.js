@@ -68,6 +68,8 @@ describe('tareas', () => {
     expect(nov.fallback).toBe('2026-10');
     // Solo hay tareas a futuro: se propone la primera
     expect(monthHistory([{ monthKey: '2026-12' }], TODAY).fallback).toBe('2026-12');
+    // Solo tareas sin mes: se propone "Sin mes"
+    expect(monthHistory([{ monthKey: null }], TODAY).fallback).toBe('none');
     expect(monthHistory([], TODAY)).toEqual({ options: [{ value: '2026-10', label: 'Octubre 2026', count: 0, current: true }], fallback: null });
   });
 

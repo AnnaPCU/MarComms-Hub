@@ -67,7 +67,11 @@ function TaskCard({ t, open, onToggle, c }) {
 export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dark = false }) {
   const theme = brandTheme(planBrand(plan.name));
   const c = dark ? theme.darkColors : theme.colors;
-  const [month, setMonth] = useState(todayIso.slice(0, 7));
+  // Sigue al mes actual (aunque la página quede abierta y cambie el mes)
+  // hasta que la persona elige otro
+  const currentMonth = todayIso.slice(0, 7);
+  const [pickedMonth, setMonth] = useState(null);
+  const month = pickedMonth ?? currentMonth;
   const [expanded, setExpanded] = useState(() => new Set());
   const history = useMemo(() => monthHistory(tasks, todayIso), [tasks, todayIso]);
   // Si el mes elegido se quedó sin tareas (cambio en vivo), se sigue mostrando en la lista
@@ -93,8 +97,8 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
     <div className="px-4 py-10 text-center text-sm">
       <p>{emptyText}</p>
       {showFallback && (
-        <button onClick={() => setMonth(history.fallback)} className="mt-3 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest" style={{ background: c.primary, color: '#ffffff' }}>
-          {fill(theme.goTo, monthLabel(history.fallback))}
+        <button onClick={() => setMonth(history.fallback)} className="mt-3 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest" style={{ background: c.primary, color: c.onPrimary }}>
+          {fill(theme.goTo, history.fallback === 'none' ? 'las acciones sin mes' : monthLabel(history.fallback))}
         </button>
       )}
     </div>

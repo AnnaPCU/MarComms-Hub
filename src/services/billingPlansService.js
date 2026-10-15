@@ -5,8 +5,8 @@
 // con billing = 'plan' apunta al plan que lo cubre con `plan_id`.
 //
 // Plan (UI): { id, name, publicToken, createdBy, createdAt }
-// publicToken: token del link externo del plan (migration 0030); null si la
-// migración todavía no se corrió.
+// publicToken: token del link externo del plan (migrations 0030 / 0032);
+// null si la migración todavía no se corrió.
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';

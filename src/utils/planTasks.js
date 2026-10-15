@@ -72,7 +72,8 @@ export const monthFilterOptions = (tasks = [], todayIso, selected = '') => {
 // Histórico del link externo: el mes actual + los meses que tienen tareas
 // (los vacíos no aparecen), en orden, y "Sin mes" al final si hay. Cada
 // opción trae cuántas tareas tiene. `fallback`: si el mes actual no tiene
-// tareas, el último mes que sí (o el primero que viene); null si no hay.
+// tareas, el último mes que sí (o el primero que viene; si solo hay tareas
+// sin mes, 'none'); null si no hay.
 //   { options: [{ value, label, count, current }], fallback }
 export const monthHistory = (tasks = [], todayIso) => {
   const current = todayIso.slice(0, 7);
@@ -88,7 +89,7 @@ export const monthHistory = (tasks = [], todayIso) => {
   let fallback = null;
   if (!counts.get(current)) {
     const withTasks = keys.filter((k) => counts.get(k) > 0);
-    fallback = [...withTasks].reverse().find((k) => k < current) || withTasks.find((k) => k > current) || null;
+    fallback = [...withTasks].reverse().find((k) => k < current) || withTasks.find((k) => k > current) || (withoutMonth ? 'none' : null);
   }
   return { options, fallback };
 };

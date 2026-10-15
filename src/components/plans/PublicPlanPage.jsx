@@ -2,7 +2,7 @@
 // PublicPlanPage — Link externo de un plan: /?plan=<token>
 // ════════════════════════════════════════════════════════════════════
 // Se abre sin login (ver main.jsx). Lee el plan con get_public_plan
-// (migration 0030), que devuelve solo el nombre y las tareas sin
+// (migrations 0030 / 0032), que devuelve solo el nombre y las tareas sin
 // Responsable ni Deadline. Se actualiza sola cada minuto y al volver a
 // la pestaña. Respeta el modo oscuro si se activó en el Hub (useTheme);
 // si no, en claro.

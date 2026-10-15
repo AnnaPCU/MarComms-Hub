@@ -8,7 +8,7 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 **Marcomms Hub** — plataforma web interna para el equipo de Marketing & Comunicaciones de **Control Union LATAM**.
 
-- ~8 usuarios internos (no exposición pública)
+- ~8 usuarios internos + un link público de solo lectura por plan para clientes (sección Planes, oct 2026)
 - Idioma: **100% Español argentino**
 - Maneja: webinars, pilares (campañas), eventos, programas (campaña integral que agrupa pilares), Social Media (hoja de posteos de LinkedIn + calendario de días mundiales), reportes por país, Planes (tareas de cada plan en tiempo real + link externo por plan para el cliente, oct 2026), CRM HubSpot (facturación de licencias HubSpot por entidad, importada desde el Excel; reemplazó a la vieja sección CRM en oct 2026)
 - Stack: **React 18 + Vite + Tailwind**
@@ -105,6 +105,7 @@ Mantené consistencia con esta paleta al agregar features.
 1. **Persistencia de datos** — ✅ Supabase + realtime para webinars, pilares, eventos, pedidos, tareas asignadas, casos de éxito, UTMs y equipo.
    - ⚠️ Todavía **solo en memoria** (se pierden al recargar): comentarios, archivos y aprobaciones de los **pedidos** de Social Media (`useRequests` overlay `content`) y los **ítems manuales de Facturación** (`manualItems` en `FacturacionApp`).
    - ⚠️ Estado "leída" de las notificaciones vive en `localStorage` (por navegador, no por usuario en la DB).
+   - ⚠️ **Seguridad**: casi todas las tablas tienen la política RLS "anon temp full access" y el login es una contraseña compartida que queda dentro del bundle (`src/services/auth.js`). Con el link externo de Planes, quien lo reciba carga el código del Hub: con la clave pública podría leer y modificar cualquier tabla (incluidos los planes de la otra marca) y ver la contraseña compartida. El link en sí solo usa `get_public_plan`. Cerrarlo de verdad: pasar el login a Supabase Auth y reemplazar las políticas anon por políticas para `authenticated` (la función del link sigue andando porque es security definer). Hasta entonces, compartir links solo con contactos de confianza.
    - Migraciones: corridas en producción hasta la 0031 (tareas de planes, oct 2026: las 55 tareas del Excel se cargaron una sola vez con SQL; desde entonces se cargan y editan solo desde el Hub). La 0030 agregó el link externo de los planes, la 0031 lo quitó y borró el plan "Control Union Canada", y la 0032 lo vuelve a activar (se corre a mano; hasta que esté, el detalle de cada plan avisa que el link no está activado). De la 0023 quedó sin aplicar solo el paso de realtime de `billing_plans`: un plan nuevo se ve en otros navegadores al recargar o al volver a la pestaña. Desde la 0021 se aplican con el conector de Supabase de Claude Code (quedan registradas en el historial de Supabase), salvo de la 0030 en adelante, que se corren a mano en el SQL Editor de Supabase; todas se guardan además en `supabase/migrations/`.
 
 2. ~~**Reporte Mailchimp**~~ ✅ ELIMINADO del Hub (jul 2026)
