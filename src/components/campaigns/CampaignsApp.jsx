@@ -52,7 +52,9 @@ const campaignId = () => {
   });
 };
 
-// Botón de alta según la pestaña de Pilares
+// Botón de alta: mismo estilo que «Nuevo Webinar» en todas las pestañas de
+// Pilares; el texto depende de la pestaña
+const NEW_BUTTON_CLS = 'bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20';
 const NEW_BUTTON_LABEL = {
   email: 'Nuevo email marketing',
   paid: 'Nuevo paid media',
@@ -411,12 +413,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       {embedded ? (
         // Embebido en Pilares: solo el botón de alta (el header lo da CampanasApp),
         // con el nombre del pilar de la pestaña ("Nueva creación de BBDD"…)
-        <div className="max-w-7xl mx-auto px-6 pt-6 flex justify-end">
+        <div className="max-w-6xl mx-auto w-full px-6 pt-6 flex justify-end">
           <button
             onClick={handleStartNewCampaign}
-            className="bg-sky-400 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 hover:bg-sky-500 transition-all shadow-md active:scale-95"
+            className={NEW_BUTTON_CLS}
           >
-            <Plus className="w-5 h-5" /> {NEW_BUTTON_LABEL[filterType] || 'Nueva Campaña'}
+            <Plus className="w-4 h-4" /> {NEW_BUTTON_LABEL[filterType] || 'Nueva Campaña'}
           </button>
         </div>
       ) : (
@@ -441,7 +443,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         </header>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 mt-10 space-y-12">
+      <main className="max-w-6xl mx-auto w-full p-6">
         {(() => {
           // Filtro por pilar (cuando viene de CampanasApp). Excluye las
           // campañas variant 'webinar' (mailings auto del webinar — se ven
@@ -466,24 +468,102 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
             email:    { border: "border-blue-300",    bg: "bg-blue-50",    text: "text-blue-700",    chip: "bg-blue-100 text-blue-700",       label: "Email Mkt." }
           };
 
+          const visibleCampaigns = campaigns.filter(matchesPilar);
+          const openCampaign = visibleCampaigns.find(c => expandedCampaigns.has(c.id));
+          const openCampaign_ = (id) => { setExpandedCampaigns(new Set([id])); if (typeof window !== 'undefined') window.scrollTo({ top: 0 }); };
+          const closeCampaign = () => setExpandedCampaigns(new Set());
+
+          // Card (misma estructura que la de webinars): clic → detalle
+          const typeLabel = { paid: 'Paid Media', database: 'Creación de BBDD', research: 'Investigación', email: 'Email Marketing' };
+          const renderCampaignCard = (c, isCompleted) => {
+            const prog = getProgress(c);
+            const fee = chargedAmount(c.budget, c.billing);
+            const platform = Number(c.platformInvestment || 0);
+            return (
+              <div
+                key={c.id}
+                ref={el => campaignRefs.current[c.id] = el}
+                className={`bg-white rounded-[24px] p-6 border shadow-sm hover:shadow-xl transition-all group relative overflow-hidden ${isCompleted ? 'border-emerald-200 hover:border-emerald-400' : 'border-slate-200 hover:border-blue-300'}`}
+              >
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(c); }}
+                  title="Eliminar"
+                  className="absolute top-4 right-4 z-10 w-8 h-8 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg flex items-center justify-center border border-red-100 hover:border-red-500 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+
+                <div onClick={() => openCampaign_(c.id)} className="cursor-pointer">
+                  <div className="flex items-center gap-2 mb-4 pr-10 flex-wrap">
+                    <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{c.country || 'GLO'}</span>
+                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{c.businessUnit || 'CU'}</span>
+                    {!filterType && <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{typeLabel[c.type] || 'Email Marketing'}</span>}
+                    {isCompleted && (
+                      <span className="bg-emerald-500 text-white px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Listo
+                      </span>
+                    )}
+                  </div>
+                  <h3 className={`text-lg font-black text-slate-900 uppercase leading-tight mb-2 transition-colors ${isCompleted ? 'group-hover:text-emerald-600' : 'group-hover:text-blue-600'}`}>{c.name}</h3>
+                  {c.type === 'paid' && (c.objective || c.paidMode) && (
+                    <p className="text-[11px] font-bold text-slate-400 uppercase mb-2">
+                      {[c.objective === 'posicionamiento' ? 'Posicionamiento' : c.objective === 'conversion' ? 'Conversión' : '', c.paidMode ? (c.paidMode === 'always_on' ? 'Always On' : 'One Shot') : ''].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {c.billing === 'plan' ? (
+                    <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
+                      <Layers className="w-3 h-3" /> Plan: {planNameOf(c, planById)}
+                    </p>
+                  ) : fee > 0 && (
+                    <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
+                      <DollarSign className="w-3 h-3" /> Fee: ${fee.toLocaleString()}{platform > 0 ? ` + plataforma $${platform.toLocaleString()}` : ''}
+                    </p>
+                  )}
+                  <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                    <QuotationBadge
+                      validated={!!c.quotationValidated}
+                      onToggle={(next) => toggleQuotation(c.id, next)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 px-2.5 py-1.5 rounded-lg w-fit mb-3">
+                    <User className="w-3 h-3 text-purple-600" />
+                    <span className="text-[9px] font-bold text-purple-600 uppercase tracking-widest">Responsable</span>
+                    <span className="text-[10px] font-black text-purple-800 uppercase">{c.serviceOwner || SERVICE_OWNERS.campaign}</span>
+                  </div>
+                  {isCompleted && c.completedAt && (
+                    <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg">
+                      <CheckCircle2 className="w-3 h-3" /> Completada: {new Date(c.completedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>{prog}%</div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Progreso</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                  </div>
+
+                  <div className="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className={`h-full ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${prog}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
           return (
             <>
-              {/* Sección 1 — Campañas Activas */}
-              <section className="space-y-3">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Campañas Activas</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">En proceso de ejecución</p>
-                  </div>
-                  <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-xs font-black border border-blue-100">
-                    {campaignsActivas.length} {campaignsActivas.length === 1 ? 'CAMPAÑA' : 'CAMPAÑAS'}
-                  </span>
-                </div>
-
-                {campaignsActivas.length > 0 ? campaignsActivas.map(campaign => (
+              {openCampaign ? (
+                /* Detalle de una campaña (como el de webinars) */
+                <section className="space-y-4">
+                  <button
+                    onClick={closeCampaign}
+                    className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Volver
+                  </button>
+                  {[openCampaign].map(campaign => (
                   <div key={campaign.id} ref={el => campaignRefs.current[campaign.id] = el} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
                     {/* Header compacto clickeable */}
                     {(() => {
@@ -2276,7 +2356,29 @@ td a { color: #2563eb; text-decoration: none; }
                     )}
                     </>)}
             </div>
-                )) : (
+                  ))}
+                </section>
+              ) : (<>
+              {/* Sección 1 — Campañas Activas */}
+              <section className="mb-12">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <Clock className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black uppercase tracking-tight text-slate-800">Campañas Activas</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">En proceso de ejecución</p>
+                  </div>
+                  <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-xs font-black border border-blue-100">
+                    {campaignsActivas.length} {campaignsActivas.length === 1 ? 'CAMPAÑA' : 'CAMPAÑAS'}
+                  </span>
+                </div>
+
+                {campaignsActivas.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {campaignsActivas.map(c => renderCampaignCard(c, false))}
+                  </div>
+                ) : (
                   <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center">
                     <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No hay campañas activas</p>
@@ -2285,13 +2387,13 @@ td a { color: #2563eb; text-decoration: none; }
               </section>
 
               {/* Sección 2 — Campañas Completadas / Listas para Facturar */}
-              <section className="space-y-6 mt-12">
-                <div className="flex items-center gap-4">
+              <section>
+                <div className="flex items-center gap-4 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Campañas Completadas</h2>
+                    <h2 className="text-xl font-black uppercase tracking-tight text-slate-800">Campañas Completadas</h2>
                     <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Listas para Facturar</p>
                   </div>
                   <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl text-right">
@@ -2304,112 +2406,8 @@ td a { color: #2563eb; text-decoration: none; }
                 </div>
 
                 {campaignsCompletadas.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {campaignsCompletadas.map(c => {
-                      const s = typeStyles[c.type] || typeStyles.email;
-                      const coveredByPlan = c.billing === 'plan';
-                      const fee = chargedAmount(c.budget, c.billing);
-                      const platform = Number(c.platformInvestment || 0);
-                      const total = fee + platform;
-                      return (
-                        <div key={c.id} className={`bg-white rounded-2xl p-5 border-2 ${s.border} hover:shadow-lg transition-all relative group`}>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setConfirmDelete(c); }}
-                            title="Eliminar campaña"
-                            className="absolute top-3 right-3 w-8 h-8 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg flex items-center justify-center border border-red-100 hover:border-red-500 transition-all"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-
-                          <div className="flex items-center gap-2 mb-3 pr-10">
-                            <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${s.chip}`}>
-                              {s.label}
-                            </span>
-                            <span className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
-                              <CheckCircle2 className="w-2.5 h-2.5" /> Listo
-                            </span>
-                          </div>
-
-                          <h4 className="font-black text-slate-800 text-sm uppercase mb-1 leading-tight">{c.name}</h4>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{c.businessUnit} · {c.country}</p>
-                          <div className="mb-2">
-                            <QuotationBadge
-                              validated={!!c.quotationValidated}
-                              onToggle={(next) => toggleQuotation(c.id, next)}
-                            />
-                          </div>
-                          {c.completedAt && (
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                              <CheckCircle2 className="w-3 h-3" /> Completada: {new Date(c.completedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                            </p>
-                          )}
-
-                          <div className={`${s.bg} rounded-xl p-3 ${c.type === 'paid' ? 'grid grid-cols-3' : 'grid grid-cols-1'} gap-2`}>
-                            <div className="text-center">
-                              <p className={`text-[8px] font-black uppercase tracking-widest ${s.text}`}>{coveredByPlan ? 'Cubierta por plan' : (c.type === 'paid' ? 'Fee' : 'Monto')}</p>
-                              <p className={`text-sm font-black ${s.text} truncate`}>{coveredByPlan ? planNameOf(c, planById) : `$${fee.toLocaleString()}`}</p>
-                            </div>
-                            {c.type === 'paid' && (
-                              <>
-                                <div className="text-center border-x border-slate-200">
-                                  <p className={`text-[8px] font-black uppercase tracking-widest ${s.text}`}>Plataforma</p>
-                                  <p className={`text-sm font-black ${s.text}`}>${platform.toLocaleString()}</p>
-                                </div>
-                                <div className="text-center">
-                                  <p className={`text-[8px] font-black uppercase tracking-widest ${s.text}`}>Total</p>
-                                  <p className={`text-sm font-black ${s.text}`}>${total.toLocaleString()}</p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Desglose editable — toggle "Ver/editar desglose".
-                              Los pasos son clickeables: si se destilda uno, la campaña
-                              baja de 100% y vuelve automáticamente a "Campañas Activas"
-                              (el useEffect limpia completedAt y el filtro la reubica). */}
-                          {(() => {
-                            const isOpen = expandedCampaigns.has(c.id);
-                            const stepDefs = CAMPAIGN_STEPS[c.type] || CAMPAIGN_STEPS.email;
-                            const completedSet = new Set(c.completedSteps || []);
-                            const doneCount = stepDefs.filter(s => completedSet.has(s.id)).length;
-                            return (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); toggleExpand(c.id); }}
-                                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg py-2 transition-all"
-                                >
-                                  <ChevronRight className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                                  {isOpen ? 'Ocultar desglose' : 'Ver / editar desglose'}
-                                </button>
-                                {isOpen && (
-                                  <div className="mt-3 space-y-1 bg-slate-50/60 border border-slate-100 rounded-xl p-3">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                      Pasos completados ({doneCount}/{stepDefs.length}) · click para editar
-                                    </p>
-                                    {stepDefs.map((s) => {
-                                      const done = completedSet.has(s.id);
-                                      return (
-                                        <button
-                                          key={s.id}
-                                          onClick={(e) => { e.stopPropagation(); toggleStep(c, s.id); }}
-                                          className="w-full flex items-center gap-2 py-1 text-left hover:bg-white/60 rounded-md px-1 transition-colors"
-                                          title={done ? 'Click para destildar (la campaña volverá a Activas)' : 'Click para marcar como hecho'}
-                                        >
-                                          {done
-                                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                            : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                                          <span className={`text-[10px] font-bold ${done ? 'text-slate-600' : 'text-slate-400'}`}>{s.label}</span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {campaignsCompletadas.map(c => renderCampaignCard(c, true))}
                   </div>
                 ) : (
                   <div className="bg-emerald-50/30 border-2 border-dashed border-emerald-200 rounded-3xl p-12 text-center">
@@ -2419,6 +2417,7 @@ td a { color: #2563eb; text-decoration: none; }
                   </div>
                 )}
               </section>
+              </>)}
             </>
           );
         })()}

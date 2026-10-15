@@ -264,10 +264,10 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
     return (
       <div className={embedded ? 'w-full' : 'min-h-screen bg-slate-50 flex flex-col w-full'}>
         {embedded ? (
-          <div className="max-w-7xl mx-auto w-full px-6 pt-6 flex justify-end">
+          <div className="max-w-6xl mx-auto w-full px-6 pt-6 flex justify-end">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-orange-600 text-white hover:bg-orange-700 px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-500/20"
             >
               <Plus className="w-4 h-4" /> Nuevo Evento
             </button>
