@@ -6,8 +6,19 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#1b1e42" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Marcomms Hub — Plataforma de gestión operativa para Marketing & Comunicaciones de Control Union LATAM" />
+    <meta name="description" content="Marcomms Hub — Marketing & Comunicaciones" />
     <title>Marcomms Hub</title>
+
+    <!-- Modo oscuro antes de que cargue React (sin destello claro). La clave
+         es la misma que STORAGE_KEY de src/hooks/useTheme.js -->
+    <script>
+      try {
+        if (localStorage.getItem('marcomms_hub_theme_v1') === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        }
+      } catch (e) { /* storage deshabilitado */ }
+    </script>
 
     <!-- Fonts: DM Sans + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

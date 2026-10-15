@@ -6,14 +6,15 @@
 // (BudgetInput, Portal Cliente, tarjetas) lo lee con useBillingPlans().
 //
 // Devuelve: plans (ordenados por nombre), planById (Map id → plan),
-//           loading, error, addPlan(nombre) → plan (crea o reutiliza)
+//           loading, error, addPlan(nombre) → plan (crea o reutiliza),
+//           rotatePublicToken(id) → plan (link externo nuevo, sección Planes)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { listBillingPlans, createBillingPlan, subscribeBillingPlans } from '@/services/billingPlansService';
+import { listBillingPlans, createBillingPlan, rotatePlanPublicToken, subscribeBillingPlans } from '@/services/billingPlansService';
 import { cleanPlanName, findPlanByName } from '@/utils/billing';
 
-const EMPTY = { plans: [], planById: new Map(), loading: false, error: null, addPlan: async () => null };
+const EMPTY = { plans: [], planById: new Map(), loading: false, error: null, addPlan: async () => null, rotatePublicToken: async () => null };
 const BillingPlansContext = createContext(EMPTY);
 
 export const useBillingPlansState = (currentUserName = '') => {
@@ -29,8 +30,16 @@ export const useBillingPlansState = (currentUserName = '') => {
 
   useEffect(() => { refetch(); }, [refetch]);
   // Realtime: si la tabla no está en la publicación (ver migration 0023),
-  // el canal no recibe nada y los planes nuevos de otros se ven al recargar.
+  // el canal no recibe nada y los cambios de otros se ven al recargar o al
+  // volver a la pestaña (ver abajo).
   useEffect(() => subscribeBillingPlans(() => refetch()), [refetch]);
+  // Sin realtime en billing_plans: al volver a la pestaña se vuelve a leer
+  // (así un plan nuevo o un link externo regenerado en otro navegador se ve)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') refetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refetch]);
 
   // Crea el plan (o devuelve el existente si ya hay uno con ese nombre).
   // Espera a que el plan esté en la base antes de devolverlo, así el pilar
@@ -57,9 +66,15 @@ export const useBillingPlansState = (currentUserName = '') => {
     }
   }, [plans, currentUserName]);
 
+  const rotatePublicToken = useCallback(async (id) => {
+    const plan = await rotatePlanPublicToken(id);
+    setPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
+    return plan;
+  }, []);
+
   const planById = useMemo(() => new Map(plans.map((p) => [String(p.id), p])), [plans]);
 
-  return useMemo(() => ({ plans, planById, loading, error, addPlan }), [plans, planById, loading, error, addPlan]);
+  return useMemo(() => ({ plans, planById, loading, error, addPlan, rotatePublicToken }), [plans, planById, loading, error, addPlan, rotatePublicToken]);
 };
 
 export function BillingPlansProvider({ value, children }) {

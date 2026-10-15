@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   monthLabel, monthOptions, monthFilterOptions, taskStats, isTaskOverdue, filterTasks, groupTasksByMonth, splitLinks,
-  pendingFromPreviousMonths,
+  pendingFromPreviousMonths, monthHistory,
   planBrand, planPillarItems,
 } from './planTasks';
 
@@ -55,6 +55,20 @@ describe('tareas', () => {
     // El mes elegido sigue en la lista aunque se haya quedado sin tareas
     expect(monthFilterOptions(list, TODAY, '2026-09').map((o) => o.value)).toEqual(['all', '2026-08', '2026-09', '2026-10', 'none']);
     expect(monthFilterOptions([{ id: 1, monthKey: '2026-10' }], TODAY, 'none').map((o) => o.value)).toEqual(['all', '2026-10', 'none']);
+  });
+
+  it('histórico del link: mes actual + meses con tareas, y a dónde ir si el actual está vacío', () => {
+    const list = [{ monthKey: '2026-08' }, { monthKey: '2026-08' }, { monthKey: '2026-10' }, { monthKey: null }];
+    const h = monthHistory(list, TODAY);
+    expect(h.options.map((o) => [o.value, o.count, o.current])).toEqual([['2026-08', 2, false], ['2026-10', 1, true], ['none', 1, false]]);
+    expect(h.fallback).toBeNull(); // octubre tiene tareas
+    // En noviembre (sin tareas): aparece noviembre y se propone ir a octubre; septiembre (vacío) no aparece
+    const nov = monthHistory(list, '2026-11-02');
+    expect(nov.options.map((o) => o.value)).toEqual(['2026-08', '2026-10', '2026-11', 'none']);
+    expect(nov.fallback).toBe('2026-10');
+    // Solo hay tareas a futuro: se propone la primera
+    expect(monthHistory([{ monthKey: '2026-12' }], TODAY).fallback).toBe('2026-12');
+    expect(monthHistory([], TODAY)).toEqual({ options: [{ value: '2026-10', label: 'Octubre 2026', count: 0, current: true }], fallback: null });
   });
 
   it('aviso de tareas sin completar de meses anteriores', () => {

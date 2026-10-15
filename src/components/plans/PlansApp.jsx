@@ -10,6 +10,8 @@
 //
 // Pantalla interna: nuevo plan y edición de tareas. Todo se carga y edita
 // desde acá (la carga inicial del Excel se hizo una sola vez, oct 2026).
+// La vista externa es por plan: el link que se le pasa al cliente
+// (/?plan=<token>), que se ve desde el detalle de cada plan.
 //
 // Las tarjetas se agrupan por marca: Control Union y Peterson Solutions
 // nunca se mezclan en un mismo bloque.
@@ -32,7 +34,7 @@ import PlanDetail from './PlanDetail';
 const BRAND_ORDER = ['Control Union', 'Peterson Solutions', ''];
 
 export default function PlansApp({ planTasks, webinars, campaigns, events, teamNames = [], currentUser, onOpenProject, onBack }) {
-  const { plans, loading: plansLoading, addPlan } = useBillingPlans();
+  const { plans, loading: plansLoading, addPlan, rotatePublicToken } = useBillingPlans();
   const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask } = planTasks;
   const [openId, setOpenId] = useState(null);
   const [newPlan, setNewPlan] = useState(null); // { name, saving, error }
@@ -107,6 +109,7 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
             updateTask={updateTask}
             removeTask={removeTask}
             onOpenPillar={(it) => onOpenProject && onOpenProject('campaigns', it.id)}
+            onRotateToken={rotatePublicToken}
             onBack={() => setOpenId(null)}
           />
         ) : (

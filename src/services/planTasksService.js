@@ -72,6 +72,30 @@ export const deleteTask = async (id) => {
   return true;
 };
 
+// ── Link externo (migrations 0030 / 0032) ──
+// Lo único que lee la página externa: nombre del plan y tareas sin
+// Responsable ni Deadline. Devuelve null si el token no existe.
+export const getPublicPlan = async (token) => {
+  const { data, error } = await supabase.rpc('get_public_plan', { p_token: token });
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    name: data.name || '',
+    tasks: (data.tasks || []).map((t) => ({
+      id: t.id,
+      monthKey: t.monthKey || null,
+      title: t.title || '',
+      status: t.status || DEFAULT_TASK_STATUS,
+      objective: t.objective || '',
+      result: t.result || '',
+      detail: t.detail || '',
+      link: t.link || '',
+      position: t.position ?? 0,
+      createdAt: t.createdAt || null,
+    })),
+  };
+};
+
 // ── Realtime ──
 export const subscribePlanTasks = (onChange) => {
   const channel = supabase

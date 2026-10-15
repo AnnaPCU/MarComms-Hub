@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // planTasks — Lógica de la sección Planes (sin React ni Supabase)
 // ════════════════════════════════════════════════════════════════════
-//   Meses:     monthLabel, monthOptions, monthFilterOptions
+//   Meses:     monthLabel, monthOptions, monthFilterOptions, monthHistory
 //   Tareas:    taskStats, isTaskOpen, isTaskOverdue, filterTasks,
 //              groupTasksByMonth, pendingFromPreviousMonths, splitLinks
 //   Planes:    planBrand, planPillarItems (pilares que cubre cada plan —
@@ -67,6 +67,30 @@ export const monthFilterOptions = (tasks = [], todayIso, selected = '') => {
     ...[...keys].sort().map((k) => ({ value: k, label: monthLabel(k) })),
     ...(withoutMonth ? [{ value: 'none', label: 'Sin mes' }] : []),
   ];
+};
+
+// Histórico del link externo: el mes actual + los meses que tienen tareas
+// (los vacíos no aparecen), en orden, y "Sin mes" al final si hay. Cada
+// opción trae cuántas tareas tiene. `fallback`: si el mes actual no tiene
+// tareas, el último mes que sí (o el primero que viene); null si no hay.
+//   { options: [{ value, label, count, current }], fallback }
+export const monthHistory = (tasks = [], todayIso) => {
+  const current = todayIso.slice(0, 7);
+  const counts = new Map([[current, 0]]);
+  let withoutMonth = 0;
+  tasks.forEach((t) => {
+    if (t.monthKey && MONTH_KEY_RE.test(t.monthKey)) counts.set(t.monthKey, (counts.get(t.monthKey) || 0) + 1);
+    else withoutMonth += 1;
+  });
+  const keys = [...counts.keys()].sort();
+  const options = keys.map((k) => ({ value: k, label: monthLabel(k), count: counts.get(k), current: k === current }));
+  if (withoutMonth) options.push({ value: 'none', label: 'Sin mes', count: withoutMonth, current: false });
+  let fallback = null;
+  if (!counts.get(current)) {
+    const withTasks = keys.filter((k) => counts.get(k) > 0);
+    fallback = [...withTasks].reverse().find((k) => k < current) || withTasks.find((k) => k > current) || null;
+  }
+  return { options, fallback };
 };
 
 // filtros: month 'all' | 'YYYY-MM' | 'none'; status 'open' | 'all' | id de
