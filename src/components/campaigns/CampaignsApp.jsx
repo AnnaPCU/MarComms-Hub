@@ -52,6 +52,14 @@ const campaignId = () => {
   });
 };
 
+// Botón de alta según la pestaña de Pilares
+const NEW_BUTTON_LABEL = {
+  email: 'Nuevo email marketing',
+  paid: 'Nuevo paid media',
+  database: 'Nueva creación de BBDD',
+  research: 'Nueva investigación',
+};
+
 export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted, currentUser, focusProjectId, onFocusHandled, embedded = false, filterType = null }) {
   const confirm = useConfirm();
   const { planById } = useBillingPlans();
@@ -165,8 +173,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     }));
   };
 
+  // Dentro de una pestaña de Pilares (filterType) el alta ya arranca con ese tipo
   const handleStartNewCampaign = () => {
-    setNewCampData({ type: "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
+    setNewCampData({ type: filterType || "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
     setShowBudgetModal(true);
   };
 
@@ -400,13 +409,14 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   return (
     <div className={embedded ? 'w-full font-sans text-slate-900 relative' : 'min-h-screen bg-slate-50 pb-20 font-sans text-slate-900 relative'}>
       {embedded ? (
-        // Embebido en Campañas: solo el botón "Nueva Campaña" (el header lo da CampanasApp)
+        // Embebido en Pilares: solo el botón de alta (el header lo da CampanasApp),
+        // con el nombre del pilar de la pestaña ("Nueva creación de BBDD"…)
         <div className="max-w-7xl mx-auto px-6 pt-6 flex justify-end">
           <button
             onClick={handleStartNewCampaign}
             className="bg-sky-400 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 hover:bg-sky-500 transition-all shadow-md active:scale-95"
           >
-            <Plus className="w-5 h-5" /> Nueva Campaña
+            <Plus className="w-5 h-5" /> {NEW_BUTTON_LABEL[filterType] || 'Nueva Campaña'}
           </button>
         </div>
       ) : (
@@ -2504,12 +2514,14 @@ td a { color: #2563eb; text-decoration: none; }
               {/* PASO 2: Campos comunes + condicionales */}
               {newCampData.type && (
                 <>
-                  <button
-                    onClick={() => setNewCampData({...newCampData, type: ""})}
-                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    <ArrowLeft className="w-3 h-3" /> Cambiar tipo
-                  </button>
+                  {!filterType && (
+                    <button
+                      onClick={() => setNewCampData({...newCampData, type: ""})}
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-700 transition-colors"
+                    >
+                      <ArrowLeft className="w-3 h-3" /> Cambiar tipo
+                    </button>
+                  )}
 
                   <div className="space-y-4">
                     <div className="space-y-1.5">

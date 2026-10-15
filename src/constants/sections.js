@@ -15,7 +15,10 @@
 //   - Las notificaciones que navegan a esa sección no se muestran
 // ════════════════════════════════════════════════════════════════════
 
-export const HIDDEN_SECTIONS = ['my_week', 'facturacion', 'success_cases'];
+// "programs" (vista Programas) se oculta en oct 2026: confundía más de lo que
+// ayudaba. Se mantiene el botón «Nuevo programa» del header para crear
+// varios pilares juntos; cada uno aparece en su pestaña de Pilares.
+export const HIDDEN_SECTIONS = ['my_week', 'facturacion', 'success_cases', 'programs'];
 
 export const isSectionHidden = (id) => HIDDEN_SECTIONS.includes(id);
 

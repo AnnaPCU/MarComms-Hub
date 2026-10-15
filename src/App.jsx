@@ -282,8 +282,15 @@ export default function App() {
     if (built.events.length) setGlobalEvents(prev => [...built.events, ...prev]);
     if (built.campaigns.length) setGlobalCampaigns(prev => [...built.campaigns, ...prev]);
     setShowProgramWizard(false);
-    setFocusProgramId(program.id);
-    goToSection('programs');
+    // La vista Programas está oculta: se va a Pilares, al primer pilar creado
+    const first = built.webinars[0] || built.events[0] || built.campaigns[0];
+    if (isSectionHidden('programs')) {
+      goToSection('campaigns');
+      if (first) navigateToProject('campaigns', first.id);
+    } else {
+      setFocusProgramId(program.id);
+      goToSection('programs');
+    }
   };
 
   // ─── Tareas asignadas entre usuarios (Supabase + realtime) ───
@@ -486,7 +493,7 @@ export default function App() {
             <ClientReportApp
               scope={portalScope}
               programs={programs.programs}
-              onOpenProgram={(id) => { setFocusProgramId(id); goToSection('programs'); }}
+              onOpenProgram={isSectionHidden('programs') ? undefined : (id) => { setFocusProgramId(id); goToSection('programs'); }}
               webinars={globalWebinars}
               campaigns={globalCampaigns}
               events={globalEvents}

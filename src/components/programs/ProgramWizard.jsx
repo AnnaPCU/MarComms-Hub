@@ -2,7 +2,8 @@
 // ProgramWizard — Crear un programa y generar sus pilares
 // ════════════════════════════════════════════════════════════════════
 // Dos pasos:
-//   1. Datos del programa: nombre, cliente, país, unidad, objetivo, fechas
+//   1. Datos del programa: nombre, país, unidad, objetivo, fechas (sin
+//      "cliente": el cliente se identifica por país + unidad de negocio)
 //   2. Pilares a generar: tildar cada uno; nombre opcional, fecha (webinar
 //      y evento la necesitan) y presupuesto opcional (USD o cubierto por un plan).
 // Al guardar llama onCreate(form) — App.jsx crea el programa y los pilares.
@@ -80,11 +81,7 @@ export default function ProgramWizard({ onCreate, onClose }) {
                       {form.country && unitsForCountry(form.country).map((u) => <option key={u} value={u}>{u}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <label className={labelCls}>Cliente</label>
-                    <input value={form.client} onChange={(e) => set('client', e.target.value)} placeholder="Ej: Multi-cliente" className={inputCls} />
-                  </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 col-span-2">
                     <label className={labelCls}>Objetivo</label>
                     <input value={form.objective} onChange={(e) => set('objective', e.target.value)} placeholder="Ej: Generar leads ISO 27001" className={inputCls} />
                   </div>
