@@ -76,6 +76,7 @@ export const ACCOUNT_GROUPS = [
   'CU Portugal',
   'PS Iberia & America',
   'PS Global',
+  'Bel',                 // ni Control Union ni Peterson Solutions (oct 2026)
 ];
 
 // ── Cuentas por defecto (seed) ──
@@ -85,6 +86,7 @@ export const ACCOUNT_GROUPS = [
 export const DEFAULT_SOCIAL_ACCOUNTS = [
   { key: 'cu-latam-chile',          group: 'CU Latinoamérica',    name: 'Chile',            plan: 'semi_active' },
   { key: 'cu-latam-peru',           group: 'CU Latinoamérica',    name: 'Peru',             plan: 'active' },
+  { key: 'cu-latam-tlr-peru',       group: 'CU Latinoamérica',    name: 'TLR Peru',         plan: 'active', sortOrder: 25 },
   { key: 'cu-latam-mexico',         group: 'CU Latinoamérica',    name: 'Mexico',           plan: 'semi_active' },
   { key: 'cu-latam-ecuador',        group: 'CU Latinoamérica',    name: 'Ecuador',          plan: 'semi_active' },
   { key: 'cu-latam-certificaciones',group: 'CU Latinoamérica',    name: 'Certificaciones',  plan: 'active' },
@@ -101,4 +103,6 @@ export const DEFAULT_SOCIAL_ACCOUNTS = [
   { key: 'ps-iberam-brasil',        group: 'PS Iberia & America', name: 'Brasil',           plan: 'none' },
   { key: 'ps-global-ptech',         group: 'PS Global',           name: 'PTech',            plan: 'none' },
   { key: 'ps-global-academy',       group: 'PS Global',           name: 'Academy',          plan: 'none' },
-].map((a, i) => ({ ...a, sortOrder: (i + 1) * 10, active: true }));
+  { key: 'bel',                     group: 'Bel',                 name: 'Bel',              plan: 'none', sortOrder: 190 },
+// Las cuentas agregadas después (migration 0033) traen su sortOrder, igual que en la base
+].map((a, _i, all) => ({ ...a, sortOrder: a.sortOrder ?? (all.filter((x) => x.sortOrder === undefined).indexOf(a) + 1) * 10, active: true }));

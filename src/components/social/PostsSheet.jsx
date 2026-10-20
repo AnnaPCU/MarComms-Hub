@@ -9,9 +9,9 @@
 //   - Clic en el punto del chip → rota el estado (proceso → listo →
 //     aprobado → programado).
 //   - Clic en el chip → abre el editor (título, temática, estado, semana…).
-//   - Botón + de la celda → carga directa en la celda (título + temática,
+//   - Botón + de la celda → carga directa en la celda (título + estado,
 //     Enter guarda, Esc cancela), como en una planilla. El editor completo
-//     queda para estado, fecha de publicación, link y notas.
+//     queda para temática, fecha de publicación, link y notas.
 //   - Última columna: posteos del mes vs. esperados según el plan, con la
 //     identidad de colores de COUNTER_TONES (verde cumplió, ámbar falta,
 //     rojo se pasó).
@@ -30,7 +30,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Settings2, Check, X } from 'lucide-react';
 
 import { POST_STATUSES, POST_STATUS_BY_ID, ACCOUNT_PLAN_BY_ID, nextPostStatus, ACCOUNT_GROUPS, COUNTER_TONES, DEFAULT_POST_STATUS } from '@/constants/socialPosts';
-import { WORLD_DAY_THEME_BY_ID, WORLD_DAY_THEMES } from '@/constants/worldDays';
+import { WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
 import { weeksOfMonth, expectedPostsBy, accountMonthSummary, counterTone } from '@/utils/socialPosts';
 import { todayIso as getTodayIso } from '@/utils/date';
 import PostEditor from './PostEditor';
@@ -48,7 +48,7 @@ export default function PostsSheet({
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterGroup, setFilterGroup] = useState('all');
   const [editor, setEditor] = useState(null); // { post } | { account, weekStart }
-  const [quick, setQuick] = useState(null);   // carga directa en celda: { accountId, weekStart, title, theme, saving }
+  const [quick, setQuick] = useState(null);   // carga directa en celda: { accountId, weekStart, title, status, saving }
   const [showAccounts, setShowAccounts] = useState(false);
 
   const isCurrentMonth = cursor.year === Number(today.slice(0, 4)) && cursor.month === Number(today.slice(5, 7));
@@ -90,7 +90,7 @@ export default function PostsSheet({
     try {
       await createPost({
         accountId: quick.accountId, weekStart: quick.weekStart,
-        title: quick.title.trim(), theme: quick.theme, status: DEFAULT_POST_STATUS,
+        title: quick.title.trim(), status: quick.status || DEFAULT_POST_STATUS,
         createdBy: currentUser?.name || '',
       });
       setQuick(null);
@@ -243,13 +243,13 @@ export default function PostsSheet({
                                   />
                                   <div className="flex items-center gap-1">
                                     <select
-                                      value={quick.theme}
-                                      onChange={(e) => setQuick({ ...quick, theme: e.target.value })}
+                                      value={quick.status}
+                                      onChange={(e) => setQuick({ ...quick, status: e.target.value })}
                                       onKeyDown={(e) => { if (e.key === 'Enter') saveQuick(); if (e.key === 'Escape') setQuick(null); }}
-                                      className="flex-1 min-w-0 text-[9px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded px-1 py-0.5 outline-none"
+                                      title="Estado del posteo"
+                                      className={`flex-1 min-w-0 text-[9px] font-black uppercase tracking-wider border rounded px-1 py-0.5 outline-none ${(POST_STATUS_BY_ID[quick.status] || POST_STATUSES[0]).color}`}
                                     >
-                                      <option value="">Temática…</option>
-                                      {WORLD_DAY_THEMES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                      {POST_STATUSES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
                                     </select>
                                     <button onClick={saveQuick} disabled={!quick.title.trim() || quick.saving} className="w-5 h-5 rounded bg-pink-600 text-white flex items-center justify-center disabled:opacity-40" title="Guardar (Enter)"><Check className="w-3 h-3" /></button>
                                     <button onClick={() => setQuick(null)} className="w-5 h-5 rounded hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar (Esc)"><X className="w-3 h-3" /></button>
@@ -257,7 +257,7 @@ export default function PostsSheet({
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => setQuick({ accountId: account.id, weekStart: w.start, title: '', theme: '', saving: false })}
+                                  onClick={() => setQuick({ accountId: account.id, weekStart: w.start, title: '', status: DEFAULT_POST_STATUS, saving: false })}
                                   disabled={!!account.isFallback}
                                   className="w-full flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-wider text-slate-300 hover:text-pink-600 hover:bg-pink-50 rounded-md py-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
                                   title="Agregar posteo"
