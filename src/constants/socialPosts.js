@@ -98,10 +98,7 @@ export const DEFAULT_SOCIAL_ACCOUNTS = [
   { key: 'cu-es-espana',            group: 'CU España',           name: 'España',           plan: 'active' },
   { key: 'cu-pt-portugal',          group: 'CU Portugal',         name: 'Portugal',         plan: 'active' },
   { key: 'ps-iberam-argentina',     group: 'PS Iberia & America', name: 'Argentina',        plan: 'none' },
-  { key: 'ps-iberam-espana',        group: 'PS Iberia & America', name: 'España',           plan: 'none' },
   { key: 'ps-iberam-usa',           group: 'PS Iberia & America', name: 'Estados Unidos',   plan: 'none' },
-  { key: 'ps-iberam-brasil',        group: 'PS Iberia & America', name: 'Brasil',           plan: 'none' },
-  { key: 'ps-global-ptech',         group: 'PS Global',           name: 'PTech',            plan: 'none' },
   { key: 'ps-global-academy',       group: 'PS Global',           name: 'Academy',          plan: 'none' },
   { key: 'bel',                     group: 'Bel',                 name: 'Bel',              plan: 'none', sortOrder: 190 },
 // Las cuentas agregadas después (migration 0033) traen su sortOrder, igual que en la base
