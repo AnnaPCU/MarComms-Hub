@@ -40,7 +40,7 @@ import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
 import BudgetInput from '@/components/shared/BudgetInput';
 import ClientPicker from '@/components/shared/ClientPicker';
-import GoogleAdsResults from './GoogleAdsResults';
+import GoogleAdsCampaigns, { GoogleAdsChips } from './GoogleAdsCampaigns';
 import { cleanExtraCountries, countriesLabel, clientLabel, normalizeUnit } from '@/utils/pillarClient';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
@@ -507,9 +507,10 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                     </p>
                   ) : fee > 0 && (
                     <p className={`text-[11px] font-black uppercase mb-2 flex items-center gap-1.5 ${isCompleted ? 'text-emerald-600' : 'text-blue-600'}`}>
-                      <DollarSign className="w-3 h-3" /> Fee: ${fee.toLocaleString()}{platform > 0 ? ` + plataforma $${platform.toLocaleString()}` : ''}
+                      <DollarSign className="w-3 h-3" /> Fee: ${fee.toLocaleString()}{platform > 0 ? ` + pauta $${platform.toLocaleString()}` : ''}
                     </p>
                   )}
+                  {c.type === 'paid' && c.data?.google_ads && <GoogleAdsChips ads={c.data.google_ads} name={c.name} />}
                   <div className="mb-3" onClick={(e) => e.stopPropagation()}>
                     <QuotationBadge
                       validated={!!c.quotationValidated}
@@ -849,7 +850,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                           </div>
 
                           {campaign.data?.google_ads ? (
-                            <GoogleAdsResults ads={campaign.data.google_ads} />
+                            <GoogleAdsCampaigns ads={campaign.data.google_ads} name={campaign.name} />
                           ) : (
                             <div className="p-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
                               <h4 className="font-black text-xs uppercase mb-2 flex items-center gap-2 text-slate-600"><TrendingUp className="w-4 h-4 text-amber-500" /> Resultados</h4>

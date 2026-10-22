@@ -19,7 +19,8 @@
 // la lista de un render anterior no trae lo que llegó por realtime después,
 // y el diff lo tomaría como borrado (oct 2026 se perdieron así 7 campañas
 // durante una carga masiva). Como red de seguridad, un setData con array no
-// borra ítems que llegaron por realtime hace menos de RECENT_ARRIVAL_MS.
+// borra ítems que llegaron por realtime hace menos de RECENT_ARRIVAL_MS, ni
+// vuelve a crear ítems que otro cliente borró en ese lapso.
 //
 // Parametros:
 //   service: {
@@ -50,6 +51,17 @@ export const recentArrivalsMissing = (prev, next, arrivedAt, now = Date.now()) =
   });
 };
 
+// Ítems de `next` que no están en `prev` porque otro cliente los borró hace
+// poco (realtime DELETE): una lista vieja los traería de vuelta. Se descartan.
+export const recentlyDeletedReappearing = (prev, next, deletedAt, now = Date.now()) => {
+  const inPrev = new Set(prev.map((p) => String(p.id)));
+  return next.filter((n) => {
+    const id = String(n.id);
+    const t = deletedAt.get(id);
+    return !inPrev.has(id) && t !== undefined && now - t < RECENT_ARRIVAL_MS;
+  });
+};
+
 export const useCollection = (service, options = {}) => {
   const { realtime = true } = options;
 
@@ -62,6 +74,8 @@ export const useCollection = (service, options = {}) => {
   const pendingWritesRef = useRef(new Set());
   // id → momento en que llegó por realtime (INSERT de otro cliente)
   const arrivedAtRef = useRef(new Map());
+  // id → momento en que otro cliente lo borró (realtime DELETE)
+  const deletedAtRef = useRef(new Map());
 
   // ── Fetch inicial ──
   const refetch = useCallback(async () => {
@@ -111,6 +125,7 @@ export const useCollection = (service, options = {}) => {
           prev.map((p) => (String(p.id) === String(item.id) ? item : p)),
         );
       } else if (eventType === 'DELETE') {
+        deletedAtRef.current.set(String(oldRow.id), Date.now());
         setDataLocal((prev) =>
           prev.filter((p) => String(p.id) !== String(oldRow.id)),
         );
@@ -130,6 +145,12 @@ export const useCollection = (service, options = {}) => {
         if (keep.length) {
           console.warn('[useCollection] setData con una lista vieja: se conservan', keep.length, 'ítems recién llegados por realtime');
           next = [...keep, ...next];
+        }
+        const zombies = recentlyDeletedReappearing(prev, next, deletedAtRef.current);
+        if (zombies.length) {
+          console.warn('[useCollection] setData con una lista vieja: no se vuelven a crear', zombies.length, 'ítems recién borrados por otro cliente');
+          const drop = new Set(zombies.map((z) => String(z.id)));
+          next = next.filter((n) => !drop.has(String(n.id)));
         }
       }
       // Diff
