@@ -15,7 +15,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Layers, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import BudgetInput from '@/components/shared/BudgetInput';
-import { MARKETS, unitsForCountry } from '@/constants/markets';
+import ClientPicker from '@/components/shared/ClientPicker';
 import { PROGRAM_PILLARS as ALL_PROGRAM_PILLARS } from '@/constants/programs';
 import { isPillarHidden } from '@/constants/sections';
 
@@ -30,7 +30,7 @@ export default function ProgramWizard({ onCreate, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    name: '', client: '', country: '', businessUnit: '', objective: '', startDate: '', endDate: '', notes: '',
+    name: '', country: '', businessUnit: '', extraCountries: [], objective: '', startDate: '', endDate: '', notes: '',
     pillars: Object.fromEntries(PROGRAM_PILLARS.map((p) => [p.id, { enabled: false, name: '', date: '', budget: '', billing: 'usd', planId: null }])),
   });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -67,19 +67,14 @@ export default function ProgramWizard({ onCreate, onClose }) {
                   <input autoFocus value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Ej: ISO 27001 España 2026" className={inputCls} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className={labelCls}>País *</label>
-                    <select value={form.country} onChange={(e) => { set('country', e.target.value); set('businessUnit', ''); }} className={inputCls}>
-                      <option value="">Seleccionar...</option>
-                      {Object.keys(MARKETS).sort().map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className={labelCls}>Unidad de negocio *</label>
-                    <select value={form.businessUnit} onChange={(e) => set('businessUnit', e.target.value)} disabled={!form.country} className={`${inputCls} disabled:opacity-50`}>
-                      <option value="">Seleccionar...</option>
-                      {form.country && unitsForCountry(form.country).map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
+                  <div className="col-span-2">
+                    <ClientPicker
+                      accent="violet"
+                      country={form.country}
+                      businessUnit={form.businessUnit}
+                      extraCountries={form.extraCountries}
+                      onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+                    />
                   </div>
                   <div className="space-y-1 col-span-2">
                     <label className={labelCls}>Objetivo</label>
@@ -120,7 +115,7 @@ export default function ProgramWizard({ onCreate, onClose }) {
                             {p.needsDate && <input type="date" value={cfg.date} onChange={(e) => setPillar(p.id, { date: e.target.value })} className={`${inputCls} py-2 text-xs`} title="Fecha (obligatoria)" />}
                           </div>
                           <BudgetInput
-                            label="Presupuesto (opcional)"
+                            label="Fee Marcomms (opcional)"
                             accent="violet"
                             size="sm"
                             amount={cfg.budget}

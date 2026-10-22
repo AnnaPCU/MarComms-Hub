@@ -46,6 +46,7 @@ import { useTheme } from '@/hooks/useTheme';
 // Utils
 import { calcProgress } from '@/utils/progress';
 import { makeCampaignFromWebinar } from '@/utils/webinar';
+import { clientLabel, cleanExtraCountries, countriesLabel } from '@/utils/pillarClient';
 import { buildNotifications } from '@/utils/notifications';
 import { isSectionHidden, SHOW_SOCIAL_PEDIDOS } from '@/constants/sections';
 import { useNotificationAlerts } from '@/hooks/useNotificationAlerts';
@@ -270,7 +271,8 @@ export default function App() {
   // proyecto propio (webinar con su campaña de mailings, evento, campañas).
   const createProgramWithPillars = async (form) => {
     const program = await programs.createProgram({
-      name: form.name.trim(), client: form.client, country: form.country, businessUnit: form.businessUnit,
+      name: form.name.trim(), client: clientLabel(form.country, form.businessUnit), country: form.country, businessUnit: form.businessUnit,
+      extraCountries: cleanExtraCountries(form.country, form.extraCountries),
       objective: form.objective, startDate: form.startDate, endDate: form.endDate, notes: form.notes,
       createdBy: currentUser?.name || '',
     });
@@ -377,6 +379,11 @@ export default function App() {
       }));
       return prevCampaigns;
     });
+  };
+
+  // País / unidad / otros países del webinar → también en su campaña linkeada
+  const onWebinarPlaceChanged = (webinarId, place) => {
+    setGlobalCampaigns(prev => prev.map(c => (c.linkedWebinarId === webinarId ? { ...c, ...place } : c)));
   };
 
   // Cuando se borra un webinar, también borramos la campaña linkeada
@@ -541,6 +548,7 @@ export default function App() {
              setWebinars={setGlobalWebinars}
              onWebinarCreated={onWebinarCreated}
              onWebinarMailToggled={onWebinarMailToggled}
+             onWebinarPlaceChanged={onWebinarPlaceChanged}
              onWebinarDeleted={onWebinarDeleted}
              campaigns={globalCampaigns}
              setCampaigns={setGlobalCampaigns}
@@ -780,12 +788,12 @@ export default function App() {
     const matches = (...fields) => fields.some(f => (f || '').toString().toLowerCase().includes(q));
 
     (globalWebinars || []).forEach(w => {
-      if (matches(w.name, w.client, w.pais, w.unidadNegocio)) {
+      if (matches(w.name, w.pais, w.unidadNegocio, ...(w.extraCountries || []))) {
         results.push({
           id: `w-${w.id}`,
           type: 'Webinar', icon: Video, color: 'bg-blue-50 text-blue-700 border-blue-200',
           title: w.name,
-          subtitle: `${w.client || '—'} · ${w.pais || '—'} · ${w.unidadNegocio || '—'}`,
+          subtitle: `${clientLabel(w.pais, w.unidadNegocio) || '—'} · ${countriesLabel(w.pais, w.extraCountries) || '—'}`,
           extra: w.mainDate ? new Date(w.mainDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
           navTo: 'campaigns'
         });
@@ -793,7 +801,7 @@ export default function App() {
     });
 
     (globalCampaigns || []).forEach(c => {
-      if (matches(c.name, c.country, c.businessUnit, c.data?.requester)) {
+      if (matches(c.name, c.country, c.businessUnit, c.data?.requester, ...(c.extraCountries || []))) {
         const typeLabel = c.variant === 'webinar' ? 'Mailings Webinar' :
           c.type === 'email' ? 'Email Marketing' :
           c.type === 'paid' ? 'Paid Media' :
@@ -802,7 +810,7 @@ export default function App() {
           id: `c-${c.id}`,
           type: 'Campaña', icon: Mail, color: 'bg-purple-50 text-purple-700 border-purple-200',
           title: c.name,
-          subtitle: `${typeLabel} · ${c.country || '—'} · ${c.businessUnit || '—'}`,
+          subtitle: `${typeLabel} · ${clientLabel(c.country, c.businessUnit) || '—'} · ${countriesLabel(c.country, c.extraCountries) || '—'}`,
           extra: c.billing === 'plan' ? 'Plan' : (c.budget ? `$${Number(c.budget).toLocaleString()}` : ''),
           navTo: 'campaigns'
         });
@@ -810,12 +818,12 @@ export default function App() {
     });
 
     (globalEvents || []).forEach(ev => {
-      if (matches(ev.name, ev.client, ev.country, ev.businessUnit)) {
+      if (matches(ev.name, ev.country, ev.businessUnit, ...(ev.extraCountries || []))) {
         results.push({
           id: `e-${ev.id}`,
           type: 'Evento', icon: Calendar, color: 'bg-orange-50 text-orange-700 border-orange-200',
           title: ev.name,
-          subtitle: `${ev.client || '—'} · ${ev.country || '—'} · ${ev.businessUnit || '—'}`,
+          subtitle: `${clientLabel(ev.country, ev.businessUnit) || '—'} · ${countriesLabel(ev.country, ev.extraCountries) || '—'}`,
           extra: ev.date ? new Date(ev.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
           navTo: 'campaigns'
         });

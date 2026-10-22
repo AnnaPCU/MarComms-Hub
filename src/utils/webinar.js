@@ -97,6 +97,7 @@ export const makeCampaignFromWebinar = (webinar) => {
     linkedWebinarId: webinar.id,
     country: webinar.pais || '',
     businessUnit: webinar.unidadNegocio || '',
+    extraCountries: webinar.extraCountries || [],
     budget: 0,
     numEmails: 5, // 3 pre + 2 post
     completedSteps: initialCompleted,

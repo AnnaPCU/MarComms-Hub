@@ -23,7 +23,6 @@ import {
   TrendingUp, Upload, User, Users, Video, X, Zap,
 } from 'lucide-react';
 
-import { MARKETS, unitsForCountry } from '@/constants/markets';
 import { SERVICE_OWNERS } from '@/constants/team';
 import { STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { CAMPAIGN_STEPS, getCampaignChecklist } from '@/constants/campaigns';
@@ -39,6 +38,8 @@ import ModalPortal from '@/components/shared/ModalPortal';
 import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
 import BudgetInput from '@/components/shared/BudgetInput';
+import ClientPicker from '@/components/shared/ClientPicker';
+import { cleanExtraCountries, countriesLabel, clientLabel, normalizeUnit } from '@/utils/pillarClient';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
 
@@ -118,7 +119,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [newCampData, setNewCampData] = useState({ type: "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
+  const [newCampData, setNewCampData] = useState({ type: "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "", extraCountries: [] });
   const [uploadedFiles, setUploadedFiles] = useState({});
   const [newComment, setNewComment] = useState({});
   const [utmCampaignName, setUtmCampaignName] = useState({});
@@ -177,7 +178,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
   // Dentro de una pestaña de Pilares (filterType) el alta ya arranca con ese tipo
   const handleStartNewCampaign = () => {
-    setNewCampData({ type: filterType || "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "" });
+    setNewCampData({ type: filterType || "", budget: "", billing: "usd", planId: null, unit: "", country: "", name: "", detail: "", objective: "", platforms: [], platformInvestment: "", duration: "", extraCountries: [] });
     setShowBudgetModal(true);
   };
 
@@ -204,6 +205,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
+        extraCountries: cleanExtraCountries(newCampData.country, newCampData.extraCountries),
         objective: newCampData.objective,
         detail: newCampData.detail || "",
         platforms: newCampData.platforms || [],
@@ -222,6 +224,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
+        extraCountries: cleanExtraCountries(newCampData.country, newCampData.extraCountries),
         detail: newCampData.detail || "",
         completedSteps: [],
         report: null
@@ -235,6 +238,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
         ...billingFields,
         businessUnit: newCampData.unit,
         country: newCampData.country,
+        extraCountries: cleanExtraCountries(newCampData.country, newCampData.extraCountries),
         numEmails: 1,
         data: {
           requester: "", senderEmail: "", tag: "", dates: ["", "", ""],
@@ -495,8 +499,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
                 <div onClick={() => openCampaign_(c.id)} className="cursor-pointer">
                   <div className="flex items-center gap-2 mb-4 pr-10 flex-wrap">
-                    <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{c.country || 'GLO'}</span>
-                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{c.businessUnit || 'CU'}</span>
+                    <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider" title={countriesLabel(c.country, c.extraCountries)}>{c.country ? `${c.country}${cleanExtraCountries(c.country, c.extraCountries).length ? ` +${cleanExtraCountries(c.country, c.extraCountries).length}` : ''}` : 'GLO'}</span>
+                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{normalizeUnit(c.businessUnit) || 'Sin unidad'}</span>
                     {!filterType && <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{typeLabel[c.type] || 'Email Marketing'}</span>}
                     {isCompleted && (
                       <span className="bg-emerald-500 text-white px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
@@ -604,7 +608,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               )}
                             </div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              {campaign.businessUnit || "—"} · {campaign.country || "—"}
+                              {clientLabel(campaign.country, campaign.businessUnit) || "—"}{cleanExtraCountries(campaign.country, campaign.extraCountries).length ? ` · también ${cleanExtraCountries(campaign.country, campaign.extraCountries).join(', ')}` : ''}
                             </p>
                           </div>
 
@@ -681,30 +685,14 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 placeholder="Nombre de la campaña"
                               />
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
-                                <select
-                                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-amber-400 outline-none"
-                                  value={campaign.country}
-                                  onChange={(e) => { updateCampaign(campaign.id, 'country', e.target.value); updateCampaign(campaign.id, 'businessUnit', ''); }}
-                                >
-                                  <option value="">País/Región...</option>
-                                  {Object.keys(MARKETS).sort().map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                              </div>
-                              <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Unidad</p>
-                                <select
-                                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 disabled:opacity-50 focus:ring-2 focus:ring-amber-400 outline-none"
-                                  value={campaign.businessUnit}
-                                  disabled={!campaign.country}
-                                  onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)}
-                                >
-                                  <option value="">Unidad de Negocio...</option>
-                                  {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
-                                </select>
-                              </div>
+                            <div className="md:col-span-2">
+                              <ClientPicker
+                                accent="amber"
+                                country={campaign.country}
+                                businessUnit={campaign.businessUnit}
+                                extraCountries={campaign.extraCountries}
+                                onChange={(patch) => updateCampaignFields(campaign.id, patch)}
+                              />
                             </div>
 
                             <div>
@@ -790,7 +778,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
                             <div className="grid grid-cols-2 gap-3">
                               <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Inversión Oficina (USD)</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5" title="Lo que se invierte en anuncios dentro de las plataformas (LinkedIn, Google…). Va aparte del Fee Marcomms y se suma siempre, aunque el fee lo cubra un plan.">Inversión en pauta (USD)</p>
                                 <div className="relative">
                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
                                   <input
@@ -801,6 +789,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                     onChange={(e) => updateCampaign(campaign.id, 'platformInvestment', Math.max(0, parseFloat(e.target.value) || 0))}
                                   />
                                 </div>
+                                <p className="text-[9px] text-slate-400 font-medium mt-1">Anuncios en las plataformas. Aparte del fee: se suma aunque el fee lo cubra un plan.</p>
                               </div>
                               <div>
                                 <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Duración</p>
@@ -850,7 +839,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                 <p className="text-sm font-black text-amber-900 truncate" title={campaign.billing === 'plan' ? planNameOf(campaign, planById) : undefined}>{campaign.billing === 'plan' ? 'Plan' : `$${(campaign.budget || 0).toLocaleString()}`}</p>
                               </div>
                               <div className="text-center border-x border-amber-200">
-                                <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Plataforma</p>
+                                <p className="text-[8px] font-black text-amber-700 uppercase tracking-widest">Pauta</p>
                                 <p className="text-sm font-black text-amber-900">${(campaign.platformInvestment || 0).toLocaleString()}</p>
                               </div>
                               <div className="text-center">
@@ -938,35 +927,19 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> {sectionTitle}</h3>
 
                               <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
-                                    <select
-                                      className={`w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 ${accentClasses.ring}`}
-                                      value={campaign.country}
-                                      onChange={(e) => { updateCampaign(campaign.id, 'country', e.target.value); updateCampaign(campaign.id, 'businessUnit', ''); }}
-                                    >
-                                      <option value="">País/Región...</option>
-                                      {Object.keys(MARKETS).sort().map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Unidad</p>
-                                    <select
-                                      className={`w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 disabled:opacity-50 outline-none focus:ring-2 ${accentClasses.ring}`}
-                                      value={campaign.businessUnit}
-                                      disabled={!campaign.country}
-                                      onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)}
-                                    >
-                                      <option value="">Unidad de Negocio...</option>
-                                      {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
-                                    </select>
-                                  </div>
+                                <div className="md:col-span-2">
+                                  <ClientPicker
+                                    accent={campaign.type === "database" ? "emerald" : campaign.type === "research" ? "violet" : "blue"}
+                                    country={campaign.country}
+                                    businessUnit={campaign.businessUnit}
+                                    extraCountries={campaign.extraCountries}
+                                    onChange={(patch) => updateCampaignFields(campaign.id, patch)}
+                                  />
                                 </div>
 
                                 <div>
                                   <BudgetInput
-                                  label="Monto"
+                                  label="Fee Marcomms"
                                   accent="blue"
                                   size="sm"
                                   amount={campaign.budget}
@@ -1109,8 +1082,9 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                                   Esta campaña se creó automáticamente al crear el webinar. Los 5 mailings están sincronizados con la sección <strong>Webinars</strong>: tildar acá tilda allá, y viceversa.
                                 </p>
                                 <div className="bg-white rounded-xl p-3 border border-blue-100">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1">País / Unidad</p>
-                                  <p className="text-sm font-black text-slate-800">{campaign.country || '—'} · {campaign.businessUnit || '—'}</p>
+                                  <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Cliente · países</p>
+                                  <p className="text-sm font-black text-slate-800">{clientLabel(campaign.country, campaign.businessUnit) || '—'} · {countriesLabel(campaign.country, campaign.extraCountries) || '—'}</p>
+                                  <p className="text-[10px] font-medium text-slate-500 mt-1">Se cambia desde el webinar.</p>
                                 </div>
                               </div>
 
@@ -1273,21 +1247,14 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings className="w-4 h-4" /> Configuración General</h3>
 
                               <div className="bg-white p-5 rounded-2xl border-2 border-slate-100 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">País</p>
-                                    <select value={campaign.country} onChange={(e) => { updateCampaign(campaign.id, 'country', e.target.value); updateCampaign(campaign.id, 'businessUnit', ''); }} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-400">
-                                      <option value="">País/Región...</option>
-                                      {Object.keys(MARKETS).sort().map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1.5">Unidad</p>
-                                    <select value={campaign.businessUnit} disabled={!campaign.country} onChange={(e) => updateCampaign(campaign.id, 'businessUnit', e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none disabled:opacity-50 focus:ring-2 focus:ring-blue-400">
-                                      <option value="">Unidad de Negocio...</option>
-                                      {campaign.country && unitsForCountry(campaign.country).map(u => <option key={u} value={u}>{u}</option>)}
-                                    </select>
-                                  </div>
+                                <div className="md:col-span-2">
+                                  <ClientPicker
+                                    accent="blue"
+                                    country={campaign.country}
+                                    businessUnit={campaign.businessUnit}
+                                    extraCountries={campaign.extraCountries}
+                                    onChange={(patch) => updateCampaignFields(campaign.id, patch)}
+                                  />
                                 </div>
 
                                 <div>
@@ -2540,62 +2507,22 @@ td a { color: #2563eb; text-decoration: none; }
                        />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">País</label>
-                          <select 
-                            className={`w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none ${
-                              newCampData.type === "paid" ? "focus:ring-2 focus:ring-amber-400" :
-                              newCampData.type === "database" ? "focus:ring-2 focus:ring-emerald-400" :
-                              newCampData.type === "research" ? "focus:ring-2 focus:ring-purple-400" :
-                              "focus:ring-2 focus:ring-blue-400"
-                            }`}
-                            value={newCampData.country}
-                            onChange={(e) => setNewCampData({...newCampData, country: e.target.value, unit: ""})}
-                          >
-                             <option value="">Seleccionar...</option>
-                             {Object.keys(MARKETS).sort().map(c => (
-                                <option key={c} value={c}>{c}</option>
-                             ))}
-                          </select>
-                       </div>
-                       <div className="space-y-1.5">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            {newCampData.type === "database" ? "Organización" : "Unidad"}
-                          </label>
-                          {newCampData.type === "database" ? (
-                            /* Para BBDD: selector CU / PS, disponible para TODOS los países */
-                            <select
-                              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400"
-                              value={newCampData.unit}
-                              onChange={(e) => setNewCampData({...newCampData, unit: e.target.value})}
-                            >
-                              <option value="">Organización...</option>
-                              <option value="Control Union">Control Union (CU)</option>
-                              <option value="Peterson">Peterson (PS)</option>
-                            </select>
-                          ) : (
-                            <select
-                              className={`w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-sm font-bold text-slate-700 disabled:opacity-50 outline-none ${
-                                newCampData.type === "paid" ? "focus:ring-2 focus:ring-amber-400" :
-                                newCampData.type === "research" ? "focus:ring-2 focus:ring-purple-400" :
-                                "focus:ring-2 focus:ring-blue-400"
-                              }`}
-                              value={newCampData.unit}
-                              onChange={(e) => setNewCampData({...newCampData, unit: e.target.value})}
-                              disabled={!newCampData.country}
-                            >
-                               <option value="">Unidad...</option>
-                               {newCampData.country && unitsForCountry(newCampData.country).map(u => (
-                                  <option key={u} value={u}>{u}</option>
-                               ))}
-                            </select>
-                          )}
-                       </div>
-                    </div>
+                    <ClientPicker
+                      size="lg"
+                      accent={newCampData.type === "paid" ? "amber" : newCampData.type === "database" ? "emerald" : newCampData.type === "research" ? "violet" : "blue"}
+                      country={newCampData.country}
+                      businessUnit={newCampData.unit}
+                      extraCountries={newCampData.extraCountries}
+                      onChange={(patch) => setNewCampData((d) => ({
+                        ...d,
+                        ...(patch.country !== undefined ? { country: patch.country } : {}),
+                        ...(patch.businessUnit !== undefined ? { unit: patch.businessUnit } : {}),
+                        ...(patch.extraCountries !== undefined ? { extraCountries: patch.extraCountries } : {}),
+                      }))}
+                    />
 
                     <BudgetInput
-                        label={newCampData.type === "paid" ? "Fee Marcomms" : "Monto"}
+                        label="Fee Marcomms"
                         accent={newCampData.type === "paid" ? "amber" : "blue"}
                         amount={newCampData.budget}
                         billing={newCampData.billing}
@@ -2637,7 +2564,7 @@ td a { color: #2563eb; text-decoration: none; }
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inversión Oficina (USD)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inversión en pauta (USD)</label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
                               <input
@@ -2649,7 +2576,7 @@ td a { color: #2563eb; text-decoration: none; }
                                 onChange={(e) => setNewCampData({ ...newCampData, platformInvestment: e.target.value })}
                               />
                             </div>
-                            <p className="text-[9px] text-slate-400 font-medium">Lo que invierte la oficina dentro de la plataforma.</p>
+                            <p className="text-[9px] text-slate-400 font-medium">Lo que se invierte en anuncios (LinkedIn, Google…). Va aparte del fee y se suma aunque el fee lo cubra un plan.</p>
                           </div>
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duración</label>

@@ -17,6 +17,7 @@ export const fromRow = (row) => {
     linkedWebinarId:   row.linked_webinar_id || null,
     country:           row.country || '',
     businessUnit:      row.business_unit || '',
+    extraCountries:    row.extra_countries || [],    // otros países además del que paga (migration 0035)
     serviceOwner:      row.service_owner || '',
     budget:            row.budget == null ? 0 : Number(row.budget),
     platformInvestment: row.platform_investment == null ? 0 : Number(row.platform_investment),
@@ -57,6 +58,7 @@ export const toRow = (obj) => {
   if (obj.linkedWebinarId !== undefined)     row.linked_webinar_id = obj.linkedWebinarId;
   if (obj.country !== undefined)             row.country = obj.country;
   if (obj.businessUnit !== undefined)        row.business_unit = obj.businessUnit;
+  if (obj.extraCountries !== undefined)      row.extra_countries = obj.extraCountries || [];
   if (obj.serviceOwner !== undefined)        row.service_owner = obj.serviceOwner;
   if (obj.budget !== undefined)              row.budget = Number(obj.budget) || 0;
   if (obj.platformInvestment !== undefined)  row.platform_investment = Number(obj.platformInvestment) || 0;

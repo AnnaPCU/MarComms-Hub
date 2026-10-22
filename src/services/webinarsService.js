@@ -33,6 +33,7 @@ export const fromRow = (row) => {
     monto:            row.monto == null ? '' : Number(row.monto),
     pais:             row.pais || '',
     unidadNegocio:    row.unidad_negocio || '',
+    extraCountries:   row.extra_countries || [],    // otros países además del que paga (migration 0035)
     serviceOwner:     row.service_owner || '',
     linkedCampaignId: row.linked_campaign_id || null,
     asistentes:       row.asistentes || '',
@@ -67,6 +68,7 @@ export const toRow = (obj) => {
   if (obj.monto !== undefined)            row.monto = obj.monto === '' ? 0 : Number(obj.monto);
   if (obj.pais !== undefined)             row.pais = obj.pais;
   if (obj.unidadNegocio !== undefined)    row.unidad_negocio = obj.unidadNegocio;
+  if (obj.extraCountries !== undefined)   row.extra_countries = obj.extraCountries || [];
   if (obj.serviceOwner !== undefined)     row.service_owner = obj.serviceOwner;
   if (obj.linkedCampaignId !== undefined) row.linked_campaign_id = obj.linkedCampaignId;
   if (obj.asistentes !== undefined)       row.asistentes = obj.asistentes;

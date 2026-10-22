@@ -20,8 +20,9 @@ import {
 
 import { calcEventProgress } from '@/utils/progress';
 import { makeEvent, recalcEventDates } from '@/utils/events';
-import { MARKETS, unitsForCountry } from '@/constants/markets';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
+import ClientPicker from '@/components/shared/ClientPicker';
+import { clientLabel, cleanExtraCountries } from '@/utils/pillarClient';
 import BudgetInput from '@/components/shared/BudgetInput';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
@@ -40,7 +41,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
   const [activeEvent, setActiveEvent] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const EMPTY_NEW_EVENT = { name: "", date: "", country: "", businessUnit: "", client: "", fee: "", billing: "usd", planId: null };
+  const EMPTY_NEW_EVENT = { name: "", date: "", country: "", businessUnit: "", extraCountries: [], fee: "", billing: "usd", planId: null };
   const [newEvent, setNewEvent] = useState(EMPTY_NEW_EVENT);
   const { planById } = useBillingPlans();
   const [newCustomTask, setNewCustomTask] = useState({});
@@ -101,7 +102,8 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
     if (!newEvent.name || !newEvent.date) return;
     const isPlan = newEvent.billing === 'plan';
     const ev = {
-      ...makeEvent(newEvent.name, newEvent.date, newEvent.country, newEvent.businessUnit, newEvent.client, isPlan ? 0 : newEvent.fee),
+      ...makeEvent(newEvent.name, newEvent.date, newEvent.country, newEvent.businessUnit, clientLabel(newEvent.country, newEvent.businessUnit), isPlan ? 0 : newEvent.fee),
+      extraCountries: cleanExtraCountries(newEvent.country, newEvent.extraCountries),
       billing: isPlan ? 'plan' : 'usd',
       planId: isPlan ? newEvent.planId : null,
     };
@@ -455,32 +457,18 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre</label>
                   <input type="text" placeholder="Ej: ExpoAgro 2025" value={newEvent.name} onChange={e => setNewEvent({...newEvent, name: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
-                    <input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">País</label>
-                    <select value={newEvent.country} onChange={e => setNewEvent({...newEvent, country: e.target.value, businessUnit: ""})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700">
-                      <option value="">SELECCIONAR...</option>
-                      {Object.keys(MARKETS).sort().map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
+                  <input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
-                    <select value={newEvent.businessUnit} onChange={e => setNewEvent({...newEvent, businessUnit: e.target.value})} disabled={!newEvent.country} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700 disabled:opacity-50">
-                      <option value="">SELECCIONAR...</option>
-                      {newEvent.country && unitsForCountry(newEvent.country).map(b => <option key={b} value={b}>{b}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente (opcional)</label>
-                    <input type="text" placeholder="Ej: Multi-cliente" value={newEvent.client} onChange={e => setNewEvent({...newEvent, client: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-orange-400 font-bold text-slate-700" />
-                  </div>
-                </div>
+                <ClientPicker
+                  size="lg"
+                  accent="orange"
+                  country={newEvent.country}
+                  businessUnit={newEvent.businessUnit}
+                  extraCountries={newEvent.extraCountries}
+                  onChange={(patch) => setNewEvent(prev => ({ ...prev, ...patch }))}
+                />
                 <div className="space-y-1">
                   <BudgetInput
                     label="Fee Marcomms"
@@ -582,24 +570,14 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
               <input type="date" value={ev.date} onChange={e => updateEvent(ev.id, "date", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm" />
               <p className="text-[9px] text-orange-600 font-bold mt-1">Recalcula fechas</p>
             </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">País</label>
-              <select value={ev.country} onChange={e => { updateEvent(ev.id, "country", e.target.value); updateEvent(ev.id, "businessUnit", ""); }} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm">
-                <option value="">—</option>
-                {Object.keys(MARKETS).sort().map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <p className="text-[9px] text-orange-600 font-bold mt-1">Linkea a Países</p>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Unidad de Negocio</label>
-              <select value={ev.businessUnit} onChange={e => updateEvent(ev.id, "businessUnit", e.target.value)} disabled={!ev.country} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm disabled:opacity-50">
-                <option value="">—</option>
-                {ev.country && unitsForCountry(ev.country).map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Cliente</label>
-              <input type="text" value={ev.client} onChange={e => updateEvent(ev.id, "client", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-orange-400 font-bold text-slate-700 text-sm" />
+            <div className="md:col-span-2 lg:col-span-3">
+              <ClientPicker
+                accent="orange"
+                country={ev.country}
+                businessUnit={ev.businessUnit}
+                extraCountries={ev.extraCountries}
+                onChange={(patch) => updateEventFields(ev.id, { ...patch, client: clientLabel(patch.country ?? ev.country, patch.businessUnit ?? ev.businessUnit) })}
+              />
             </div>
             <div>
               <BudgetInput

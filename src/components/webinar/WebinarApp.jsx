@@ -12,6 +12,8 @@
 //   onWebinarCreated(w)     — callback al crear (auto-crea campaña linkeada)
 //   onWebinarMailToggled    — callback al togglear mail (sync con campaña)
 //   onWebinarDeleted(w)     — callback al eliminar (limpia campaña linkeada)
+//   onWebinarPlaceChanged(id, { country?, businessUnit?, extraCountries? })
+//                           — cambió país / unidad / otros países (sync con la campaña linkeada)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -22,9 +24,10 @@ import {
 
 import { calcProgress } from '@/utils/progress';
 import { makeWebinar, autoCalcDates } from '@/utils/webinar';
-import { COUNTRY_BU_MAPPING_WEBINAR, unitsForCountry } from '@/constants/markets';
+import { clientLabel, cleanExtraCountries } from '@/utils/pillarClient';
 import ProjectTitleEditor from '@/components/shared/ProjectTitleEditor';
 import BudgetInput from '@/components/shared/BudgetInput';
+import ClientPicker from '@/components/shared/ClientPicker';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
 import { SERVICE_OWNERS } from '@/constants/team';
@@ -39,13 +42,13 @@ import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 
-export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, focusProjectId, onFocusHandled, embedded = false }) {
+export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, onWebinarPlaceChanged, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
   const { planById } = useBillingPlans();
   const [view,setView]=useState("internal"); 
   const [activeW,setActiveW]=useState(null);
   const [showForm,setShowForm]=useState(false);
-  const [newW,setNewW]=useState({name:"",date:"",client:"",monto:"",pais:"",unidadNegocio:""});
+  const [newW,setNewW]=useState({name:"",date:"",monto:"",pais:"",unidadNegocio:"",extraCountries:[]});
   const [copyFeedback,setCopyFeedback]=useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -91,11 +94,11 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
 
   const createWebinar = () => {
     if(!newW.name || !newW.date) return;
-    const w = makeWebinar(newW.name, newW.date, newW.client, newW.monto, newW.pais, newW.unidadNegocio);
+    const w = { ...makeWebinar(newW.name, newW.date, clientLabel(newW.pais, newW.unidadNegocio), newW.monto, newW.pais, newW.unidadNegocio), extraCountries: cleanExtraCountries(newW.pais, newW.extraCountries) };
     setWebinars([w, ...webinars]);
     // Auto-crear campaña linkeada en la sección Campañas
     if (onWebinarCreated) onWebinarCreated(w);
-    setNewW({name:"",date:"",client:"",monto:"",pais:"",unidadNegocio:""});
+    setNewW({name:"",date:"",monto:"",pais:"",unidadNegocio:"",extraCountries:[]});
     setShowForm(false);
   };
 
@@ -143,6 +146,26 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
     const stamped = { ...patch, updatedAt: new Date().toISOString() };
     setWebinars(prev => prev.map(w => (w.id === id ? { ...w, ...stamped } : w)));
     if (activeW && activeW.id === id) setActiveW(a => (a ? { ...a, ...stamped } : a));
+    // País / unidad / otros países → también en la campaña de mailings linkeada
+    const place = {
+      ...(patch.pais !== undefined ? { country: patch.pais } : {}),
+      ...(patch.unidadNegocio !== undefined ? { businessUnit: patch.unidadNegocio } : {}),
+      ...(patch.extraCountries !== undefined ? { extraCountries: patch.extraCountries } : {}),
+    };
+    if (Object.keys(place).length && onWebinarPlaceChanged) onWebinarPlaceChanged(id, place);
+  };
+
+  // ClientPicker trabaja con country / businessUnit; el webinar usa pais / unidadNegocio.
+  // El cliente queda derivado (ya no se escribe a mano).
+  const updatePlace = (w, patch) => {
+    const pais = patch.country !== undefined ? patch.country : w.pais;
+    const unidadNegocio = patch.businessUnit !== undefined ? patch.businessUnit : w.unidadNegocio;
+    updateFields(w.id, {
+      ...(patch.country !== undefined ? { pais } : {}),
+      ...(patch.businessUnit !== undefined ? { unidadNegocio } : {}),
+      ...(patch.extraCountries !== undefined ? { extraCountries: patch.extraCountries } : {}),
+      client: clientLabel(pais, unidadNegocio),
+    });
   };
 
   const deleteWebinarWithSync = (id) => {
@@ -213,7 +236,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
 
               <div onClick={()=>{setActiveW(w); setView("internal_detail");}} className="cursor-pointer">
                 <div className="flex items-center gap-2 mb-4 pr-10 flex-wrap">
-                  <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{w.pais || "GLO"}</span>
+                  <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider">{w.pais ? `${w.pais}${cleanExtraCountries(w.pais, w.extraCountries).length ? ` +${cleanExtraCountries(w.pais, w.extraCountries).length}` : ''}` : "GLO"}</span>
                   <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>{w.unidadNegocio || "CU"}</span>
                   {isCompleted && (
                     <span className="bg-emerald-500 text-white px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
@@ -373,26 +396,22 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Webinar</label>
                 <input type="text" placeholder="Ej: Tendencias del Agro 2025" value={newW.name} onChange={e=>setNewW({...newW, name: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors uppercase" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Principal</label>
-                  <input type="date" value={newW.date} onChange={e=>setNewW({...newW, date: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">País</label>
-                  <select value={newW.pais} onChange={e=>setNewW({...newW, pais: e.target.value, unidadNegocio: ""})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors">
-                    <option value="">SELECCIONAR...</option>
-                    {Object.keys(COUNTRY_BU_MAPPING_WEBINAR).map(c=><option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidad de Negocio</label>
-                <select value={newW.unidadNegocio} onChange={e=>setNewW({...newW, unidadNegocio: e.target.value})} disabled={!newW.pais} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors disabled:opacity-50">
-                  <option value="">SELECCIONAR...</option>
-                  {newW.pais && unitsForCountry(newW.pais).map(b=><option key={b} value={b}>{b}</option>)}
-                </select>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Principal</label>
+                <input type="date" value={newW.date} onChange={e=>setNewW({...newW, date: e.target.value})} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-400 font-bold text-slate-700 transition-colors" />
               </div>
+              <ClientPicker
+                size="lg"
+                country={newW.pais}
+                businessUnit={newW.unidadNegocio}
+                extraCountries={newW.extraCountries}
+                onChange={(patch) => setNewW((f) => ({
+                  ...f,
+                  ...(patch.country !== undefined ? { pais: patch.country } : {}),
+                  ...(patch.businessUnit !== undefined ? { unidadNegocio: patch.businessUnit } : {}),
+                  ...(patch.extraCountries !== undefined ? { extraCountries: patch.extraCountries } : {}),
+                }))}
+              />
               <div className="pt-4">
                 <button onClick={createWebinar} className="w-full bg-slate-900 hover:bg-blue-600 text-white p-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">Crear Proyecto</button>
               </div>
@@ -435,12 +454,16 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
                   <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Fecha Webinar</label>
                   <input type="date" value={activeW.mainDate} onChange={e=>updateField(activeW.id, "mainDate", e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm" />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Cliente / Marca</label>
-                  <input type="text" value={activeW.client} onChange={e=>updateField(activeW.id, "client", e.target.value.toUpperCase())} className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:border-blue-400 font-bold text-slate-700 text-sm uppercase" />
+                <div className="md:col-span-2">
+                  <ClientPicker
+                    country={activeW.pais}
+                    businessUnit={activeW.unidadNegocio}
+                    extraCountries={activeW.extraCountries}
+                    onChange={(patch) => updatePlace(activeW, patch)}
+                  />
                 </div>
                 <BudgetInput
-                  label="Presupuesto"
+                  label="Fee Marcomms"
                   accent="blue"
                   amount={activeW.monto}
                   billing={activeW.billing}

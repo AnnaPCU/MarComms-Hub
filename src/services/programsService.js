@@ -18,6 +18,7 @@ export const programFromRow = (row) => (row ? {
   client:       row.client || '',
   country:      row.country || '',
   businessUnit: row.business_unit || '',
+  extraCountries: row.extra_countries || [],
   objective:    row.objective || '',
   startDate:    row.start_date || '',
   endDate:      row.end_date || '',
@@ -33,6 +34,7 @@ export const programToRow = (obj) => {
   if (obj.client       !== undefined) row.client = obj.client || null;
   if (obj.country      !== undefined) row.country = obj.country || null;
   if (obj.businessUnit !== undefined) row.business_unit = obj.businessUnit || null;
+  if (obj.extraCountries !== undefined) row.extra_countries = obj.extraCountries || [];
   if (obj.objective    !== undefined) row.objective = obj.objective || null;
   if (obj.startDate    !== undefined) row.start_date = obj.startDate || null;
   if (obj.endDate      !== undefined) row.end_date = obj.endDate || null;

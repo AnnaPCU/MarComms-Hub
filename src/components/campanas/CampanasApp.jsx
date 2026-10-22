@@ -32,7 +32,7 @@ const PILARES = PILLARS.filter((p) => !isPillarHidden(p.id)).map((p) => ({ ...p,
 export default function CampanasApp({
   onBack,
   // webinars
-  webinars, setWebinars, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted,
+  webinars, setWebinars, onWebinarCreated, onWebinarMailToggled, onWebinarPlaceChanged, onWebinarDeleted,
   // campañas
   campaigns, setCampaigns, onCampaignWebinarStepToggled, onCampaignDeleted,
   // eventos
@@ -122,6 +122,7 @@ export default function CampanasApp({
             onBack={onBack}
             onWebinarCreated={onWebinarCreated}
             onWebinarMailToggled={onWebinarMailToggled}
+            onWebinarPlaceChanged={onWebinarPlaceChanged}
             onWebinarDeleted={onWebinarDeleted}
             focusProjectId={focusForChild('webinars')}
             onFocusHandled={clearFocus}

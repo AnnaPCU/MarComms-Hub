@@ -11,6 +11,7 @@
 import { PDF_THEMES } from '@/constants/pdf';
 import { EVENT_PHASES } from '@/constants/events';
 import { formatPdfDate } from './date';
+import { clientLabel } from '@/utils/pillarClient';
 
 // ── Helpers internos ──
 
@@ -113,7 +114,7 @@ export const getProjectMeta = (project, type) => {
       date: project.mainDate || '',
       country: project.pais || '',
       businessUnit: project.unidadNegocio || '',
-      client: project.client || '',
+      client: clientLabel(project.pais, project.unidadNegocio),
     };
   }
   if (type === 'event') {
@@ -122,7 +123,7 @@ export const getProjectMeta = (project, type) => {
       date: project.date || '',
       country: project.country || '',
       businessUnit: project.businessUnit || '',
-      client: project.client || '',
+      client: clientLabel(project.country, project.businessUnit),
     };
   }
   if (type === 'campaign') {

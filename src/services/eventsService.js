@@ -15,6 +15,7 @@ export const fromRow = (row) => {
     date:             row.date || '',
     country:          row.country || '',
     businessUnit:     row.business_unit || '',
+    extraCountries:   row.extra_countries || [],    // otros países además del que paga (migration 0035)
     client:           row.client || '',
     fee:              row.fee == null ? 0 : Number(row.fee),
     serviceOwner:     row.service_owner || '',
@@ -45,6 +46,7 @@ export const toRow = (obj) => {
   if (obj.date !== undefined)             row.date = obj.date || null;
   if (obj.country !== undefined)          row.country = obj.country;
   if (obj.businessUnit !== undefined)     row.business_unit = obj.businessUnit;
+  if (obj.extraCountries !== undefined)   row.extra_countries = obj.extraCountries || [];
   if (obj.client !== undefined)           row.client = obj.client;
   if (obj.fee !== undefined)              row.fee = Number(obj.fee) || 0;
   if (obj.serviceOwner !== undefined)     row.service_owner = obj.serviceOwner;

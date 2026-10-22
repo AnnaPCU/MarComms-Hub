@@ -54,7 +54,11 @@ export const COUNTRY_BU_MAPPING_WEBINAR = { ...MARKETS };
 // específicas del país (CU Barcos, BELE, etc.) se suman después.
 // "Peterson" (alias legacy de Peterson Solutions en MARKETS) se filtra
 // para no mostrar un duplicado.
-export const BASE_UNITS = ['Control Union', 'Peterson Solutions'];
+// PCU (oct 2026) = Peterson Control Union: acciones a nivel grupo, más
+// globales, que suelen repercutir en varios países. Disponible en todos
+// los países (salvo Ptech, que es solo Peterson Solutions).
+export const PCU_UNIT = 'PCU';
+export const BASE_UNITS = ['Control Union', 'Peterson Solutions', PCU_UNIT];
 export const unitsForCountry = (country) => {
   // Excepción: Ptech es sí o sí Peterson Solutions (no opera Control Union)
   if (country === 'Ptech') return ['Peterson Solutions'];

@@ -31,6 +31,7 @@ import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
 import { Layers } from 'lucide-react';
+import { clientLabel } from '@/utils/pillarClient';
 
 export default function ClientReportApp({ country, scope, webinars, campaigns, events, programs = [], onOpenProgram, onBack, isPublic = false }) {
   const now = new Date();
@@ -162,7 +163,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         pillar: 'webinars',
         name: w.name,
         businessUnit: w.unidadNegocio || '—',
-        client: w.client || '',
+        client: clientLabel(w.pais, w.unidadNegocio),
         date: w.mainDate,
         fee: chargedAmount(w.monto, w.billing),
         billing: w.billing || 'usd',
@@ -216,7 +217,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
         pillar: 'eventos',
         name: ev.name,
         businessUnit: ev.businessUnit || '—',
-        client: ev.client || '',
+        client: clientLabel(ev.country, ev.businessUnit),
         date: ev.date,
         fee: chargedAmount(ev.fee, ev.billing),
         billing: ev.billing || 'usd',
@@ -498,7 +499,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0">
                           <h3 className="font-black text-slate-900 leading-tight truncate">{p.name}</h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{[p.businessUnit, p.client, p.objective].filter(Boolean).join(' · ')}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{[clientLabel(p.country, p.businessUnit), p.objective].filter(Boolean).join(' · ')}</p>
                         </div>
                         <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider border shrink-0 ${st.color}`}>{st.label}</span>
                       </div>

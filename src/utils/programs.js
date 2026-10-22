@@ -12,6 +12,7 @@ import { PILLAR_BY_ID, pillarOfCampaign } from '@/constants/campaigns';
 import { makeWebinar } from './webinar';
 import { makeEvent } from './events';
 import { calcProgress, calcEventProgress, calcCampaignProgress } from './progress';
+import { clientLabel, cleanExtraCountries } from '@/utils/pillarClient';
 
 const uuid = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
@@ -40,7 +41,9 @@ const makeCampaign = (type, { name, budget, businessUnit, country, objective, de
 export const buildProgramProjects = (form, program) => {
   const out = { webinars: [], campaigns: [], events: [] };
   const pillars = form.pillars || {};
-  const common = { businessUnit: program.businessUnit || form.businessUnit || '', country: program.country || form.country || '', programId: program.id };
+  const country = program.country || form.country || '';
+  const common = { businessUnit: program.businessUnit || form.businessUnit || '', country, extraCountries: cleanExtraCountries(country, form.extraCountries), programId: program.id };
+  const client = clientLabel(common.country, common.businessUnit);
 
   Object.entries(pillars).forEach(([id, cfg]) => {
     if (!cfg || !cfg.enabled) return;
@@ -50,13 +53,13 @@ export const buildProgramProjects = (form, program) => {
     const billing = coveredByPlan ? { billing: 'plan', planId: cfg.planId || null } : { billing: 'usd', planId: null };
     const budget = coveredByPlan ? '' : (cfg.budget || '');
     if (id === 'webinars') {
-      const w = makeWebinar(name, cfg.date || '', program.client || '', budget, common.country, common.businessUnit);
-      out.webinars.push({ ...w, ...billing, programId: program.id });
+      const w = makeWebinar(name, cfg.date || '', client, budget, common.country, common.businessUnit);
+      out.webinars.push({ ...w, ...billing, extraCountries: common.extraCountries, programId: program.id });
     } else if (id === 'eventos') {
-      const ev = makeEvent(name, cfg.date || '', common.country, common.businessUnit, program.client || '', budget);
-      out.events.push({ ...ev, ...billing, programId: program.id });
+      const ev = makeEvent(name, cfg.date || '', common.country, common.businessUnit, client, budget);
+      out.events.push({ ...ev, ...billing, extraCountries: common.extraCountries, programId: program.id });
     } else if (['email', 'paid', 'database', 'research'].includes(id)) {
-      out.campaigns.push({ ...makeCampaign(id, { name, budget, objective: program.objective, detail: program.objective, ...common }), ...billing });
+      out.campaigns.push({ ...makeCampaign(id, { name, budget, objective: program.objective, detail: program.objective, ...common }), ...billing, extraCountries: common.extraCountries });
     }
   });
   return out;
