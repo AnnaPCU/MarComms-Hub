@@ -67,6 +67,18 @@ export const LEGACY_UTM_VALUE_MAP = {
   medium: { email_mkt: 'email_marketing', 'Social Media': 'social', 'social_media': 'social' },
 };
 
+// ── Estados de las campañas de Paid Media ──
+// Estado de cada campaña dentro de una tarjeta de Paid Media (oct 2026): se
+// edita desde la ficha. Clases completas para que Tailwind las detecte.
+export const PAID_CAMPAIGN_STATUSES = [
+  { id: 'Activa',       label: 'Activa',       chip: 'bg-emerald-50 text-emerald-800 border-emerald-100', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  { id: 'Pausada',      label: 'Pausada',      chip: 'bg-amber-50 text-amber-800 border-amber-100',       badge: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400' },
+  { id: 'Inhabilitada', label: 'Inhabilitada', chip: 'bg-slate-50 text-slate-400 border-slate-200 line-through', badge: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-300' },
+];
+export const PAID_CAMPAIGN_STATUS_BY_ID = Object.fromEntries(PAID_CAMPAIGN_STATUSES.map((s) => [s.id, s]));
+// Estado desconocido (ej. otro que traiga Google Ads): se muestra como pausada
+export const paidCampaignStatus = (estado) => PAID_CAMPAIGN_STATUS_BY_ID[estado] || { ...PAID_CAMPAIGN_STATUS_BY_ID.Pausada, id: estado || 'Pausada', label: estado || 'Pausada' };
+
 // ── Pasos (steps) de cada tipo de campaña ──
 // IDs deben coincidir con los que se guardan en campaign.completedSteps.
 // Usado para mostrar el desglose/checklist de una campaña (read-only en

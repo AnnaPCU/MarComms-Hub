@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // CampaignsApp — Módulo de Campañas
 // ════════════════════════════════════════════════════════════════════
-// 4 tipos: email (13 steps), paid (3), database (3), research (3).
+// 4 tipos: email (13 steps), paid (4), database (3), research (3).
 // Variant "webinar" auto-creado y linkeado.
 // Sync bidireccional con webinar linkeado (5 mailings).
 // Step 12 = Reporte Cliente con import CSV Mailchimp + descarga HTML.
@@ -41,6 +41,7 @@ import { useConfirm } from '@/hooks/useConfirm';
 import BudgetInput from '@/components/shared/BudgetInput';
 import ClientPicker from '@/components/shared/ClientPicker';
 import GoogleAdsCampaigns, { GoogleAdsChips } from './GoogleAdsCampaigns';
+import { adsCampaignList } from '@/utils/googleAds';
 import { cleanExtraCountries, countriesLabel, clientLabel, normalizeUnit } from '@/utils/pillarClient';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
@@ -257,6 +258,16 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   // updater funcional para no pisar escrituras en vuelo.
   const updateCampaignFields = (id, patch) => {
     setCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  };
+
+  // Lista de campañas de una tarjeta de Paid Media (agregar, renombrar,
+  // estado): `change` recibe la lista guardada y devuelve la nueva.
+  const updateAdsCampaigns = (id, change) => {
+    setCampaigns(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const ads = c.data?.google_ads || {};
+      return { ...c, data: { ...(c.data || {}), google_ads: { ...ads, campanas: change(adsCampaignList(ads, c.name)) } } };
+    }));
   };
 
   const updateCampaign = (id, field, value) => {
@@ -510,7 +521,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                       <DollarSign className="w-3 h-3" /> Fee: ${fee.toLocaleString()}{platform > 0 ? ` + pauta $${platform.toLocaleString()}` : ''}
                     </p>
                   )}
-                  {c.type === 'paid' && c.data?.google_ads && <GoogleAdsChips ads={c.data.google_ads} name={c.name} />}
+                  {c.type === 'paid' && <GoogleAdsChips ads={c.data?.google_ads} name={c.name} />}
                   <div className="mb-3" onClick={(e) => e.stopPropagation()}>
                     <QuotationBadge
                       validated={!!c.quotationValidated}
@@ -849,14 +860,12 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             <p className="text-[9px] text-slate-400 font-medium">Mientras la campaña esté activa queda en proceso; al pausarla o terminarla, tildá el último paso y pasa a Completadas.</p>
                           </div>
 
-                          {campaign.data?.google_ads ? (
-                            <GoogleAdsCampaigns ads={campaign.data.google_ads} name={campaign.name} />
-                          ) : (
-                            <div className="p-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
-                              <h4 className="font-black text-xs uppercase mb-2 flex items-center gap-2 text-slate-600"><TrendingUp className="w-4 h-4 text-amber-500" /> Resultados</h4>
-                              <p className="text-[10px] text-slate-400 font-medium">Los resultados de Paid Media (impresiones, alcance, CPL, CPC) se cargan al finalizar la campaña desde el reporte de la plataforma.</p>
-                            </div>
-                          )}
+                          <GoogleAdsCampaigns
+                            ads={campaign.data?.google_ads}
+                            name={campaign.name}
+                            finished={(campaign.completedSteps || []).includes('finished')}
+                            onChange={(change) => updateAdsCampaigns(campaign.id, change)}
+                          />
 
                           <div className="bg-white border-2 border-amber-100 rounded-xl p-4">
                             <div className="flex items-center gap-2 mb-2">
