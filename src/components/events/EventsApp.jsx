@@ -66,22 +66,20 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
   }, [focusProjectId]);
 
   // ─── Auto-marca completedAt cuando el evento llega al 100% ───
+  // Con updater funcional: escribir la lista de este render borraría los
+  // eventos que llegaron por realtime mientras tanto (ver useCollection).
   useEffect(() => {
-    let needsUpdate = false;
-    const updated = events.map(ev => {
+    const fix = (ev) => {
       const p = calcEventProgress(ev);
-      if (p === 100 && !ev.completedAt) {
-        needsUpdate = true;
-        return { ...ev, completedAt: new Date().toISOString() };
-      }
+      if (p === 100 && !ev.completedAt) return { ...ev, completedAt: new Date().toISOString() };
       if (p < 100 && ev.completedAt) {
-        needsUpdate = true;
         const { completedAt, ...rest } = ev;
         return rest;
       }
       return ev;
-    });
-    if (needsUpdate) setEvents(updated);
+    };
+    if (!events.some((ev) => fix(ev) !== ev)) return;
+    setEvents(prev => prev.map(fix));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
 
@@ -107,7 +105,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       billing: isPlan ? 'plan' : 'usd',
       planId: isPlan ? newEvent.planId : null,
     };
-    setEvents([ev, ...events]);
+    setEvents(prev => [ev, ...prev]);
     setNewEvent(EMPTY_NEW_EVENT);
     setShowCreateModal(false);
   };
@@ -119,14 +117,20 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
     if (activeEvent && activeEvent.id === id) setActiveEvent(a => (a ? { ...a, ...patch } : a));
   };
 
+  // Aplica `change` al evento sobre la versión actual de la lista (updater
+  // funcional: no pisa ni borra lo que llegó por realtime) y al evento abierto.
+  // `change` tiene que ser puro: los ids nuevos se generan afuera.
+  const changeEvent = (id, change) => {
+    setEvents(prev => prev.map(e => (e.id === id ? change(e) : e)));
+    if (activeEvent && activeEvent.id === id) setActiveEvent(a => (a && a.id === id ? change(a) : a));
+  };
+
   const updateEvent = (id, field, value) => {
-    setEvents(events.map(e => {
-      if (e.id !== id) return e;
+    changeEvent(id, (e) => {
       const updated = { ...e, [field]: value };
       if (field === "date") updated.tasks = recalcEventDates(value, e.tasks, e.removedDefaults || []);
-      if (activeEvent && activeEvent.id === id) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const updateTaskField = async (eventId, taskId, field, value) => {
@@ -138,15 +142,13 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       });
       if (!ok) return;
     }
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    changeEvent(eventId, (e) => {
       const updated = {
         ...e,
         tasks: { ...e.tasks, [taskId]: { ...(e.tasks[taskId] || {}), [field]: value } }
       };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const updateCustomTaskField = async (eventId, taskIdx, field, value) => {
@@ -158,27 +160,23 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       });
       if (!ok) return;
     }
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    changeEvent(eventId, (e) => {
       const updated = {
         ...e,
         customTasks: e.customTasks.map((t, i) => i === taskIdx ? { ...t, [field]: value } : t)
       };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const addCustomTask = (eventId, phaseId) => {
     const label = (newCustomTask[`${eventId}_${phaseId}`] || "").trim();
     if (!label) return;
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
-      const newT = { id: `custom_${Date.now()}`, label, phaseId, done: false, owner: "", date: "", isCustom: true };
+    const newT = { id: `custom_${Date.now()}`, label, phaseId, done: false, owner: "", date: "", isCustom: true };
+    changeEvent(eventId, (e) => {
       const updated = { ...e, customTasks: [...(e.customTasks || []), newT] };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
     setNewCustomTask({ ...newCustomTask, [`${eventId}_${phaseId}`]: "" });
   };
 
@@ -189,12 +187,10 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       confirmText: 'Eliminar', tone: 'danger',
     });
     if (!ok) return;
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    changeEvent(eventId, (e) => {
       const updated = { ...e, customTasks: (e.customTasks || []).filter(t => t.id !== taskId) };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const removeDefaultTask = async (eventId, taskId) => {
@@ -204,8 +200,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       confirmText: 'Eliminar', tone: 'danger',
     });
     if (!ok) return;
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    changeEvent(eventId, (e) => {
       const newTasks = { ...e.tasks };
       delete newTasks[taskId];
       const updated = {
@@ -213,25 +208,23 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
         tasks: newTasks,
         removedDefaults: [...(e.removedDefaults || []), taskId]
       };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const addParticipant = (eventId, taskId) => {
     const name = (newParticipant[`${eventId}_${taskId}`] || "").trim();
     if (!name) return;
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    const participant = { id: Date.now(), name };
+    changeEvent(eventId, (e) => {
       const task = e.tasks[taskId] || {};
-      const participants = [...(task.participants || []), { id: Date.now(), name }];
+      const participants = [...(task.participants || []), participant];
       const updated = {
         ...e,
         tasks: { ...e.tasks, [taskId]: { ...task, participants } }
       };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
     setNewParticipant({ ...newParticipant, [`${eventId}_${taskId}`]: "" });
   };
 
@@ -242,21 +235,19 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
       confirmText: 'Quitar', tone: 'danger',
     });
     if (!ok) return;
-    setEvents(events.map(e => {
-      if (e.id !== eventId) return e;
+    changeEvent(eventId, (e) => {
       const task = e.tasks[taskId] || {};
       const participants = (task.participants || []).filter(p => p.id !== participantId);
       const updated = {
         ...e,
         tasks: { ...e.tasks, [taskId]: { ...task, participants } }
       };
-      if (activeEvent && activeEvent.id === eventId) setActiveEvent(updated);
       return updated;
-    }));
+    });
   };
 
   const deleteEvent = (id) => {
-    setEvents(events.filter(e => e.id !== id));
+    setEvents(prev => prev.filter(e => e.id !== id));
     setConfirmDelete(null);
     if (activeEvent && activeEvent.id === id) setActiveEvent(null);
   };

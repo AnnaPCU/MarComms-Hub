@@ -15,6 +15,12 @@
 // → el último UPDATE gana (no hay conflict resolution). Suficiente para
 // el uso interno del equipo (9 personas).
 //
+// Usá siempre el updater funcional (setX(prev => …)). Un array armado con
+// la lista de un render anterior no trae lo que llegó por realtime después,
+// y el diff lo tomaría como borrado (oct 2026 se perdieron así 7 campañas
+// durante una carga masiva). Como red de seguridad, un setData con array no
+// borra ítems que llegaron por realtime hace menos de RECENT_ARRIVAL_MS.
+//
 // Parametros:
 //   service: {
 //     list:        () => Promise<Item[]>,
@@ -31,6 +37,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+export const RECENT_ARRIVAL_MS = 15000;
+
+// Ítems de `prev` que faltan en `next` pero llegaron por realtime hace poco:
+// no son un borrado del usuario, sino una lista vieja. Se conservan.
+export const recentArrivalsMissing = (prev, next, arrivedAt, now = Date.now()) => {
+  const inNext = new Set(next.map((n) => String(n.id)));
+  return prev.filter((p) => {
+    const id = String(p.id);
+    const t = arrivedAt.get(id);
+    return !inNext.has(id) && t !== undefined && now - t < RECENT_ARRIVAL_MS;
+  });
+};
+
 export const useCollection = (service, options = {}) => {
   const { realtime = true } = options;
 
@@ -41,6 +60,8 @@ export const useCollection = (service, options = {}) => {
   // IDs que estamos escribiendo localmente (para distinguir nuestras propias
   // escrituras de cambios externos en el realtime).
   const pendingWritesRef = useRef(new Set());
+  // id → momento en que llegó por realtime (INSERT de otro cliente)
+  const arrivedAtRef = useRef(new Map());
 
   // ── Fetch inicial ──
   const refetch = useCallback(async () => {
@@ -78,6 +99,7 @@ export const useCollection = (service, options = {}) => {
 
       if (eventType === 'INSERT') {
         const item = service.fromRow(newRow);
+        arrivedAtRef.current.set(String(item.id), Date.now());
         setDataLocal((prev) =>
           prev.find((p) => String(p.id) === String(item.id))
             ? prev
@@ -102,7 +124,14 @@ export const useCollection = (service, options = {}) => {
   // Actualiza state local Y dispara INSERT / UPDATE / DELETE en background.
   const setData = useCallback((updater) => {
     setDataLocal((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
+      let next = typeof updater === 'function' ? updater(prev) : updater;
+      if (typeof updater !== 'function') {
+        const keep = recentArrivalsMissing(prev, next, arrivedAtRef.current);
+        if (keep.length) {
+          console.warn('[useCollection] setData con una lista vieja: se conservan', keep.length, 'ítems recién llegados por realtime');
+          next = [...keep, ...next];
+        }
+      }
       // Diff
       const prevById = new Map(prev.map((p) => [String(p.id), p]));
       const nextById = new Map(next.map((n) => [String(n.id), n]));

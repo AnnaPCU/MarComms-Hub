@@ -73,29 +73,27 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
   }, [focusProjectId]);
 
   // ─── Auto-marca completedAt cuando el webinar llega al 100% ───
+  // Con updater funcional: escribir la lista de este render borraría los
+  // webinars que llegaron por realtime mientras tanto (ver useCollection).
   useEffect(() => {
-    let needsUpdate = false;
-    const updated = webinars.map(w => {
+    const fix = (w) => {
       const p = calcProgress(w);
-      if (p === 100 && !w.completedAt) {
-        needsUpdate = true;
-        return { ...w, completedAt: new Date().toISOString() };
-      }
+      if (p === 100 && !w.completedAt) return { ...w, completedAt: new Date().toISOString() };
       if (p < 100 && w.completedAt) {
-        needsUpdate = true;
         const { completedAt, ...rest } = w;
         return rest;
       }
       return w;
-    });
-    if (needsUpdate) setWebinars(updated);
+    };
+    if (!webinars.some((w) => fix(w) !== w)) return;
+    setWebinars(prev => prev.map(fix));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [webinars]);
 
   const createWebinar = () => {
     if(!newW.name || !newW.date) return;
     const w = { ...makeWebinar(newW.name, newW.date, clientLabel(newW.pais, newW.unidadNegocio), newW.monto, newW.pais, newW.unidadNegocio), extraCountries: cleanExtraCountries(newW.pais, newW.extraCountries) };
-    setWebinars([w, ...webinars]);
+    setWebinars(prev => [w, ...prev]);
     // Auto-crear campaña linkeada en la sección Campañas
     if (onWebinarCreated) onWebinarCreated(w);
     setNewW({name:"",date:"",monto:"",pais:"",unidadNegocio:"",extraCountries:[]});
@@ -117,19 +115,21 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
       if (!ok) return;
     }
 
-    setWebinars(webinars.map(w => {
-      if(w.id !== id) return w;
+    // Se aplica sobre la versión actual (updater funcional), no sobre la
+    // lista de antes del confirm: así no se pisan ni se borran cambios que
+    // llegaron por realtime mientras tanto.
+    const apply = (w) => {
       let clone = JSON.parse(JSON.stringify(w));
       const parts = path.split('.');
       let current = clone;
       for(let i=0; i<parts.length-1; i++) current = current[parts[i]];
       current[parts[parts.length-1]] = val;
-      
       if(path === "mainDate") clone = autoCalcDates(val, clone);
       clone.updatedAt = new Date().toISOString();
-      if (activeW && activeW.id === id) setActiveW(clone);
       return clone;
-    }));
+    };
+    setWebinars(prev => prev.map(w => (w.id === id ? apply(w) : w)));
+    if (activeW && activeW.id === id) setActiveW(a => (a && a.id === id ? apply(a) : a));
 
     // Sync con campaña linkeada: si tocaron .done de un mail tracked
     const parts = path.split('.');
@@ -170,7 +170,7 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
 
   const deleteWebinarWithSync = (id) => {
     if (onWebinarDeleted) onWebinarDeleted(id);
-    setWebinars(webinars.filter(w => w.id !== id));
+    setWebinars(prev => prev.filter(w => w.id !== id));
     setConfirmDelete(null);
     setView("internal");
     if (activeW && activeW.id === id) setActiveW(null);

@@ -85,25 +85,22 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   }, [focusProjectId]);
 
   // ─── Auto-marca completedAt cuando la campaña llega al 100% ───
+  // Siempre con updater funcional: si se escribiera la lista de este render,
+  // las campañas que llegaron por realtime mientras tanto (otro usuario, una
+  // carga masiva) faltarían en ella y useCollection las borraría de la base.
   useEffect(() => {
-    const progCalc = calcCampaignProgress;
-
-    let needsUpdate = false;
-    const updated = campaigns.map(c => {
-      const p = progCalc(c);
-      if (p === 100 && !c.completedAt) {
-        needsUpdate = true;
-        return { ...c, completedAt: new Date().toISOString() };
-      }
+    const fix = (c) => {
+      const p = calcCampaignProgress(c);
+      if (p === 100 && !c.completedAt) return { ...c, completedAt: new Date().toISOString() };
       if (p < 100 && c.completedAt) {
         // Si volvió a menos de 100 (ej. destildaron algo), limpiamos la fecha
-        needsUpdate = true;
         const { completedAt, ...rest } = c;
         return rest;
       }
       return c;
-    });
-    if (needsUpdate) setCampaigns(updated);
+    };
+    if (!campaigns.some((c) => fix(c) !== c)) return;
+    setCampaigns(prev => prev.map(fix));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaigns]);
 
@@ -148,7 +145,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   // ─── HELPER: agregar comentario a campaña ───────────────────────────────
   const addComment = (campaignId, text) => {
     if (!text || !text.trim()) return;
-    setCampaigns(campaigns.map(c => {
+    setCampaigns(prev => prev.map(c => {
       if (c.id !== campaignId) return c;
       const comment = {
         id: Date.now(),
@@ -168,7 +165,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       confirmText: 'Eliminar', tone: 'danger',
     });
     if (!ok) return;
-    setCampaigns(campaigns.map(c => {
+    setCampaigns(prev => prev.map(c => {
       if (c.id !== campaignId) return c;
       return { ...c, comments: (c.comments || []).filter(cm => cm.id !== commentId) };
     }));
@@ -252,7 +249,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
       };
     }
 
-    setCampaigns([newCampaign, ...campaigns]);
+    setCampaigns(prev => [newCampaign, ...prev]);
     setShowBudgetModal(false);
   };
 
@@ -263,11 +260,11 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
 
   const updateCampaign = (id, field, value) => {
-    setCampaigns(campaigns.map(c => c.id === id ? { ...c, [field]: value } : c));
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
   const updateData = (id, field, value, index = null) => {
-    setCampaigns(campaigns.map(c => {
+    setCampaigns(prev => prev.map(c => {
       if (c.id === id) {
         const newData = { ...c.data };
         if (index !== null) {
@@ -284,7 +281,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
 
   const updateContent = (campaignId, index, field, value) => {
-    setCampaigns(campaigns.map(c => {
+    setCampaigns(prev => prev.map(c => {
       if (c.id === campaignId) {
         const data = c.data || {};
         const newContents = [...(data.contents || [])];
@@ -329,11 +326,10 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     }
 
     const willBeDone = !isDone;
-    setCampaigns(campaigns.map(c => {
-      if (c.id === campaign.id) {
-        return { ...c, completedSteps: isDone ? steps.filter(s => s !== stepId) : [...steps, stepId] };
-      }
-      return c;
+    setCampaigns(prev => prev.map(c => {
+      if (c.id !== campaign.id) return c;
+      const cur = c.completedSteps || [];
+      return { ...c, completedSteps: willBeDone ? [...new Set([...cur, stepId])] : cur.filter(s => s !== stepId) };
     }));
     // Sync con webinar linkeado si aplica
     if (campaign.linkedWebinarId && STEP_TO_WEBINAR_MAIL[stepId] && onCampaignWebinarStepToggled) {
@@ -342,7 +338,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   };
 
   const toggleQuotation = (campaignId, next) => {
-    setCampaigns(campaigns.map(c => c.id === campaignId ? { ...c, quotationValidated: next } : c));
+    setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, quotationValidated: next } : c));
   };
 
   const handleBulkFileUpload = (campaignId, files) => {
@@ -356,7 +352,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
     setIsAnalyzing(true);
     setTimeout(() => {
-      setCampaigns(campaigns.map(c => {
+      setCampaigns(prev => prev.map(c => {
         if (c.id === campaignId) {
           const emailReports = files.map((f, idx) => ({
             name: `Envío ${idx + 1}`,
@@ -2683,7 +2679,7 @@ td a { color: #2563eb; text-decoration: none; }
                 <button
                   onClick={() => {
                     if (onCampaignDeleted) onCampaignDeleted(confirmDelete.id);
-                    setCampaigns(campaigns.filter(c => c.id !== confirmDelete.id));
+                    setCampaigns(prev => prev.filter(c => c.id !== confirmDelete.id));
                     setConfirmDelete(null);
                   }}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-200 transition-all"

@@ -77,6 +77,10 @@ Hay **sync bidireccional Webinar ↔ Campaign**:
 
 ⚠️ **Cuidado**: si tocás esta lógica, testear que ambos lados queden consistentes.
 
+### ⚠️ Setters de colecciones sincronizadas (`useCollection`)
+
+`setWebinars`, `setCampaigns`, `setEvents` (y cualquier colección de `useCollection`) **siempre con updater funcional**: `setX(prev => prev.map(...))`, `setX(prev => prev.filter(...))`, `setX(prev => [nuevo, ...prev])`. Nunca `setX(xs.map(...))` con la lista del render: si mientras tanto llegó algo por realtime (otro usuario, una carga masiva), falta en esa lista y el diff de `useCollection` lo **borra de la base** (oct 2026 se perdieron así 7 campañas de Paid Media durante la carga de Google Ads). `useCollection` tiene una guarda (`recentArrivalsMissing`: no borra lo que llegó por realtime hace menos de 15 s), pero es una red de seguridad, no la regla. Si un callback también actualiza el ítem abierto (`setActiveW`, `setActiveEvent`), hacelo afuera del updater (ver `changeEvent` en `EventsApp`).
+
 ---
 
 ## 🎨 Paleta de colores por módulo
