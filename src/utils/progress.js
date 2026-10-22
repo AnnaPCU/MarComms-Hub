@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { webinarTaskApplies } from '@/constants/webinar';
+import { CAMPAIGN_STEPS } from '@/constants/campaigns';
 
 /**
  * Calcula el progreso % de un WEBINAR (21 tareas).
@@ -41,23 +42,22 @@ export const calcEventProgress = (event) => {
 };
 
 /**
- * Calcula el progreso % de una CAMPAÑA.
- * Cuenta `completedSteps` sobre el total de steps del tipo.
- *
- * Steps por tipo:
- *   - email standalone: 13
- *   - email variant 'webinar': 5
- *   - paid: 3
- *   - database: 3
- *   - research: 3
+ * Total de pasos de una CAMPAÑA. Fuente única para Pilares, Portal Cliente,
+ * Programas, Planes y PDF: la campaña de mailings de un webinar tiene 5;
+ * el resto, los pasos de CAMPAIGN_STEPS de su tipo (Email Mkt 13, Paid
+ * Media 4, BBDD 3, Investigación 3).
+ */
+export const campaignStepsTotal = (campaign) => {
+  if (campaign?.variant === 'webinar') return 5;
+  return (CAMPAIGN_STEPS[campaign?.type] || CAMPAIGN_STEPS.email).length;
+};
+
+/**
+ * Calcula el progreso % de una CAMPAÑA: `completedSteps` sobre el total
+ * de pasos de su tipo (tope 100).
  */
 export const calcCampaignProgress = (campaign) => {
   if (!campaign) return 0;
   const completed = (campaign.completedSteps || []).length;
-  let total = 13;
-  if (campaign.variant === 'webinar') total = 5;
-  else if (campaign.type === 'paid') total = 3;
-  else if (campaign.type === 'database') total = 3;
-  else if (campaign.type === 'research') total = 3;
-  return Math.round((completed / total) * 100);
+  return Math.min(100, Math.round((completed / campaignStepsTotal(campaign)) * 100));
 };

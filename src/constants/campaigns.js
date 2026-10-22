@@ -87,10 +87,14 @@ export const CAMPAIGN_STEPS = {
     { id: 'client_report', label: '12. Reporte enviado al cliente' },
     { id: 'smartsheet',    label: '13. Cargado en Smartsheet (facturación)' },
   ],
+  // Paid Media (oct 2026): una campaña lanzada sigue «en proceso» mientras
+  // esté activa (always on); pasa a Completadas recién cuando se pausa o
+  // termina (paso «finished»).
   paid: [
     { id: 'brief',        label: 'Brief y creatividades aprobadas' },
     { id: 'creativities', label: 'Piezas subidas a plataforma' },
     { id: 'launch',       label: 'Campaña lanzada' },
+    { id: 'finished',     label: 'Campaña finalizada (pausada o terminada)' },
   ],
   database: [
     { id: 'brief_db',    label: 'Brief y criterios aprobados' },

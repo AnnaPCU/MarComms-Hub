@@ -357,7 +357,7 @@ export default function EventsApp({ onBack, events, setEvents, campaigns, focusP
 
                     <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                       <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>{prog}%</div>
+                        <div className={`min-w-[2rem] h-8 px-1 rounded-lg flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>{prog}%</div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase">Servicio</span>
                       </div>
                       <ChevronRight className={`w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity ${isCompleted ? 'text-emerald-400' : 'text-orange-400'}`} />

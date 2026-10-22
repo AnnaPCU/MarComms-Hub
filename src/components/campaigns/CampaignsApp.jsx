@@ -18,7 +18,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   AlignLeft, ArrowLeft, BarChart3, Calendar, CheckCircle2, ChevronRight,
   Circle, Clock, Copy, Database, DollarSign, Download, ExternalLink, Eye,
-  FileText, Files, Hash, Info, Layers, Link, Mail, MailWarning, MousePointer2,
+  FileText, Files, Flag, Hash, Info, Layers, Link, Mail, MailWarning, MousePointer2,
   Plus, Receipt, RefreshCw, Send, Settings, Sparkles, Tag, Trash2,
   TrendingUp, Upload, User, Users, Video, X, Zap,
 } from 'lucide-react';
@@ -26,6 +26,7 @@ import {
 import { SERVICE_OWNERS } from '@/constants/team';
 import { STEP_TO_WEBINAR_MAIL } from '@/constants/webinar';
 import { CAMPAIGN_STEPS, getCampaignChecklist } from '@/constants/campaigns';
+import { calcCampaignProgress } from '@/utils/progress';
 import { parseMailchimpReport, parseMailchimpSubscribers } from '@/utils/csv';
 
 import OwnerPicker from '@/components/shared/OwnerPicker';
@@ -39,6 +40,7 @@ import TagInput from '@/components/shared/TagInput';
 import { useConfirm } from '@/hooks/useConfirm';
 import BudgetInput from '@/components/shared/BudgetInput';
 import ClientPicker from '@/components/shared/ClientPicker';
+import GoogleAdsResults from './GoogleAdsResults';
 import { cleanExtraCountries, countriesLabel, clientLabel, normalizeUnit } from '@/utils/pillarClient';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
@@ -84,12 +86,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
   // ─── Auto-marca completedAt cuando la campaña llega al 100% ───
   useEffect(() => {
-    const progCalc = (c) => {
-      let total = 13; // Email Marketing manual: 13 pasos (incluye Reporte cliente + Smartsheet)
-      if (c.variant === "webinar") total = 5;
-      else if (c.type === "paid" || c.type === "database" || c.type === "research") total = 3;
-      return Math.min(Math.round(((c.completedSteps || []).length / total) * 100), 100);
-    };
+    const progCalc = calcCampaignProgress;
+
     let needsUpdate = false;
     const updated = campaigns.map(c => {
       const p = progCalc(c);
@@ -402,15 +400,8 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
     document.body.removeChild(a);
   };
 
-  const getProgress = (campaign) => {
-    let totalPossibleSteps = 13; // Email Marketing tiene 13 pasos (Reporte cliente + Smartsheet)
-    if (campaign.variant === "webinar") totalPossibleSteps = 5;
-    else if (campaign.type === "paid") totalPossibleSteps = 3;
-    else if (campaign.type === "database") totalPossibleSteps = 3;
-    else if (campaign.type === "research") totalPossibleSteps = 3;
-    const progress = Math.round((campaign.completedSteps.length / totalPossibleSteps) * 100);
-    return Math.min(progress, 100);
-  };
+  const getProgress = (campaign) => calcCampaignProgress(campaign);
+
 
   return (
     <div className={embedded ? 'w-full font-sans text-slate-900 relative' : 'min-h-screen bg-slate-50 pb-20 font-sans text-slate-900 relative'}>
@@ -542,7 +533,7 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
 
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>{prog}%</div>
+                      <div className={`min-w-[2rem] h-8 px-1 rounded-lg flex items-center justify-center font-black text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-600'}`}>{prog}%</div>
                       <span className="text-[9px] font-bold text-slate-400 uppercase">Progreso</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -857,12 +848,18 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
                             <SimpleStep label="Brief y creatividades aprobadas" Icon={FileText} camp={campaign} id="brief" set={toggleStep} color="text-amber-500" />
                             <SimpleStep label="Piezas subidas a plataforma" Icon={Upload} camp={campaign} id="creativities" set={toggleStep} color="text-amber-500" />
                             <SimpleStep label="Campaña lanzada" Icon={Send} camp={campaign} id="launch" set={toggleStep} color="text-amber-500" />
+                            <SimpleStep label="Campaña finalizada (pausada o terminada)" Icon={Flag} camp={campaign} id="finished" set={toggleStep} color="text-amber-500" />
+                            <p className="text-[9px] text-slate-400 font-medium">Mientras la campaña esté activa queda en proceso; al pausarla o terminarla, tildá el último paso y pasa a Completadas.</p>
                           </div>
 
-                          <div className="p-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
-                            <h4 className="font-black text-xs uppercase mb-2 flex items-center gap-2 text-slate-600"><TrendingUp className="w-4 h-4 text-amber-500" /> Resultados</h4>
-                            <p className="text-[10px] text-slate-400 font-medium">Los resultados de Paid Media (impresiones, alcance, CPL, CPC) se cargan al finalizar la campaña desde el reporte de la plataforma.</p>
-                          </div>
+                          {campaign.data?.google_ads ? (
+                            <GoogleAdsResults ads={campaign.data.google_ads} />
+                          ) : (
+                            <div className="p-5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
+                              <h4 className="font-black text-xs uppercase mb-2 flex items-center gap-2 text-slate-600"><TrendingUp className="w-4 h-4 text-amber-500" /> Resultados</h4>
+                              <p className="text-[10px] text-slate-400 font-medium">Los resultados de Paid Media (impresiones, alcance, CPL, CPC) se cargan al finalizar la campaña desde el reporte de la plataforma.</p>
+                            </div>
+                          )}
 
                           <div className="bg-white border-2 border-amber-100 rounded-xl p-4">
                             <div className="flex items-center gap-2 mb-2">

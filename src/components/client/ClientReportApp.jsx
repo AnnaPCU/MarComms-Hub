@@ -19,10 +19,10 @@ import {
   Video, X, Zap,
 } from 'lucide-react';
 
-import { calcProgress } from '@/utils/progress';
+import { calcProgress, calcCampaignProgress } from '@/utils/progress';
 import { generateProjectPDF } from '@/utils/pdf';
 import { HS_FORM_MARCOMMS_URL, HS_FORM_HSREQUEST_URL } from '@/constants/externalLinks';
-import { PILLARS, pillarOfCampaign } from '@/constants/campaigns';
+import { CAMPAIGN_STEPS, PILLARS, pillarOfCampaign } from '@/constants/campaigns';
 import { isPillarHidden } from '@/constants/sections';
 import { unitsForCountry } from '@/constants/markets';
 import { programItems, programSummary, matchesProgramScope } from '@/utils/programs';
@@ -77,39 +77,8 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
     if (source === 'campaign') {
       const c = rawData;
       const completed = new Set(c.completedSteps || []);
-      const map = {
-        email: [
-          { id: 'req', label: '1. Pedido de la campaña confirmado' },
-          { id: 'num', label: '2. Cantidad de envíos definida' },
-          { id: 'dates', label: '3. Fechas de envío establecidas' },
-          { id: 'tag', label: '4. Etiqueta BBDD cargada' },
-          { id: 'contents', label: '5. Contenidos listos (asuntos, mensajes, CTAs, links)' },
-          { id: 'banners', label: '6. Banners preparados' },
-          { id: 'sender', label: '7. Dirección de remitente validada' },
-          { id: 'test', label: '8. Emails de prueba enviados y revisados' },
-          { id: 'prog', label: '9. Envíos programados en Mailchimp' },
-          { id: 'hs_deals', label: '10. Deals cargados en HubSpot' },
-          { id: 'bbdd_del', label: '11. BBDD borrada de Mailchimp' },
-          { id: 'client_report', label: '12. Reporte enviado al cliente' },
-          { id: 'smartsheet', label: '13. Cargado en Smartsheet (facturación)' }
-        ],
-        paid: [
-          { id: 'brief', label: 'Brief y creatividades aprobadas' },
-          { id: 'creativities', label: 'Piezas subidas a plataforma' },
-          { id: 'launch', label: 'Campaña lanzada' }
-        ],
-        database: [
-          { id: 'brief_db', label: 'Brief y criterios aprobados' },
-          { id: 'extraction', label: 'Datos extraídos / importados' },
-          { id: 'delivery_db', label: 'BBDD entregada al solicitante' }
-        ],
-        research: [
-          { id: 'brief_research', label: 'Brief y metodología aprobados' },
-          { id: 'fieldwork', label: 'Trabajo de campo finalizado' },
-          { id: 'delivery_rs', label: 'Informe final entregado' }
-        ]
-      };
-      (map[c.type] || map.email).forEach(step => {
+      // Pasos de cada tipo: fuente única en CAMPAIGN_STEPS
+      (CAMPAIGN_STEPS[c.type] || CAMPAIGN_STEPS.email).forEach(step => {
         checklist.push({ label: step.label, done: completed.has(step.id) });
       });
     }
@@ -181,9 +150,7 @@ export default function ClientReportApp({ country, scope, webinars, campaigns, e
     });
 
     (campaigns || []).filter(c => inScope(c.country, c.businessUnit)).forEach(c => {
-      let totalSteps = 11;
-      if (c.type === "paid" || c.type === "database" || c.type === "research") totalSteps = 3;
-      const progress = Math.min(Math.round(((c.completedSteps || []).length / totalSteps) * 100), 100);
+      const progress = calcCampaignProgress(c);
       items.push({
         id: `c-${c.id}`,
         source: 'campaign',

@@ -61,7 +61,7 @@ describe('programs — resumen', () => {
   const data = {
     webinars: [{ id: 'w1', programId: 'p1', name: 'W', mainDate: '2026-11-05', teamsGroup: { done: true } }, { id: 'w2', programId: 'otro', name: 'Ajeno' }],
     campaigns: [
-      { id: 'c1', programId: 'p1', type: 'paid', name: 'Pauta', completedSteps: ['a', 'b', 'c'] },
+      { id: 'c1', programId: 'p1', type: 'paid', name: 'Pauta', completedSteps: ['brief', 'creativities', 'launch', 'finished'] },
       { id: 'c2', programId: 'p1', type: 'email', variant: 'webinar', name: 'Mailings auto', completedSteps: [] }, // no se lista
     ],
     events: [{ id: 'e1', programId: 'p1', name: 'Evento', date: '2026-12-01', tasks: { a: { done: true }, b: { done: false } }, customTasks: [] }],

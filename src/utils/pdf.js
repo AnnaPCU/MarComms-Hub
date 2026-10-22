@@ -12,6 +12,7 @@ import { PDF_THEMES } from '@/constants/pdf';
 import { EVENT_PHASES } from '@/constants/events';
 import { formatPdfDate } from './date';
 import { clientLabel } from '@/utils/pillarClient';
+import { CAMPAIGN_STEPS } from '@/constants/campaigns';
 
 // ── Helpers internos ──
 
@@ -89,12 +90,9 @@ export const getProjectChecklist = (project, type) => {
         ['client_report', '12. Reporte al cliente'],
         ['smartsheet',    '13. Smartsheet actualizado'],
       ];
-    } else if (project.type === 'paid') {
-      stepDefs = [['brief', '1. Brief aprobado'], ['creativities', '2. Creatividades'], ['launch', '3. Lanzamiento']];
-    } else if (project.type === 'database') {
-      stepDefs = [['brief_db', '1. Brief de la BBDD'], ['extraction', '2. Extracción'], ['delivery', '3. Entrega']];
-    } else if (project.type === 'research') {
-      stepDefs = [['brief_research', '1. Brief de investigación'], ['fieldwork', '2. Relevamiento'], ['report', '3. Informe final']];
+    } else if (CAMPAIGN_STEPS[project.type]) {
+      // Paid Media, BBDD e Investigación: mismos pasos (e ids) que la app
+      stepDefs = CAMPAIGN_STEPS[project.type].map((st, i) => [st.id, `${i + 1}. ${st.label}`]);
     }
     return stepDefs.map(([key, label]) => ({
       key,

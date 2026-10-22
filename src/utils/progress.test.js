@@ -2,7 +2,7 @@
 // Tests para utils/progress — tareas opcionales del webinar
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { calcProgress, WEBINAR_TASK_KEYS } from './progress';
+import { calcProgress, WEBINAR_TASK_KEYS, calcCampaignProgress, campaignStepsTotal } from './progress';
 import { OPTIONAL_WEBINAR_TASKS, webinarTaskApplies } from '@/constants/webinar';
 
 const allDone = (extra = {}) => Object.fromEntries(WEBINAR_TASK_KEYS.map((k) => [k, { done: true, ...(extra[k] || {}) }]));
@@ -26,5 +26,20 @@ describe('calcProgress — PPT y one pager "si aplica"', () => {
     expect(webinarTaskApplies({ ppt: { applies: true } }, 'ppt')).toBe(true);
     expect(webinarTaskApplies({ ppt: { done: true } }, 'ppt')).toBe(false);
     expect(webinarTaskApplies({}, 'reporte')).toBe(true);
+  });
+});
+
+describe('progreso de campañas', () => {
+  it('toma el total de pasos de CAMPAIGN_STEPS', () => {
+    expect(campaignStepsTotal({ type: 'email' })).toBe(13);
+    expect(campaignStepsTotal({ type: 'email', variant: 'webinar' })).toBe(5);
+    expect(campaignStepsTotal({ type: 'paid' })).toBe(4);
+    expect(campaignStepsTotal({ type: 'database' })).toBe(3);
+    expect(campaignStepsTotal({ type: 'research' })).toBe(3);
+  });
+
+  it('Paid Media lanzada sigue en proceso hasta finalizarla', () => {
+    expect(calcCampaignProgress({ type: 'paid', completedSteps: ['brief', 'creativities', 'launch'] })).toBe(75);
+    expect(calcCampaignProgress({ type: 'paid', completedSteps: ['brief', 'creativities', 'launch', 'finished'] })).toBe(100);
   });
 });
