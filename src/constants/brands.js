@@ -17,6 +17,9 @@
 // Grey de la marca para que se lea sobre blanco. `onPrimary`: texto sobre
 // el color de la marca (Dark Blue: el blanco no se lee sobre Cyan ni Aqua).
 //
+// logo / logoWhite: el logo para fondo claro y su versión blanca para el
+// modo oscuro (sin recuadro blanco).
+//
 // emptyMonth / goTo: textos del link cuando el mes elegido no tiene
 // acciones ({mes} se reemplaza), en el tono de cada marca.
 // ════════════════════════════════════════════════════════════════════
@@ -25,6 +28,7 @@ export const BRAND_THEMES = {
   'Control Union': {
     name: 'Control Union',
     logo: '/logos/control-union.png',
+    logoWhite: '/logos/control-union-white.png',
     tagline: 'The proof to your promise',
     site: 'controlunion.com',
     title: 'Seguimiento del plan de marketing',
@@ -37,6 +41,7 @@ export const BRAND_THEMES = {
   'Peterson Solutions': {
     name: 'Peterson Solutions',
     logo: '/logos/peterson-solutions.png',
+    logoWhite: '/logos/peterson-solutions-white.png',
     tagline: 'For the world, for ourselves, for our families',
     site: 'peterson-solutions.com',
     title: 'Tu plan de marketing, paso a paso',
@@ -52,6 +57,7 @@ export const BRAND_THEMES = {
 export const NEUTRAL_THEME = {
   name: '',
   logo: null,
+  logoWhite: null,
   tagline: '',
   site: '',
   title: 'Seguimiento del plan de marketing',

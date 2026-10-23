@@ -91,7 +91,7 @@ export default function PublicPlanPage({ token }) {
       {state.status === 'error' && <Message title="No se pudo cargar el plan" text="Se puede volver a intentar en unos minutos." />}
       {state.status === 'ok' && (
         <div className="max-w-6xl mx-auto">
-          <PlanExternalView plan={state.plan} tasks={state.plan.tasks} todayIso={getTodayIso()} updatedAt={state.updatedAt} dark={theme === 'dark'} />
+          <PlanExternalView plan={state.plan} tasks={state.plan.tasks} todayIso={getTodayIso()} dark={theme === 'dark'} />
         </div>
       )}
     </div>

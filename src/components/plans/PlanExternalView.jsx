@@ -24,8 +24,7 @@
 // Modo oscuro: si la persona lo activó en el Hub (dark = true) usa los
 // colores oscuros de la marca; el cliente, por defecto, lo ve en claro.
 //
-// Props: plan ({ name, kpis?, initiatives? }), tasks, todayIso, updatedAt
-//   (opcional, ISO), dark
+// Props: plan ({ name, kpis?, initiatives? }), tasks, todayIso, dark
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -76,7 +75,7 @@ function TaskCard({ t, open, onToggle, c }) {
   );
 }
 
-export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dark = false }) {
+export default function PlanExternalView({ plan, tasks, todayIso, dark = false }) {
   const theme = brandTheme(planBrand(plan.name));
   const c = dark ? theme.darkColors : theme.colors;
   // Sigue al mes actual (aunque la página quede abierta y cambie el mes)
@@ -138,10 +137,8 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
             </div>
           </div>
           {theme.logo && (
-            // En oscuro el logo va sobre blanco: sus colores son para fondo claro
-            <span className={`shrink-0 ${dark ? 'rounded-xl px-3 py-2' : ''}`} style={dark ? { background: '#ffffff' } : undefined}>
-              <img src={theme.logo} alt={theme.name} className="h-5 sm:h-7 w-auto block" />
-            </span>
+            // En oscuro, la versión blanca del logo (sin recuadro)
+            <img src={dark && theme.logoWhite ? theme.logoWhite : theme.logo} alt={theme.name} className="h-5 sm:h-7 w-auto block shrink-0" />
           )}
         </div>
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.label }}>{theme.title}</p>
@@ -263,7 +260,6 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
             {theme.tagline && <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em]">{theme.tagline}</p>}
           </div>
         </div>
-        <p className="mt-4 text-[10px]">{updatedAt ? `Actualizado ${new Date(updatedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}{theme.site ? `${updatedAt ? ' · ' : ''}${theme.site}` : ''}</p>
       </footer>
     </div>
   );
