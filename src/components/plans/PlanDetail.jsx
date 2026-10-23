@@ -1,27 +1,36 @@
 // ════════════════════════════════════════════════════════════════════
-// PlanDetail — Un plan: avance, tareas, pilares que cubre y link externo
+// PlanDetail — Un plan: avance, KPIs, tareas, iniciativas, pilares y link
 // ════════════════════════════════════════════════════════════════════
 // Dos vistas:
-//   - Interna: tabla de tareas editable (PlanTasksBoard) y pilares que
-//     cubre el plan (lo que antes era la pestaña "Por plan" del Portal).
+//   - Interna, en el orden del reporte al cliente: avance del plan; tareas
+//     (PlanTasksBoard) con los KPIs del mes elegido arriba de la tabla
+//     (PlanMonthKpis); iniciativas (PlanInitiatives); pilares que cubre el
+//     plan (lo que antes era la pestaña "Por plan" del Portal). KPIs e
+//     iniciativas usan los colores de la marca del plan, como el link.
 //   - Externa: el link que se le pasa al cliente (/?plan=<token>), en un
 //     iframe para que se vea exactamente igual. Sin Responsable ni
 //     Deadline, solo lectura y con la marca del plan.
 //
 // Props:
 //   plan, tasks (las del plan), pillarItems (de planPillarItems), todayIso,
-//   teamNames, currentUser, createTask / updateTask / removeTask,
-//   onOpenPillar(item), onRotateToken(planId) (async), onBack
+//   teamNames, currentUser, dark (modo oscuro del Hub), createTask /
+//   updateTask / removeTask, extras ({ kpiRows, initiatives, missing, saveKpis, createInitiative,
+//   updateInitiative, removeInitiative } — de usePlanExtras, ya filtrados
+//   por plan), onOpenPillar(item), onRotateToken(planId) (async), onBack
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ClipboardList, Copy, ExternalLink, Eye, Layers, Lock, RefreshCw } from 'lucide-react';
 import { SHOW_TASK_DEADLINE } from '@/constants/planTasks';
+import { brandTheme } from '@/constants/brands';
 import { useConfirm } from '@/hooks/useConfirm';
 import { taskStats, isTaskOverdue, planBrand } from '@/utils/planTasks';
+import { previousMonthKey } from '@/utils/planKpis';
 import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
-import { Kpi, ProgressBar, SectionTitle, pctLabel } from './PlanBits';
+import { ProgressBar, SectionTitle, pctLabel } from './PlanBits';
 import PlanTasksBoard from './PlanTasksBoard';
+import PlanMonthKpis from './PlanMonthKpis';
+import PlanInitiatives from './PlanInitiatives';
 
 const VIEWS = [
   { id: 'internal', label: 'Vista interna', icon: Lock },
@@ -45,7 +54,7 @@ function ExternalPreview({ url }) {
   return <iframe ref={ref} src={url} title="Vista externa del plan" className="w-full rounded-3xl border border-slate-200 bg-white" style={{ height }} />;
 }
 
-export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNames, currentUser, createTask, updateTask, removeTask, onOpenPillar, onRotateToken, onBack }) {
+export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNames, currentUser, dark = false, createTask, updateTask, removeTask, extras, onOpenPillar, onRotateToken, onBack }) {
   const confirm = useConfirm();
   const [view, setView] = useState('internal');
   const [copied, setCopied] = useState(false);
@@ -54,6 +63,10 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
   const s = taskStats(tasks);
   const overdue = SHOW_TASK_DEADLINE ? tasks.filter((t) => isTaskOverdue(t, todayIso)).length : 0;
   const brand = planBrand(plan.name);
+  const theme = brandTheme(brand);
+  const c = dark ? theme.darkColors : theme.colors;
+  const navy = theme.colors.dark;
+  const kpisOf = (monthKey) => extras.kpiRows.find((r) => r.monthKey === monthKey)?.kpis || {};
   const pillarsDone = pillarItems.filter((it) => it.completed).length;
   const url = plan.publicToken ? publicPlanUrl(plan.publicToken) : '';
 
@@ -135,15 +148,20 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
         )
       ) : (
         <>
-          <div className={`grid grid-cols-2 ${SHOW_TASK_DEADLINE ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3`}>
-            <Kpi label="Tareas" value={s.total} />
-            <Kpi label="Completadas" value={s.completed} accent="text-emerald-600" />
-            <Kpi label="Abiertas" value={s.open} accent="text-amber-600" hint={s.cancelled ? `${s.cancelled} ${s.cancelled === 1 ? 'cancelada (no cuenta)' : 'canceladas (no cuentan)'}` : undefined} />
-            <Kpi label="% avance" value={pctLabel(s.pct)} accent="text-emerald-700" hint="del plan: completadas / (completadas + abiertas)" />
-            {SHOW_TASK_DEADLINE && <Kpi label="Vencidas" value={overdue} accent={overdue ? 'text-red-600' : 'text-slate-800'} hint="abiertas con deadline pasado" />}
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-200 p-4">
-            <ProgressBar pct={s.pct} />
+          {/* Avance del plan (todos los meses), como en el link */}
+          <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
+            <div className="flex items-end gap-3 flex-wrap">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Avance del plan</p>
+                <p className="text-3xl font-black font-mono text-emerald-700 leading-none mt-1">{pctLabel(s.pct)}</p>
+              </div>
+              <p className="text-[11px] font-bold text-slate-500 pb-0.5">
+                <span className="font-mono font-black text-slate-800">{s.completed}</span> completadas · <span className="font-mono font-black text-slate-800">{s.open}</span> abiertas · <span className="font-mono font-black text-slate-800">{s.total}</span> tareas
+                {s.cancelled > 0 && ` · ${s.cancelled} ${s.cancelled === 1 ? 'cancelada (no cuenta)' : 'canceladas (no cuentan)'}`}
+                {SHOW_TASK_DEADLINE && overdue > 0 && <span className="text-red-600"> · {overdue} vencidas</span>}
+              </p>
+            </div>
+            <ProgressBar pct={s.pct} className="h-2 mt-3" />
           </div>
 
           <section>
@@ -158,8 +176,34 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
               createTask={createTask}
               updateTask={updateTask}
               removeTask={removeTask}
+              aboveTable={(month) => (
+                <PlanMonthKpis
+                  key={month}
+                  plan={plan}
+                  monthKey={month}
+                  tasks={tasks}
+                  stored={kpisOf(month)}
+                  prevStored={kpisOf(previousMonthKey(month))}
+                  c={c}
+                  navy={navy}
+                  missing={extras.missing}
+                  onSave={(kpis) => extras.saveKpis({ planId: plan.id, monthKey: month, kpis, updatedBy: currentUser?.name || '' })}
+                />
+              )}
             />
           </section>
+
+          <PlanInitiatives
+            plan={plan}
+            initiatives={extras.initiatives}
+            c={c}
+            navy={navy}
+            currentUser={currentUser}
+            missing={extras.missing}
+            createInitiative={extras.createInitiative}
+            updateInitiative={extras.updateInitiative}
+            removeInitiative={extras.removeInitiative}
+          />
 
           <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
             <SectionTitle right={pillarItems.length > 0 && <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{pillarsDone} de {pillarItems.length} completados</span>}>

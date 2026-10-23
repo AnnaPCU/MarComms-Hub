@@ -42,6 +42,15 @@ export const isTaskCancelled = (t) => t.status === CANCELLED_TASK_STATUS;
 export const isTaskOpen = (t) => !isTaskDone(t) && !isTaskCancelled(t);
 export const isTaskOverdue = (t, todayIso) => isTaskOpen(t) && ISO_RE.test(t.deadline || '') && t.deadline < todayIso;
 
+// Al pasar a Completado una tarea de un mes anterior al actual sin haberle
+// cambiado el mes, el editor pregunta si se completó en ese mes o si pasa
+// al actual (así cuenta en los KPIs del mes en que se terminó).
+//   task: la tarea guardada; next: { status, monthKey } del formulario
+export const needsCompletionMonthCheck = (task, next, todayIso) => !!task
+  && next.status === DONE_TASK_STATUS && task.status !== DONE_TASK_STATUS
+  && MONTH_KEY_RE.test(next.monthKey || '') && next.monthKey === task.monthKey
+  && next.monthKey < todayIso.slice(0, 7);
+
 // Mismas reglas que el Excel: % avance = completadas / (completadas + abiertas); las canceladas no cuentan
 export const taskStats = (tasks = []) => {
   const byStatus = Object.fromEntries(Object.keys(PLAN_TASK_STATUS_BY_ID).map((k) => [k, 0]));

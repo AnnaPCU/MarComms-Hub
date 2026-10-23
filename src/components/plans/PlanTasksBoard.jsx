@@ -17,7 +17,9 @@
 //
 // Props:
 //   plan, tasks (las del plan), todayIso, teamNames, currentUser,
-//   createTask / updateTask / removeTask
+//   createTask / updateTask / removeTask,
+//   aboveTable(month) (opcional) — lo que va entre los filtros y la tabla
+//   para el mes elegido (los KPIs del mes, en PlanDetail)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -37,7 +39,7 @@ function LongText({ value, open }) {
   return <p className={`text-[11px] text-slate-600 leading-snug whitespace-pre-line ${open ? '' : 'line-clamp-3'}`}>{value}</p>;
 }
 
-export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask }) {
+export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask, aboveTable }) {
   const currentMonth = todayIso.slice(0, 7);
   // Sigue al mes actual (aunque la pestaña quede abierta y cambie el mes)
   // hasta que la persona elige otro
@@ -136,6 +138,8 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
           ))}
         </div>
       )}
+
+      {aboveTable && aboveTable(month)}
 
       {/* Tabla */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
@@ -254,6 +258,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
           plan={plan}
           defaults={editor.defaults}
           monthKeys={editorMonths}
+          todayIso={todayIso}
           teamNames={teamNames}
           onSave={saveEditor}
           onDelete={editor.task ? async () => {

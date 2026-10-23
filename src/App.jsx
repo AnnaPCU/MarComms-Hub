@@ -665,6 +665,7 @@ export default function App() {
             events={globalEvents}
             teamNames={livePeople}
             currentUser={currentUser}
+            dark={resolvedTheme === 'dark'}
             onOpenProject={navigateToProject}
             onBack={() => goToSection('main')}
           />

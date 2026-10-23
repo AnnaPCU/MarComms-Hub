@@ -13,20 +13,27 @@
 //     vacíos no aparecen). Si el mes actual todavía no tiene, lo avisa y
 //     ofrece ir al último mes con acciones.
 //   - En el celular las tareas se ven como tarjetas (sin scroll lateral).
+//   - Como el reporte mensual: KPIs del mes elegido arriba de las acciones
+//     (solo los que tienen valor mayor a 0; performance con la variación
+//     contra el mes anterior) e Iniciativas al final. Sin datos, esas
+//     secciones no aparecen.
 //
 // Modo oscuro: si la persona lo activó en el Hub (dark = true) usa los
 // colores oscuros de la marca; el cliente, por defecto, lo ve en claro.
 //
-// Props: plan ({ name }), tasks, todayIso, updatedAt (opcional, ISO), dark
+// Props: plan ({ name, kpis?, initiatives? }), tasks, todayIso, updatedAt
+//   (opcional, ISO), dark
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 
 import { brandTheme } from '@/constants/brands';
-import { CANCELLED_TASK_STATUS } from '@/constants/planTasks';
+import { CANCELLED_TASK_STATUS, MONTHS_ES } from '@/constants/planTasks';
 import { filterTasks, groupTasksByMonth, monthHistory, monthLabel, planBrand, taskStats } from '@/utils/planTasks';
+import { initiativeGroups, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
 import { StatusBadge, TaskLinks, pctLabel } from './PlanBits';
+import { InitiativesTables, KpiGroupsView, ReportSectionTitle } from './PlanReportBlocks';
 
 const thCls = 'text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest';
 const fill = (tpl, mes) => tpl.replace('{mes}', mes);
@@ -88,6 +95,12 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
   const s = taskStats(tasks);
   const ms = taskStats(shown);
   const toggleRow = (id) => setExpanded((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const navy = theme.colors.dark;
+  // KPIs del mes elegido (solo si es un mes; sin ninguno con valor no se muestran)
+  const prevKey = previousMonthKey(month);
+  const kpiGroups = prevKey ? monthKpiGroups(tasks, month, plan.kpis?.[month], plan.kpis?.[prevKey]) : [];
+  const hasKpis = kpiGroups.some((g) => g.items.some((k) => k.visible));
+  const initiatives = initiativeGroups(plan.initiatives || []);
 
   const emptyText = tasks.length === 0
     ? 'Todavía no hay acciones cargadas en este plan.'
@@ -147,6 +160,14 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
           </div>
         </div>
       </section>
+
+      {/* KPIs del mes */}
+      {hasKpis && (
+        <section className="px-6 sm:px-8 pt-6">
+          <ReportSectionTitle title={`KPIs del mes · ${selected?.label || ''}`} aside="Operativos y de performance" c={c} />
+          <KpiGroupsView groups={kpiGroups} c={c} navy={navy} prevLabel={MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase()} />
+        </section>
+      )}
 
       {/* Tareas del mes */}
       <section className="px-2 sm:px-4 py-4">
@@ -208,6 +229,14 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
         </div>
         </>)}
       </section>
+
+      {/* Iniciativas (del plan, no del mes) */}
+      {initiatives.length > 0 && (
+        <section className="px-6 sm:px-8 pb-6 pt-2">
+          <ReportSectionTitle title="Iniciativas" aside="En definición o en marcha" c={c} />
+          <InitiativesTables groups={initiatives} c={c} navy={navy} />
+        </section>
+      )}
 
       {/* Pie: tagline y sitio de la marca */}
       <footer className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px]" style={{ color: c.label }}>

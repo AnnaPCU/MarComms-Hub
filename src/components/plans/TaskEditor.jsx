@@ -8,11 +8,16 @@
 // Al editar se guardan solo los campos que cambiaron, así no se pisa lo
 // que otra persona cambió mientras el editor estaba abierto.
 //
+// Si se pasa a Completado una tarea de un mes anterior al actual (sin
+// cambiarle el mes), pregunta si se completó en ese mes o si pasa al mes
+// actual: así cuenta en los KPIs del mes en que se terminó.
+//
 // Props:
 //   task          — tarea existente o null (nueva)
 //   plan          — plan al que pertenece
 //   defaults      — valores iniciales para una tarea nueva ({ monthKey })
 //   monthKeys     — opciones del selector de mes ('YYYY-MM')
+//   todayIso      — hoy ('YYYY-MM-DD'), para la pregunta del mes
 //   teamNames     — el equipo: opciones de Responsable
 //   onSave(data) — tarea nueva: todos los campos; existente: solo los que
 //                  cambiaron (puede venir vacío)
@@ -20,17 +25,17 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { CalendarClock, Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE } from '@/constants/planTasks';
-import { monthLabel } from '@/utils/planTasks';
+import { monthLabel, needsCompletionMonthCheck } from '@/utils/planTasks';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-300';
 const areaCls = `${inputCls} resize-y font-medium leading-snug`;
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
 
-export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], teamNames = [], onSave, onDelete, onClose }) {
+export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], todayIso = '', onSave, onDelete, onClose, teamNames = [] }) {
   const confirm = useConfirm();
   const [form, setForm] = useState({
     title:     task?.title || '',
@@ -45,17 +50,23 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [askMonth, setAskMonth] = useState(false);
+  const currentMonth = todayIso.slice(0, 7);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const canSave = form.title.trim().length > 0 && !saving;
   const months = form.monthKey && !monthKeys.includes(form.monthKey) ? [...monthKeys, form.monthKey].sort() : monthKeys;
   // Todo el equipo; si la tarea ya tenía a alguien de afuera (del Excel), también
   const ownerOptions = [...new Set([...teamNames, task?.owner].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 
-  const submit = async () => {
+  // monthKey: para guardar con otro mes (respuesta a la pregunta del mes)
+  const submit = async ({ monthKey, checked = false } = {}) => {
     if (!canSave) return;
+    const next = { status: form.status, monthKey: form.monthKey || null };
+    if (!checked && todayIso && needsCompletionMonthCheck(task, next, todayIso)) { setAskMonth(true); return; }
+    setAskMonth(false);
     setSaving(true); setError('');
     try {
-      const data = { ...form, title: form.title.trim(), owner: form.owner.trim(), link: form.link.trim(), monthKey: form.monthKey || null };
+      const data = { ...form, title: form.title.trim(), owner: form.owner.trim(), link: form.link.trim(), monthKey: (monthKey ?? form.monthKey) || null };
       if (!task) { await onSave(data); return; }
       const changed = Object.fromEntries(Object.entries(data).filter(([k, v]) => (v || '') !== (task[k] || '')));
       await onSave(changed);
@@ -165,6 +176,26 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
             {error && <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
           </div>
 
+          {askMonth ? (
+            <div className="px-5 py-4 border-t border-amber-200 bg-amber-50 space-y-3" role="alertdialog" aria-label="¿En qué mes se completó?">
+              <p className="text-sm font-black text-amber-900 flex items-start gap-2">
+                <CalendarClock className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>¿Se completó en {monthLabel(form.monthKey)}?</span>
+              </p>
+              <p className="text-[11px] font-medium text-amber-900/80 -mt-1.5">
+                La tarea está en {monthLabel(form.monthKey)}. Si se terminó en {monthLabel(currentMonth)}, pasala a ese mes para que cuente en sus entregables y en su reporte.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => submit({ monthKey: currentMonth, checked: true })} className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg">
+                  Pasarla a {monthLabel(currentMonth)}
+                </button>
+                <button onClick={() => submit({ checked: true })} className="text-[10px] font-black uppercase tracking-wider bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 px-3 py-2 rounded-lg">
+                  Sí, dejarla en {monthLabel(form.monthKey)}
+                </button>
+                <button onClick={() => setAskMonth(false)} className="text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 px-3 py-2">Volver</button>
+              </div>
+            </div>
+          ) : (
           <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
             {onDelete && (
               <button onClick={remove} disabled={saving} className="text-[10px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 flex items-center gap-1 px-2 py-2 disabled:opacity-40">
@@ -173,10 +204,11 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
             )}
             <div className="flex-1" />
             <button onClick={onClose} disabled={saving} className="text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 px-3 py-2">Cancelar</button>
-            <button onClick={submit} disabled={!canSave} className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg">
+            <button onClick={() => submit()} disabled={!canSave} className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg">
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
+          )}
         </div>
       </div>
     </ModalPortal>

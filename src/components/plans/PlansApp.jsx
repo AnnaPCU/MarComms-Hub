@@ -7,6 +7,8 @@
 //     Excel "Seguimiento Planes Marketing"), editables en tiempo real
 //   - los pilares que cubre (lo que antes estaba en Portal Cliente →
 //     "Por plan")
+//   - KPIs del mes e iniciativas, como en el reporte al cliente
+//     (usePlanExtras, migration 0038)
 //
 // Pantalla interna: nuevo plan y edición de tareas. Todo se carga y edita
 // desde acá (la carga inicial del Excel se hizo una sola vez, oct 2026).
@@ -18,13 +20,15 @@
 //
 // Props:
 //   planTasks (usePlanTasks), webinars, campaigns, events, teamNames,
-//   currentUser, onOpenProject(section, id), onBack
+//   currentUser, dark (modo oscuro del Hub, para los colores de la marca en
+//   KPIs e iniciativas), onOpenProject(section, id), onBack
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Plus, Target, X } from 'lucide-react';
 
 import { useBillingPlans } from '@/hooks/useBillingPlans';
+import { usePlanExtras } from '@/hooks/usePlanExtras';
 import { planBrand, planPillarItems, taskStats } from '@/utils/planTasks';
 import { todayIso as getTodayIso } from '@/utils/date';
 import { Kpi, pctLabel } from './PlanBits';
@@ -33,9 +37,10 @@ import PlanDetail from './PlanDetail';
 
 const BRAND_ORDER = ['Control Union', 'Peterson Solutions', ''];
 
-export default function PlansApp({ planTasks, webinars, campaigns, events, teamNames = [], currentUser, onOpenProject, onBack }) {
+export default function PlansApp({ planTasks, webinars, campaigns, events, teamNames = [], currentUser, dark = false, onOpenProject, onBack }) {
   const { plans, loading: plansLoading, addPlan, rotatePublicToken } = useBillingPlans();
   const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask } = planTasks;
+  const extras = usePlanExtras();
   const [openId, setOpenId] = useState(null);
   const [newPlan, setNewPlan] = useState(null); // { name, saving, error }
   const [flash, setFlash] = useState('');
@@ -105,9 +110,15 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
             todayIso={todayIso}
             teamNames={teamNames}
             currentUser={currentUser}
+            dark={dark}
             createTask={createTask}
             updateTask={updateTask}
             removeTask={removeTask}
+            extras={{
+              ...extras,
+              kpiRows: extras.kpiRows.filter((r) => String(r.planId) === String(openPlan.id)),
+              initiatives: extras.initiatives.filter((i) => String(i.planId) === String(openPlan.id)),
+            }}
             onOpenPillar={(it) => onOpenProject && onOpenProject('campaigns', it.id)}
             onRotateToken={rotatePublicToken}
             onBack={() => setOpenId(null)}
