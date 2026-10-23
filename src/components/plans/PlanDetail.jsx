@@ -38,6 +38,8 @@ const VIEWS = [
 ];
 
 const publicPlanUrl = (token) => `${window.location.origin}/?plan=${token}`;
+// «Generar link nuevo» oculto por ahora (pedido oct 2026); poner en true para volver a mostrarlo
+const SHOW_ROTATE_LINK = false;
 
 // El link real dentro del Hub; la página le avisa su alto por postMessage
 function ExternalPreview({ url }) {
@@ -127,9 +129,11 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
             <a href={url} target="_blank" rel="noopener noreferrer" className="border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
               <ExternalLink className="w-3.5 h-3.5" /> Abrir
             </a>
-            <button onClick={rotateLink} disabled={rotating} className="text-slate-400 hover:text-amber-700 px-2 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-40" title="El link anterior deja de funcionar">
-              <RefreshCw className={`w-3.5 h-3.5 ${rotating ? 'animate-spin' : ''}`} /> Generar link nuevo
-            </button>
+            {SHOW_ROTATE_LINK && (
+              <button onClick={rotateLink} disabled={rotating} className="text-slate-400 hover:text-amber-700 px-2 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-40" title="El link anterior deja de funcionar">
+                <RefreshCw className={`w-3.5 h-3.5 ${rotating ? 'animate-spin' : ''}`} /> Generar link nuevo
+              </button>
+            )}
           </>
         ) : (
           <span className="text-[11px] font-bold text-amber-800">El link externo todavía no está activado en la base (falta la migración 0032 en Supabase).</span>

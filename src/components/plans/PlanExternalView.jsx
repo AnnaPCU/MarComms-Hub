@@ -5,6 +5,9 @@
 // del Hub muestra ese mismo link en un iframe, así lo que se ve en el Hub
 // es exactamente lo que ve el cliente.
 //
+//   - Encabezado y pie como el reporte mensual: franja del color de la
+//     marca, logo de MarComms + logo de la marca arriba; al pie, MarComms a
+//     la izquierda y la tagline de la marca bajo una línea Dark Blue.
 //   - Con la identidad de la marca del plan (logo, colores, tagline al
 //     pie). Control Union y Peterson Solutions nunca se mezclan.
 //   - Sin Responsable ni Deadline, solo lectura.
@@ -36,6 +39,8 @@ import { StatusBadge, TaskLinks, pctLabel } from './PlanBits';
 import { InitiativesTables, KpiGroupsView, ReportSectionTitle } from './PlanReportBlocks';
 
 const thCls = 'text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest';
+// Logo del equipo que firma el reporte (el mismo del menú del Hub)
+const MARCOMMS_LOGO = { color: '/logos/marcomms-color.png', white: '/logos/marcomms-white.png' };
 const fill = (tpl, mes) => tpl.replace('{mes}', mes);
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -120,14 +125,25 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" style={{ fontFamily: 'Ubuntu, Calibri, "DM Sans", sans-serif', color: c.text }}>
-      {/* Encabezado: logo solo (la tagline va al pie) */}
-      <header className="px-6 sm:px-8 pt-6 pb-5 border-b border-slate-100">
-        {theme.logo && (
-          // En oscuro el logo va sobre blanco: sus colores son para fondo claro
-          <span className={`inline-block mb-5 ${dark ? 'rounded-xl px-3 py-2' : ''}`} style={dark ? { background: '#ffffff' } : undefined}>
-            <img src={theme.logo} alt={theme.name} className="h-7 sm:h-8 w-auto block" />
-          </span>
-        )}
+      {/* Encabezado como el reporte: MarComms | reporte · logo de la marca (la tagline va al pie) */}
+      <div className="h-1" style={{ background: c.primary }} />
+      <header className="px-6 sm:px-8 pt-5 pb-5 border-b border-slate-100">
+        <div className="flex items-center justify-between gap-4 mb-5 pb-5 border-b border-slate-100">
+          <div className="flex items-center gap-4 min-w-0">
+            <img src={dark ? MARCOMMS_LOGO.white : MARCOMMS_LOGO.color} alt="MarComms" className="h-7 sm:h-9 w-auto block shrink-0" />
+            <span className="hidden sm:block w-px h-9 bg-slate-200" />
+            <div className="hidden sm:block min-w-0">
+              <p className="text-[13px] font-bold leading-tight truncate" style={{ color: c.dark }}>Plan · {plan.name}</p>
+              <p className="text-[11px] mt-0.5" style={{ color: c.label }}>Reporte de Marketing Digital</p>
+            </div>
+          </div>
+          {theme.logo && (
+            // En oscuro el logo va sobre blanco: sus colores son para fondo claro
+            <span className={`shrink-0 ${dark ? 'rounded-xl px-3 py-2' : ''}`} style={dark ? { background: '#ffffff' } : undefined}>
+              <img src={theme.logo} alt={theme.name} className="h-5 sm:h-7 w-auto block" />
+            </span>
+          )}
+        </div>
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: c.label }}>{theme.title}</p>
         <h1 className="text-2xl sm:text-3xl font-bold leading-tight mt-1" style={{ color: c.dark }}>{plan.name}</h1>
         <p className="text-sm mt-1">{theme.intro}</p>
@@ -238,10 +254,16 @@ export default function PlanExternalView({ plan, tasks, todayIso, updatedAt, dar
         </section>
       )}
 
-      {/* Pie: tagline y sitio de la marca */}
-      <footer className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px]" style={{ color: c.label }}>
-        <span className="font-bold">{theme.tagline}</span>
-        <span>{updatedAt ? `Actualizado ${new Date(updatedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}{theme.site ? `${updatedAt ? ' · ' : ''}${theme.site}` : ''}</span>
+      {/* Pie como el reporte: MarComms a la izquierda; línea Dark Blue y tagline de la marca a la derecha */}
+      <footer className="px-6 sm:px-8 pt-6 pb-5 border-t border-slate-100" style={{ color: c.label }}>
+        <div className="flex flex-col-reverse sm:flex-row sm:items-end justify-between gap-5 sm:gap-6">
+          <img src={dark ? MARCOMMS_LOGO.white : MARCOMMS_LOGO.color} alt="MarComms" className="h-6 sm:h-7 w-auto block shrink-0 self-start sm:self-auto" />
+          <div className="sm:flex-1 sm:max-w-[60%] text-right">
+            <div className="h-1 rounded-full mb-3" style={{ background: dark ? c.primary : navy }} />
+            {theme.tagline && <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em]">{theme.tagline}</p>}
+          </div>
+        </div>
+        <p className="mt-4 text-[10px]">{updatedAt ? `Actualizado ${new Date(updatedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}{theme.site ? `${updatedAt ? ' · ' : ''}${theme.site}` : ''}</p>
       </footer>
     </div>
   );
