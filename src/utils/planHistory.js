@@ -2,8 +2,7 @@
 // planHistory — Histórico de un plan (resumen de todos los meses)
 // ════════════════════════════════════════════════════════════════════
 // Opción «Histórico» del link externo (y de la vista externa en el Hub):
-// la evolución de cada KPI mes a mes, con el total del período y la
-// variación de cada mes contra el anterior. Usa los mismos
+// la evolución de cada KPI mes a mes, con el total del período. Usa los mismos
 // valores que «KPIs del mes» (monthKpiGroups: automáticos, corregidos a
 // mano y lo que se arrastra, como Plan MarComms). Un mes sin valor (o en
 // 0) no cuenta. Mientras más meses estén cargados, más completo se ve.
@@ -11,7 +10,7 @@
 
 import { PLAN_KPIS, PLAN_KPI_GROUPS } from '@/constants/planKpis';
 import { MONTHS_ES } from '@/constants/planTasks';
-import { kpiChange, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const hasValue = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -41,10 +40,8 @@ export const historyMonths = (tasks = [], kpiHistory = {}, todayIso) => {
 };
 
 // Por grupo, cada KPI con datos: [{ id, label, groups... points: [{ monthKey,
-// value, currency, count, change }], total, countTotal, currency, mixed,
+// value, currency, count }], total, countTotal, currency, mixed,
 // monthsWithData }].
-//   change (de cada mes): contra el mes anterior, como en los KPIs del mes
-//     (los dos con valor > 0 y la misma moneda; si no, null).
 export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
   const perMonth = months.map((m) => {
     const items = monthKpiGroups(tasks, m, kpiHistory[m], kpiHistory[previousMonthKey(m)], kpiHistory).flatMap((g) => g.items);
@@ -58,11 +55,6 @@ export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
         return it && it.visible
           ? { monthKey, value: it.value, currency: it.currency || '', count: hasValue(it.count) ? it.count : null }
           : { monthKey, value: null, currency: '', count: null };
-      });
-      points.forEach((p, i) => {
-        const prev = points[i - 1];
-        const ch = prev ? kpiChange(p.value, prev.value, p.currency, prev.currency) : null;
-        p.change = ch ? { ...ch, from: prev.monthKey } : null;
       });
       const withData = points.filter((p) => hasValue(p.value));
       if (!withData.length) return null;

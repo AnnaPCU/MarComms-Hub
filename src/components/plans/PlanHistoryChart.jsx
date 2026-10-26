@@ -3,37 +3,22 @@
 // ════════════════════════════════════════════════════════════════════
 // Como los gráficos de los reportes: eje Y con tramos redondos y líneas
 // guía, barras anchas del color de la marca (casi sin espacio entre un mes
-// y otro), el mes abajo y debajo la variación contra el mes anterior
-// (▲ verde / ▼ rojo). El valor de cada mes va arriba de su barra.
+// y otro) y el mes abajo. El valor de cada mes va arriba de su barra.
+// Sin variación contra el mes anterior (eso está en los KPIs de cada mes).
 //
 // Props: k (KPI de kpiTimeline), c (colores de la marca), crossYear
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { formatKpiChange, formatKpiNumber } from '@/utils/planKpis';
+import { formatKpiNumber } from '@/utils/planKpis';
 import { niceScale, shortMonthLabel } from '@/utils/planHistory';
 import { monthLabel } from '@/utils/planTasks';
-
-export const UP = '#16a34a';
-export const DOWN = '#dc2626';
 
 const PLOT_H = 168;
 const AXIS_W = 'w-12';
 
 const short = (n) => (n >= 100000 ? n.toLocaleString('es-AR', { notation: 'compact', maximumFractionDigits: 1 }) : formatKpiNumber(n));
 const pctOf = (v, max) => `${Math.min(100, (v / max) * 100)}%`;
-
-// "▲ +50 %" chico, debajo del mes (vacío si no hay con qué comparar)
-function MonthChange({ change, c }) {
-  if (!change) return <span className="block h-4" />;
-  const n = Math.round(change.pct * 100);
-  const color = n > 0 ? UP : n < 0 ? DOWN : c.label;
-  return (
-    <span className="block h-4 text-[10px] font-bold whitespace-nowrap" style={{ color }}>
-      {n > 0 ? '▲' : n < 0 ? '▼' : '='} {formatKpiChange(change.pct)}
-    </span>
-  );
-}
 
 export default function PlanHistoryChart({ k, c, crossYear }) {
   const max = Math.max(0, ...k.points.map((p) => p.value || 0));
@@ -76,7 +61,7 @@ export default function PlanHistoryChart({ k, c, crossYear }) {
           </div>
         </div>
       </div>
-      {/* Eje X: mes y variación contra el anterior */}
+      {/* Eje X: meses */}
       <div className="flex">
         <div className={`${AXIS_W} shrink-0`} />
         <div className="flex-1 min-w-0 flex">
@@ -84,15 +69,13 @@ export default function PlanHistoryChart({ k, c, crossYear }) {
             <div key={p.monthKey} className="flex-1 min-w-0 flex flex-col items-center text-center">
               <span className="w-px h-1.5" style={{ background: axis }} />
               <span className="text-[11px] mt-0.5 whitespace-nowrap" style={{ color: c.label }}>{shortMonthLabel(p.monthKey, crossYear)}</span>
-              <MonthChange change={p.change} c={c} />
             </div>
           ))}
         </div>
       </div>
       {/* Leyenda */}
-      <p className="mt-2 flex items-center justify-center gap-4 flex-wrap text-[11px]" style={{ color: c.primary }}>
+      <p className="mt-3 flex items-center justify-center text-[11px]" style={{ color: c.primary }}>
         <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-2.5" style={{ background: c.primary }} />{k.label}{k.currency ? ` (${k.currency})` : ''}</span>
-        <span className="inline-flex items-center gap-1" style={{ color: c.label }}><span style={{ color: UP }}>▲</span><span style={{ color: DOWN }}>▼</span> vs mes anterior</span>
       </p>
     </div>
   );

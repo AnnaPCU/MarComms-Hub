@@ -23,27 +23,21 @@ describe('histórico', () => {
     expect(historyMonths([], {}, '2026-10-26')).toEqual([]);
     expect(shortMonthLabel('2027-01', true)).toBe('Ene 27');
   });
-  it('por KPI: puntos por mes, total, cantidad y variación mes a mes', () => {
+  it('por KPI: puntos por mes, total y cantidad', () => {
     const groups = kpiTimeline(tasks, kpis, ['2026-08', '2026-09', '2026-10']);
     const by = Object.fromEntries(groups.flatMap((g) => g.items).map((k) => [k.id, k]));
     expect(groups.map((g) => g.id)).toEqual(['ops', 'performance', 'investment']);
     expect(by.deals.points.map((p) => p.value)).toEqual([null, 15, 26]);
     expect(by.deals.total).toBe(41);
-    expect(by.deals.points.map((p) => p.change && p.change.pct)).toEqual([null, null, 11 / 15]); // ago sin datos: sep no se compara
-    expect(by.deals.points[2].change.from).toBe('2026-09');
     expect(by.mqls).toMatchObject({ total: 37887, countTotal: 9, currency: 'USD' });
     expect(by.deliverables.points.map((p) => p.value)).toEqual([1, 8, 1]); // automático en ago/oct, a mano en sep
     expect(by.meetings.points.map((p) => p.value)).toEqual([null, null, 7]);
-    expect(by.meetings.points.every((p) => p.change === null)).toBe(true); // un solo mes con datos
     expect(by.planFee.points.map((p) => p.value)).toEqual([1500, 1500, 1500]); // se arrastra
-    expect(by.planFee.points.map((p) => p.change && p.change.pct)).toEqual([null, 0, 0]);
-    expect(by.deliverables.points.map((p) => Math.round((p.change?.pct ?? NaN) * 100))).toEqual([NaN, 700, -87]); // −87,5 % (Math.round)
     expect(by.contacts).toBeUndefined(); // en 0: no cuenta
   });
-  it('monedas distintas: sin total ni variación', () => {
+  it('monedas distintas: sin total', () => {
     const g = kpiTimeline([], { '2026-09': { sales: { value: 10, currency: 'USD' } }, '2026-10': { sales: { value: 20, currency: 'EUR' } } }, ['2026-09', '2026-10']);
     expect(g[0].items[0]).toMatchObject({ id: 'sales', mixed: true, total: null });
-    expect(g[0].items[0].points[1].change).toBeNull();
   });
   it('escala del eje Y: tramos redondos', () => {
     expect(niceScale(22, { integer: true })).toEqual({ max: 24, ticks: [0, 6, 12, 18, 24] });

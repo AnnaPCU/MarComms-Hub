@@ -3,8 +3,8 @@
 // ════════════════════════════════════════════════════════════════════
 // Mini dashboard de todos los meses del plan (del primero al último con
 // tareas o KPIs): una tarjeta por cada KPI con datos, con el total del
-// período y el gráfico de barras por mes con la variación de cada mes
-// contra el anterior (PlanHistoryChart). Sin barra de progreso.
+// período y el gráfico de barras por mes (PlanHistoryChart). Sin barra de
+// progreso ni variación contra el mes anterior: se lee en el gráfico.
 // Textos y acciones no se comparan: solo lo que se mide.
 // Lógica en src/utils/planHistory.js.
 //
@@ -53,7 +53,7 @@ export default function PlanHistoryView({ tasks = [], kpiHistory = {}, todayIso,
       ) : (
         <>
           <p className="text-[12px] mb-4">
-            {months.length} {months.length === 1 ? 'mes' : 'meses'} · {doneInPeriod} {doneInPeriod === 1 ? 'acción completada' : 'acciones completadas'} en el período. Cada mes se compara con el anterior. El histórico se completa a medida que se cargan los indicadores de cada mes.
+            {months.length} {months.length === 1 ? 'mes' : 'meses'} · {doneInPeriod} {doneInPeriod === 1 ? 'acción completada' : 'acciones completadas'} en el período. El histórico se completa a medida que se cargan los indicadores de cada mes.
           </p>
           <div className="space-y-6">
             {groups.map((g) => (
