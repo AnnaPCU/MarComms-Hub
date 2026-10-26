@@ -2,8 +2,9 @@
 // planHistory — Histórico de un plan (resumen de todos los meses)
 // ════════════════════════════════════════════════════════════════════
 // Opción «Histórico» del link externo (y de la vista externa en el Hub):
-// la evolución de cada KPI mes a mes, con el total del período y la
-// variación entre el primer y el último mes con datos. Usa los mismos
+// la evolución de cada KPI mes a mes, con el total del período, la
+// variación de cada mes contra el anterior y el promedio de esas
+// variaciones (el progreso de todo el período). Usa los mismos
 // valores que «KPIs del mes» (monthKpiGroups: automáticos, corregidos a
 // mano y lo que se arrastra, como Plan MarComms). Un mes sin valor (o en
 // 0) no cuenta. Mientras más meses estén cargados, más completo se ve.
@@ -11,7 +12,7 @@
 
 import { PLAN_KPIS, PLAN_KPI_GROUPS } from '@/constants/planKpis';
 import { MONTHS_ES } from '@/constants/planTasks';
-import { monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { kpiChange, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const hasValue = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -41,9 +42,12 @@ export const historyMonths = (tasks = [], kpiHistory = {}, todayIso) => {
 };
 
 // Por grupo, cada KPI con datos: [{ id, label, groups... points: [{ monthKey,
-// value, currency, count }], total, countTotal, currency, mixed, first,
-// last, change }]. `change`: último vs primer mes con datos (pct: 1 = +100 %),
-// solo con 2 meses o más y la misma moneda.
+// value, currency, count, change }], total, countTotal, currency, mixed,
+// monthsWithData, avgChange }].
+//   change (de cada mes): contra el mes anterior, como en los KPIs del mes
+//     (los dos con valor > 0 y la misma moneda; si no, null).
+//   avgChange: promedio de esas variaciones mes a mes ({ pct, n }: n =
+//     cuántas comparaciones hubo), o null si no hay ninguna.
 export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
   const perMonth = months.map((m) => {
     const items = monthKpiGroups(tasks, m, kpiHistory[m], kpiHistory[previousMonthKey(m)], kpiHistory).flatMap((g) => g.items);
@@ -58,13 +62,17 @@ export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
           ? { monthKey, value: it.value, currency: it.currency || '', count: hasValue(it.count) ? it.count : null }
           : { monthKey, value: null, currency: '', count: null };
       });
+      points.forEach((p, i) => {
+        const prev = points[i - 1];
+        const ch = prev ? kpiChange(p.value, prev.value, p.currency, prev.currency) : null;
+        p.change = ch ? { ...ch, from: prev.monthKey } : null;
+      });
       const withData = points.filter((p) => hasValue(p.value));
       if (!withData.length) return null;
       const currencies = [...new Set(withData.map((p) => p.currency))];
       const mixed = currencies.length > 1;
-      const first = withData[0];
-      const last = withData[withData.length - 1];
       const counts = withData.filter((p) => hasValue(p.count));
+      const changes = points.map((p) => p.change).filter(Boolean);
       return {
         ...k,
         points,
@@ -73,10 +81,23 @@ export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
         total: mixed ? null : withData.reduce((n, p) => n + p.value, 0),
         countTotal: counts.length ? counts.reduce((n, p) => n + p.count, 0) : null,
         monthsWithData: withData.length,
-        first,
-        last,
-        change: withData.length >= 2 && !mixed && first.value > 0 ? { pct: (last.value - first.value) / first.value, from: first.monthKey, to: last.monthKey } : null,
+        avgChange: changes.length ? { pct: changes.reduce((n, ch) => n + ch.pct, 0) / changes.length, n: changes.length } : null,
       };
     }).filter(Boolean),
   })).filter((g) => g.items.length > 0);
+};
+
+// Eje Y del gráfico: 4 tramos "redondos" que cubren el máximo
+// (22 → 0·6·12·18·24; 17.900 → 0·4.500·…·18.000). `integer`: para
+// cantidades, tramos enteros (2 → 0·1·2·3·4).
+const STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 4.5, 5, 6, 7.5, 8, 10];
+export const niceScale = (max, { integer = false, parts = 4 } = {}) => {
+  const raw = max > 0 ? max / parts : 1;
+  let step;
+  if (integer && raw <= 1) step = 1;
+  else {
+    const pow = 10 ** Math.floor(Math.log10(raw));
+    step = STEPS.map((s) => Number((s * pow).toPrecision(6))).find((s) => s >= raw && (!integer || Number.isInteger(s))) ?? 10 * pow;
+  }
+  return { max: step * parts, ticks: Array.from({ length: parts + 1 }, (_, i) => Number((step * i).toPrecision(12))) };
 };

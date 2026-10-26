@@ -23,9 +23,9 @@ import { formatKpiChange, formatKpiNumber } from '@/utils/planKpis';
 export function ReportSectionTitle({ title, aside, c, children }) {
   return (
     <div className="flex items-center gap-3 mb-3">
-      <h2 className="text-[11px] font-bold uppercase tracking-widest shrink-0" style={{ color: c.primary }}>{title}</h2>
-      <span className="flex-1 h-px" style={{ background: c.primary, opacity: 0.25 }} />
-      {aside && <span className="text-[11px] italic shrink-0" style={{ color: c.label }}>{aside}</span>}
+      <h2 className="text-[11px] font-bold uppercase tracking-widest min-w-0" style={{ color: c.primary }}>{title}</h2>
+      <span className="flex-1 min-w-[16px] h-px" style={{ background: c.primary, opacity: 0.25 }} />
+      {aside && <span className="hidden sm:inline text-[11px] italic shrink-0" style={{ color: c.label }}>{aside}</span>}
       {children}
     </div>
   );
