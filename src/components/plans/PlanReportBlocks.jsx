@@ -31,7 +31,7 @@ export function ReportSectionTitle({ title, aside, c, children }) {
   );
 }
 
-function GroupLabel({ label, count, c, hollow = false }) {
+export function GroupLabel({ label, count, c, hollow = false }) {
   return (
     <p className="flex items-center gap-2 mb-2 text-[11px] font-bold uppercase tracking-widest" style={{ color: c.dark }}>
       <span className="w-2 h-2 rounded-full shrink-0" style={hollow ? { border: `1.5px solid ${c.primary}` } : { background: c.primary }} />

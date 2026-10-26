@@ -16,6 +16,8 @@
 //     vacíos no aparecen). Si el mes actual todavía no tiene, lo avisa y
 //     ofrece ir al último mes con acciones.
 //   - En el celular las tareas se ven como tarjetas (sin scroll lateral).
+//   - Selector de mes: el más reciente arriba y al final «Histórico»
+//     (PlanHistoryView: evolución de cada KPI en todos los meses).
 //   - Como el reporte mensual: KPIs del mes elegido arriba de las acciones
 //     (solo los que tienen valor mayor a 0; performance con la variación
 //     contra el mes anterior) e Iniciativas al final. Sin datos, esas
@@ -36,6 +38,10 @@ import { filterTasks, groupTasksByMonth, monthHistory, monthLabel, planBrand, ta
 import { initiativeGroups, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
 import { StatusBadge, TaskLinks, pctLabel } from './PlanBits';
 import { InitiativesTables, KpiGroupsView, ReportSectionTitle } from './PlanReportBlocks';
+import PlanHistoryView from './PlanHistoryView';
+
+// Opción del selector de mes con el histórico de todos los meses
+const HISTORY = 'history';
 
 const thCls = 'text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest';
 // Logo del equipo que firma el reporte (el mismo del menú del Hub)
@@ -86,14 +92,19 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
   const [expanded, setExpanded] = useState(() => new Set());
   const history = useMemo(() => monthHistory(tasks, todayIso), [tasks, todayIso]);
   // Si el mes elegido se quedó sin tareas (cambio en vivo), se sigue mostrando en la lista
-  const options = history.options.some((o) => o.value === month)
+  const isHistory = month === HISTORY;
+  // Meses en orden cronológico (las flechas: ← más viejo, → más nuevo)
+  const options = isHistory || history.options.some((o) => o.value === month)
     ? history.options
     : [...history.options, { value: month, label: month === 'none' ? 'Sin mes' : monthLabel(month), count: 0, current: false }]
       .sort((a, b) => (a.value === 'none' ? 1 : b.value === 'none' ? -1 : a.value.localeCompare(b.value)));
+  const monthOpts = options.filter((o) => o.value !== 'none');
+  // En el selector: el más reciente arriba, después «Sin mes» y al final el histórico
+  const selectOptions = [...monthOpts].reverse().concat(options.filter((o) => o.value === 'none'), [{ value: HISTORY, label: 'Histórico (todos los meses)' }]);
   const idx = options.findIndex((o) => o.value === month);
-  const prev = options[idx - 1];
-  const next = options[idx + 1];
-  const selected = options[idx];
+  const prev = isHistory ? monthOpts[monthOpts.length - 1] : options[idx - 1];
+  const next = isHistory ? undefined : options[idx + 1];
+  const selected = isHistory ? { value: HISTORY, label: 'Histórico' } : options[idx];
   const shown = filterTasks(tasks, { month });
   const groups = groupTasksByMonth(shown);
   const s = taskStats(tasks);
@@ -165,7 +176,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
               <ChevronLeft className="w-4 h-4" />
             </button>
             <select value={month} onChange={(e) => setMonth(e.target.value)} className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none" style={{ color: c.dark }} aria-label="Mes">
-              {options.map((o) => <option key={o.value} value={o.value}>{o.label}{o.current ? ' (este mes)' : ''}</option>)}
+              {selectOptions.map((o) => <option key={o.value} value={o.value}>{o.label}{o.current ? ' (este mes)' : ''}</option>)}
             </select>
             <button onClick={() => next && setMonth(next.value)} disabled={!next} className={navBtn} style={{ color: c.dark }} title={next ? next.label : undefined} aria-label="Mes siguiente">
               <ChevronRight className="w-4 h-4" />
@@ -175,14 +186,18 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
       </section>
 
       {/* KPIs del mes */}
-      {hasKpis && (
+      {!isHistory && hasKpis && (
         <section className="px-6 sm:px-8 pt-6">
           <ReportSectionTitle title={`KPIs del mes · ${selected?.label || ''}`} aside="Operativos, performance e investment" c={c} />
           <KpiGroupsView groups={kpiGroups} c={c} navy={navy} prevLabel={MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase()} />
         </section>
       )}
 
+      {/* Histórico: evolución de los KPIs de todos los meses */}
+      {isHistory && <PlanHistoryView tasks={tasks} kpiHistory={plan.kpis || {}} todayIso={todayIso} c={c} />}
+
       {/* Tareas del mes */}
+      {!isHistory && (
       <section className="px-2 sm:px-4 py-4">
         <div className="flex items-center justify-between gap-3 px-2 sm:px-4 pb-3 flex-wrap">
           <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: c.dark }}>Acciones · {selected?.label || ''}</h2>
@@ -242,6 +257,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
         </div>
         </>)}
       </section>
+      )}
 
       {/* Iniciativas (del plan, no del mes) */}
       {initiatives.length > 0 && (
