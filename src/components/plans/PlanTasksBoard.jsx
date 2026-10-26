@@ -20,6 +20,8 @@
 //   createTask / updateTask / removeTask,
 //   aboveTable(month) (opcional) — lo que va entre los filtros y la tabla
 //   para el mes elegido (los KPIs del mes, en PlanDetail)
+//   pickedMonth / onPickMonth (opcional) — el mes elegido lo maneja el
+//   padre (PlanDetail: el PDF baja el mes en el que estás parado)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -39,11 +41,13 @@ function LongText({ value, open }) {
   return <p className={`text-[11px] text-slate-600 leading-snug whitespace-pre-line ${open ? '' : 'line-clamp-3'}`}>{value}</p>;
 }
 
-export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask, aboveTable }) {
+export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], currentUser, createTask, updateTask, removeTask, aboveTable, pickedMonth: controlledMonth, onPickMonth }) {
   const currentMonth = todayIso.slice(0, 7);
   // Sigue al mes actual (aunque la pestaña quede abierta y cambie el mes)
   // hasta que la persona elige otro
-  const [pickedMonth, setMonth] = useState(null);
+  const [ownMonth, setOwnMonth] = useState(null);
+  const pickedMonth = onPickMonth ? controlledMonth : ownMonth;
+  const setMonth = onPickMonth || setOwnMonth;
   const month = pickedMonth ?? currentMonth;
   const [status, setStatus] = useState('all');
   const [owner, setOwner] = useState('');
