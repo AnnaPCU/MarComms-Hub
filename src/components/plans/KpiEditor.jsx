@@ -13,10 +13,12 @@
 //     Todos aceptan una descripción debajo del número.
 // Vacío o en 0, el KPI no se muestra en el link externo. Los de
 // performance se comparan solos con el mes anterior.
+// `only` (id de un KPI): clic en una tarjeta → se edita solo ese KPI; al
+// guardar, el resto de los KPIs del mes queda como está.
 //
 // Props: plan, monthKey, stored (kpis guardados del mes), auto
 //   (autoKpis del mes), carried (carriedKpis: lo que se arrastra de meses
-//   anteriores), onSave(kpis) (async), onClose()
+//   anteriores), only (opcional), onSave(kpis) (async), onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
@@ -33,11 +35,13 @@ const autoText = (id, auto) => (id === 'meetings'
   ? `Automático: ${auto.meetings} (de ${auto.meetingTasks} ${auto.meetingTasks === 1 ? 'tarea de reunión completada' : 'tareas de reunión completadas'})`
   : `Automático: ${auto.deliverables} (tareas completadas del mes que no son reuniones)`);
 
-export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, onSave, onClose }) {
+export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, only = null, onSave, onClose }) {
   const [form, setForm] = useState(() => kpiFormValues(stored));
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const single = only ? PLAN_KPIS.find((k) => k.id === only) || null : null;
+  const shown = single ? [single] : PLAN_KPIS;
   const set = (id, field, v) => {
     setForm((f) => ({ ...f, [id]: { ...f[id], [field]: v } }));
     if (errors[id]) setErrors((e) => ({ ...e, [id]: '' }));
@@ -45,8 +49,16 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
 
   const submit = async () => {
     if (saving) return;
-    const { kpis, errors: errs } = cleanKpis(form);
+    const { kpis: cleaned, errors: allErrs } = cleanKpis(form);
+    const errs = only ? Object.fromEntries(Object.entries(allErrs).filter(([id]) => id === only)) : allErrs;
     if (Object.keys(errs).length) { setErrors(errs); return; }
+    // Un solo KPI: se toma lo guardado ahora (puede haber cambiado mientras
+    // tanto) y se reemplaza solo ese
+    let kpis = cleaned;
+    if (only) {
+      kpis = Object.fromEntries(Object.entries(stored || {}).filter(([id]) => id !== only));
+      if (cleaned[only]) kpis[only] = cleaned[only];
+    }
     setSaving(true); setSaveError('');
     try { await onSave(kpis); }
     catch (_e) { setSaveError('No se pudieron guardar los KPIs. Probá de nuevo; si sigue fallando, revisá la consola.'); setSaving(false); }
@@ -55,21 +67,25 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
   return (
     <ModalPortal>
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[85] flex items-center justify-center p-4" onClick={() => !saving && onClose()}>
-        <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className={`bg-white w-full ${single ? 'max-w-xl' : 'max-w-3xl'} rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden`} onClick={(e) => e.stopPropagation()}>
           <div className="px-5 py-4 border-b border-slate-100 bg-emerald-50 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 truncate">{plan?.name}</p>
-              <h2 className="text-base font-black text-slate-900">KPIs de {monthLabel(monthKey)}</h2>
-              <p className="text-[11px] font-medium text-slate-500 mt-0.5">Lo que quede vacío o en 0 no aparece en el link externo. Deals, MQLs y Ventas se comparan solos con el mes anterior.</p>
+              <h2 className="text-base font-black text-slate-900">{single ? `${single.kicker ? `${single.kicker} · ` : ''}${single.label} · ${monthLabel(monthKey)}` : `KPIs de ${monthLabel(monthKey)}`}</h2>
+              <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                {single
+                  ? 'Vacío o en 0, no aparece en el link externo. Los demás KPIs del mes no cambian.'
+                  : 'Lo que quede vacío o en 0 no aparece en el link externo. Deals, MQLs y Ventas se comparan solos con el mes anterior.'}
+              </p>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center shrink-0" title="Cerrar"><X className="w-4 h-4 text-slate-600" /></button>
           </div>
 
           <div className="p-5 space-y-5 overflow-y-auto">
-            {PLAN_KPI_GROUPS.map((g) => (
+            {PLAN_KPI_GROUPS.filter((g) => shown.some((k) => k.group === g.id)).map((g) => (
               <section key={g.id} className="space-y-3">
-                <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{g.label}</h3>
-                {PLAN_KPIS.filter((k) => k.group === g.id).map((k) => {
+                {!single && <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600">{g.label}</h3>}
+                {shown.filter((k) => k.group === g.id).map((k) => {
                   const f = form[k.id];
                   return (
                     <div key={k.id} className="border border-slate-200 rounded-2xl p-3 space-y-2">
@@ -83,6 +99,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
                           <label className={labelCls} htmlFor={`kpi-${k.id}`}>{k.money ? 'Monto' : 'Número'}</label>
                           <input
                             id={`kpi-${k.id}`}
+                            autoFocus={!!single}
                             inputMode="decimal"
                             value={f.value}
                             onChange={(e) => set(k.id, 'value', e.target.value)}
@@ -139,7 +156,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
             <div className="flex-1" />
             <button onClick={onClose} disabled={saving} className="text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 px-3 py-2">Cancelar</button>
             <button onClick={submit} disabled={saving} className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg">
-              {saving ? 'Guardando…' : 'Guardar KPIs'}
+              {saving ? 'Guardando…' : single ? 'Guardar' : 'Guardar KPIs'}
             </button>
           </div>
         </div>

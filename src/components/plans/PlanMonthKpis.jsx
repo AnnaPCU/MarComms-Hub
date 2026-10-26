@@ -5,8 +5,8 @@
 // elegido ahí. Muestra los KPIs como en el reporte (Operativos,
 // Performance e Investment); los que están
 // vacíos o en 0 se ven punteados (no van en el link externo). Performance
-// compara con el mes anterior. Clic en una tarjeta o en «Editar KPIs» →
-// KpiEditor.
+// compara con el mes anterior. Clic en una tarjeta → KpiEditor solo con
+// ese KPI; «Editar KPIs» → KpiEditor con todos.
 //
 // Props: plan, monthKey ('YYYY-MM' | 'all' | 'none'), tasks (las del
 //   plan), stored (kpis guardados de ese mes), prevStored (los del mes
@@ -35,7 +35,7 @@ const hintOf = (k) => {
 };
 
 export default function PlanMonthKpis({ plan, monthKey, tasks, stored, prevStored, history = {}, c, navy, missing = false, onSave }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(null); // null | 'all' | id de un KPI
   const isMonth = MONTH_RE.test(monthKey || '');
 
   if (!isMonth) {
@@ -56,7 +56,7 @@ export default function PlanMonthKpis({ plan, monthKey, tasks, stored, prevStore
     <div className="bg-white border border-slate-200 rounded-2xl px-4 py-4">
       <ReportSectionTitle title={`KPIs del mes · ${monthLabel(monthKey)}`} aside={`${shownInLink} de ${allKpis.length} en el link`} c={c}>
         {!missing && (
-          <button onClick={() => setEditing(true)} className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
+          <button onClick={() => setEditing('all')} className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
             <Pencil className="w-3 h-3" /> Editar KPIs
           </button>
         )}
@@ -64,7 +64,7 @@ export default function PlanMonthKpis({ plan, monthKey, tasks, stored, prevStore
       {missing ? (
         <p className="text-[11px] font-bold text-amber-800">Los KPIs todavía no están activados en la base (falta la migración 0038 en Supabase).</p>
       ) : (
-        <KpiGroupsView groups={groups} c={c} navy={navy} internal hintOf={hintOf} prevLabel={prevLabel} onCardClick={() => setEditing(true)} />
+        <KpiGroupsView groups={groups} c={c} navy={navy} internal hintOf={hintOf} prevLabel={prevLabel} onCardClick={(k) => setEditing(k.id)} />
       )}
       {editing && (
         <KpiEditor
@@ -73,8 +73,9 @@ export default function PlanMonthKpis({ plan, monthKey, tasks, stored, prevStore
           stored={stored}
           auto={autoKpis(tasks, monthKey)}
           carried={carriedKpis(history, monthKey)}
-          onSave={async (kpis) => { await onSave(kpis); setEditing(false); }}
-          onClose={() => setEditing(false)}
+          only={editing === 'all' ? null : editing}
+          onSave={async (kpis) => { await onSave(kpis); setEditing(null); }}
+          onClose={() => setEditing(null)}
         />
       )}
     </div>
