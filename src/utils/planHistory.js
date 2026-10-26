@@ -2,9 +2,8 @@
 // planHistory — Histórico de un plan (resumen de todos los meses)
 // ════════════════════════════════════════════════════════════════════
 // Opción «Histórico» del link externo (y de la vista externa en el Hub):
-// la evolución de cada KPI mes a mes, con el total del período, la
-// variación de cada mes contra el anterior y el promedio de esas
-// variaciones (el progreso de todo el período). Usa los mismos
+// la evolución de cada KPI mes a mes, con el total del período y la
+// variación de cada mes contra el anterior. Usa los mismos
 // valores que «KPIs del mes» (monthKpiGroups: automáticos, corregidos a
 // mano y lo que se arrastra, como Plan MarComms). Un mes sin valor (o en
 // 0) no cuenta. Mientras más meses estén cargados, más completo se ve.
@@ -43,11 +42,9 @@ export const historyMonths = (tasks = [], kpiHistory = {}, todayIso) => {
 
 // Por grupo, cada KPI con datos: [{ id, label, groups... points: [{ monthKey,
 // value, currency, count, change }], total, countTotal, currency, mixed,
-// monthsWithData, avgChange }].
+// monthsWithData }].
 //   change (de cada mes): contra el mes anterior, como en los KPIs del mes
 //     (los dos con valor > 0 y la misma moneda; si no, null).
-//   avgChange: promedio de esas variaciones mes a mes ({ pct, n }: n =
-//     cuántas comparaciones hubo), o null si no hay ninguna.
 export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
   const perMonth = months.map((m) => {
     const items = monthKpiGroups(tasks, m, kpiHistory[m], kpiHistory[previousMonthKey(m)], kpiHistory).flatMap((g) => g.items);
@@ -72,7 +69,6 @@ export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
       const currencies = [...new Set(withData.map((p) => p.currency))];
       const mixed = currencies.length > 1;
       const counts = withData.filter((p) => hasValue(p.count));
-      const changes = points.map((p) => p.change).filter(Boolean);
       return {
         ...k,
         points,
@@ -81,7 +77,6 @@ export const kpiTimeline = (tasks = [], kpiHistory = {}, months = []) => {
         total: mixed ? null : withData.reduce((n, p) => n + p.value, 0),
         countTotal: counts.length ? counts.reduce((n, p) => n + p.count, 0) : null,
         monthsWithData: withData.length,
-        avgChange: changes.length ? { pct: changes.reduce((n, ch) => n + ch.pct, 0) / changes.length, n: changes.length } : null,
       };
     }).filter(Boolean),
   })).filter((g) => g.items.length > 0);

@@ -31,20 +31,19 @@ describe('histórico', () => {
     expect(by.deals.total).toBe(41);
     expect(by.deals.points.map((p) => p.change && p.change.pct)).toEqual([null, null, 11 / 15]); // ago sin datos: sep no se compara
     expect(by.deals.points[2].change.from).toBe('2026-09');
-    expect(by.deals.avgChange).toEqual({ pct: 11 / 15, n: 1 });
     expect(by.mqls).toMatchObject({ total: 37887, countTotal: 9, currency: 'USD' });
     expect(by.deliverables.points.map((p) => p.value)).toEqual([1, 8, 1]); // automático en ago/oct, a mano en sep
     expect(by.meetings.points.map((p) => p.value)).toEqual([null, null, 7]);
-    expect(by.meetings.avgChange).toBeNull(); // un solo mes con datos
+    expect(by.meetings.points.every((p) => p.change === null)).toBe(true); // un solo mes con datos
     expect(by.planFee.points.map((p) => p.value)).toEqual([1500, 1500, 1500]); // se arrastra
-    expect(by.planFee.avgChange).toEqual({ pct: 0, n: 2 });
+    expect(by.planFee.points.map((p) => p.change && p.change.pct)).toEqual([null, 0, 0]);
     expect(by.deliverables.points.map((p) => Math.round((p.change?.pct ?? NaN) * 100))).toEqual([NaN, 700, -87]); // −87,5 % (Math.round)
-    expect(by.deliverables.avgChange.pct).toBeCloseTo((7 - 7 / 8) / 2); // promedio de +700 % y −87,5 %
     expect(by.contacts).toBeUndefined(); // en 0: no cuenta
   });
   it('monedas distintas: sin total ni variación', () => {
     const g = kpiTimeline([], { '2026-09': { sales: { value: 10, currency: 'USD' } }, '2026-10': { sales: { value: 20, currency: 'EUR' } } }, ['2026-09', '2026-10']);
-    expect(g[0].items[0]).toMatchObject({ id: 'sales', mixed: true, total: null, avgChange: null });
+    expect(g[0].items[0]).toMatchObject({ id: 'sales', mixed: true, total: null });
+    expect(g[0].items[0].points[1].change).toBeNull();
   });
   it('escala del eje Y: tramos redondos', () => {
     expect(niceScale(22, { integer: true })).toEqual({ max: 24, ticks: [0, 6, 12, 18, 24] });
