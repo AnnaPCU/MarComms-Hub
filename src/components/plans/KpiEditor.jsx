@@ -1,10 +1,12 @@
 // ════════════════════════════════════════════════════════════════════
 // KpiEditor — Cargar / corregir los KPIs de un plan en un mes
 // ════════════════════════════════════════════════════════════════════
-// Los 6 KPIs del reporte, en sus dos grupos:
+// Los KPIs del reporte, en sus grupos (Operativos, Performance, Investment):
 //   · Entregables completados y Reuniones internas se calculan solos con
 //     las tareas del mes: el campo queda vacío y muestra el cálculo; si se
 //     escribe un número, ese manda.
+//   · Investment (en USD): Plan MarComms se arrastra del último mes
+//     cargado (`carried`); Paid Media Always On / One Shot va mes a mes.
 //   · Contactos generados por BBDD, Deals, MQLs y Ventas se cargan a mano.
 //     Los de performance aceptan moneda opcional y una etiqueta (ej.
 //     "8 MQLs"). Todos aceptan una descripción debajo del número.
@@ -12,14 +14,15 @@
 // performance se comparan solos con el mes anterior.
 //
 // Props: plan, monthKey, stored (kpis guardados del mes), auto
-//   (autoKpis del mes), onSave(kpis) (async), onClose()
+//   (autoKpis del mes), carried (carriedKpis: lo que se arrastra de meses
+//   anteriores), onSave(kpis) (async), onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { PLAN_KPIS, PLAN_KPI_GROUPS, KPI_CURRENCIES } from '@/constants/planKpis';
-import { cleanKpis, kpiFormValues } from '@/utils/planKpis';
+import { cleanKpis, formatKpiNumber, kpiFormValues } from '@/utils/planKpis';
 import { monthLabel } from '@/utils/planTasks';
 
 const inputCls = 'w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-300';
@@ -29,7 +32,7 @@ const autoText = (id, auto) => (id === 'meetings'
   ? `Automático: ${auto.meetings} (de ${auto.meetingTasks} ${auto.meetingTasks === 1 ? 'tarea de reunión completada' : 'tareas de reunión completadas'})`
   : `Automático: ${auto.deliverables} (tareas completadas del mes que no son reuniones)`);
 
-export default function KpiEditor({ plan, monthKey, stored, auto, onSave, onClose }) {
+export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, onSave, onClose }) {
   const [form, setForm] = useState(() => kpiFormValues(stored));
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -69,7 +72,11 @@ export default function KpiEditor({ plan, monthKey, stored, auto, onSave, onClos
                   const f = form[k.id];
                   return (
                     <div key={k.id} className="border border-slate-200 rounded-2xl p-3 space-y-2">
-                      <p className="text-xs font-black text-slate-800">{k.label}</p>
+                      <p className="text-xs font-black text-slate-800">
+                        {k.kicker && <span className="text-[10px] uppercase tracking-widest text-slate-400 mr-1.5">{k.kicker}</span>}
+                        {k.label}
+                        {k.hint && <span className="ml-1.5 text-[10px] font-bold text-slate-400">· {k.hint}</span>}
+                      </p>
                       <div className={`grid grid-cols-1 gap-2 ${k.money ? 'sm:grid-cols-[1fr_110px_1fr]' : 'sm:grid-cols-[1fr_2fr]'}`}>
                         <div className="space-y-1">
                           <label className={labelCls} htmlFor={`kpi-${k.id}`}>{k.money ? 'Monto' : 'Número'}</label>
@@ -79,7 +86,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, onSave, onClos
                             value={f.value}
                             onChange={(e) => set(k.id, 'value', e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-                            placeholder={k.auto ? String(auto[k.id]) : k.money ? 'Ej: 848.160' : 'Ej: 800'}
+                            placeholder={k.auto ? String(auto[k.id]) : carried[k.id] ? formatKpiNumber(carried[k.id].value) : k.group === 'investment' ? 'Ej: 1.500' : k.money ? 'Ej: 848.160' : 'Ej: 800'}
                             className={`${inputCls} font-mono ${errors[k.id] ? 'border-red-300 ring-2 ring-red-100' : ''}`}
                           />
                         </div>
@@ -92,7 +99,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, onSave, onClos
                             </select>
                           </div>
                         )}
-                        {k.money ? (
+                        {k.tag ? (
                           <div className="space-y-1">
                             <label className={labelCls} htmlFor={`kpi-${k.id}-tag`}>Etiqueta <span className="normal-case tracking-normal font-bold text-slate-300">(opcional)</span></label>
                             <input id={`kpi-${k.id}-tag`} value={f.tag} onChange={(e) => set(k.id, 'tag', e.target.value)} placeholder={k.id === 'sales' ? 'Ej: 2 ventas' : k.id === 'mqls' ? 'Ej: 8 MQLs' : 'Ej: 12 deals'} className={inputCls} />
@@ -100,17 +107,24 @@ export default function KpiEditor({ plan, monthKey, stored, auto, onSave, onClos
                         ) : (
                           <div className="space-y-1">
                             <label className={labelCls} htmlFor={`kpi-${k.id}-note`}>Descripción <span className="normal-case tracking-normal font-bold text-slate-300">(opcional)</span></label>
-                            <input id={`kpi-${k.id}-note`} value={f.note} onChange={(e) => set(k.id, 'note', e.target.value)} placeholder={k.id === 'contacts' ? 'Ej: Top 5 estados USDA' : 'Va debajo del número'} className={inputCls} />
+                            <input id={`kpi-${k.id}-note`} value={f.note} onChange={(e) => set(k.id, 'note', e.target.value)} placeholder={k.id === 'contacts' ? 'Ej: Top 5 estados USDA' : k.money ? 'Va debajo del monto' : 'Va debajo del número'} className={inputCls} />
                           </div>
                         )}
                       </div>
-                      {k.money && (
+                      {k.money && k.tag && (
                         <div className="space-y-1">
                           <label className={labelCls} htmlFor={`kpi-${k.id}-note`}>Descripción <span className="normal-case tracking-normal font-bold text-slate-300">(opcional · va debajo del monto)</span></label>
                           <input id={`kpi-${k.id}-note`} value={f.note} onChange={(e) => set(k.id, 'note', e.target.value)} placeholder="Ej: 20 % proveniente de bases de datos creadas con la Commercial Tool" className={inputCls} />
                         </div>
                       )}
                       {k.auto && <p className="text-[10px] font-bold text-slate-400">{autoText(k.id, auto)}. Escribí un número solo para corregirlo.</p>}
+                      {k.carry && (
+                        <p className="text-[10px] font-bold text-slate-400">
+                          {carried[k.id]
+                            ? `Vacío = sigue el de ${monthLabel(carried[k.id].from)} (${carried[k.id].currency || ''} ${formatKpiNumber(carried[k.id].value)}). Un monto nuevo rige desde ${monthLabel(monthKey)} en adelante.`
+                            : 'Se repite todos los meses: cargalo una vez y sigue igual hasta que lo cambies.'}
+                        </p>
+                      )}
                       {errors[k.id] && <p className="text-[10px] font-bold text-red-600">{errors[k.id]}</p>}
                     </div>
                   );

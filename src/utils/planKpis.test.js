@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   autoKpis, monthKpiGroups, cleanKpis, kpiFormValues, parseKpiNumber, formatKpiNumber,
-  isMeetingTask, meetingCount, initiativeGroups, initiativeCategories, kpiChange, formatKpiChange, previousMonthKey,
+  isMeetingTask, meetingCount, initiativeGroups, initiativeCategories, kpiChange, formatKpiChange, previousMonthKey, carriedKpis,
 } from './planKpis';
 import { needsCompletionMonthCheck } from './planTasks';
 
@@ -41,7 +41,7 @@ describe('KPIs del mes', () => {
       deals: { value: 848160, currency: 'USD', note: '20 % de BBDD', tag: '' },
       contactsX: { value: 1 },
     });
-    expect(groups.map((g) => g.label)).toEqual(['Operativos', 'Performance']);
+    expect(groups.map((g) => g.label)).toEqual(['Operativos', 'Performance', 'Investment']);
     const by = Object.fromEntries(groups.flatMap((g) => g.items).map((k) => [k.id, k]));
     expect(by.deliverables).toMatchObject({ value: 1, computed: 1, manual: false, visible: true });
     expect(by.meetings).toMatchObject({ value: 9, computed: 8, manual: true, note: 'con ventas', visible: true });
@@ -66,6 +66,31 @@ describe('KPIs del mes', () => {
     expect(formatKpiChange(0.001)).toBe('0 %');
     expect(previousMonthKey('2026-01')).toBe('2025-12');
     expect(previousMonthKey('2026-10')).toBe('2026-09');
+  });
+  it('Investment: Plan MarComms se arrastra del último mes cargado; Paid Media va mes a mes en USD', () => {
+    const history = {
+      '2026-08': { planFee: { value: 1500, currency: 'USD' } },
+      '2026-09': { paidAlwaysOn: { value: 300, currency: 'USD' } },
+      '2026-11': { planFee: { value: 1800, currency: 'USD' } },
+    };
+    expect(carriedKpis(history, '2026-10')).toEqual({ planFee: { value: 1500, currency: 'USD', from: '2026-08' } });
+    const oct = Object.fromEntries(monthKpiGroups([], '2026-10', history['2026-10'], history['2026-09'], history).flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(oct.planFee).toMatchObject({ value: 1500, currency: 'USD', manual: false, inheritedFrom: '2026-08', visible: true, change: null });
+    expect(oct.paidAlwaysOn).toMatchObject({ value: null, visible: false });
+    const dec = Object.fromEntries(monthKpiGroups([], '2026-12', {}, {}, history).flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(dec.planFee).toMatchObject({ value: 1800, inheritedFrom: '2026-11' });
+    const jul = Object.fromEntries(monthKpiGroups([], '2026-07', {}, {}, history).flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(jul.planFee).toMatchObject({ value: null, visible: false });
+    // propio del mes, sin moneda guardada → USD por defecto
+    const sep = Object.fromEntries(monthKpiGroups([], '2026-09', { paidOneShot: { value: 2000 } }, {}, history).flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(sep.paidOneShot).toMatchObject({ value: 2000, currency: 'USD', visible: true, kicker: 'Activation' });
+    // el formulario propone USD y no guarda la moneda sola
+    const form = kpiFormValues({});
+    expect(form.planFee.currency).toBe('USD');
+    expect(cleanKpis(form).kpis).toEqual({});
+    form.paidAlwaysOn.value = '1.200';
+    form.paidAlwaysOn.tag = 'no va';
+    expect(cleanKpis(form).kpis).toEqual({ paidAlwaysOn: { value: 1200, currency: 'USD' } });
   });
   it('números con formato argentino', () => {
     expect(parseKpiNumber('848.160')).toBe(848160);

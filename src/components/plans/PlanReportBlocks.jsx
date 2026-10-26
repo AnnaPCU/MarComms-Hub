@@ -58,16 +58,20 @@ function KpiChange({ kpi, prevLabel, onNavy }) {
 
 // Una tarjeta. `muted`: no se muestra en el link (vista interna, sin valor).
 // `hint`: texto interno debajo (ej. "calculado de 3 tareas").
+// Investment: tarjeta blanca con borde superior Dark Blue (c.dark: en
+// oscuro, el texto claro de la marca) y "Activation" como kicker.
 function KpiCard({ kpi, c, navy, muted, hint, prevLabel, onClick }) {
   const dark = kpi.group === 'performance';
+  const invest = kpi.group === 'investment';
   const hasValue = kpi.value !== null && kpi.value !== undefined;
   const Tag = onClick ? 'button' : 'div';
   const base = 'text-left rounded-xl p-4 min-h-[118px] flex flex-col w-full';
   const style = muted
-    ? { border: `1.5px dashed ${dark ? navy : c.primary}`, opacity: 0.75 }
-    : dark ? { background: navy } : { borderLeft: `3px solid ${c.primary}` };
+    ? { border: `1.5px dashed ${dark ? navy : invest ? c.dark : c.primary}`, opacity: 0.75 }
+    : dark ? { background: navy } : invest ? { borderTop: `3px solid ${c.dark}` } : { borderLeft: `3px solid ${c.primary}` };
   return (
     <Tag type={onClick ? 'button' : undefined} onClick={onClick} className={`${base} ${!muted && !dark ? 'bg-white border border-slate-200 shadow-sm' : ''} ${muted ? 'bg-white' : ''} ${onClick ? 'hover:shadow-md transition-shadow' : ''}`} style={style}>
+      {kpi.kicker && <span className="text-[9px] font-bold uppercase tracking-[0.2em] mb-0.5" style={{ color: c.primary }}>{kpi.kicker}</span>}
       <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: dark && !muted ? c.primary : c.label }}>{kpi.label}</span>
       {hasValue ? (
         <span className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">

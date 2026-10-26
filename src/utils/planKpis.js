@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════════════════
 //   KPIs:        autoKpis, monthKpiGroups, cleanKpis, kpiFormValues,
 //                parseKpiNumber, formatKpiNumber, isMeetingTask, meetingCount,
-//                previousMonthKey, kpiChange, formatKpiChange
+//                previousMonthKey, kpiChange, formatKpiChange, carriedKpis
 //   Iniciativas: initiativeGroups, initiativeCategories
 //
 // Automáticos (se pueden corregir a mano desde el editor de KPIs):
@@ -81,30 +81,42 @@ export const formatKpiChange = (pct) => {
   return `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('es-AR')} %`;
 };
 
+// KPIs que se arrastran (carry): el último valor cargado en un mes anterior
+// a `monthKey`. history: { 'YYYY-MM': kpis }. → { [id]: { value, currency, from } }
+export const carriedKpis = (history = {}, monthKey) => Object.fromEntries(PLAN_KPIS.filter((k) => k.carry).map((k) => {
+  const from = Object.keys(history || {}).filter((m) => m < monthKey && hasValue(history[m]?.[k.id]?.value)).sort().pop();
+  return [k.id, from ? { value: history[from][k.id].value, currency: text(history[from][k.id].currency), from } : null];
+}).filter(([, v]) => v));
+
 // Grupos para mostrar el mes: [{ id, label, items: [{ id, label, auto,
-// money, value, computed, manual, currency, note, tag, visible, change }] }].
+// money, value, computed, manual, inheritedFrom, currency, note, tag,
+// visible, change }] }].
 // `visible`: si va en el link externo: solo con un valor mayor a 0 (un KPI
 // vacío o en 0 no se muestra). `change`: variación contra el mes anterior
-// (`prevStored`, solo performance) o null.
-export const monthKpiGroups = (tasks = [], monthKey, stored = {}, prevStored = {}) => {
+// (`prevStored`, solo performance) o null. `history` (todos los meses del
+// plan) solo hace falta para los que se arrastran (Plan MarComms).
+export const monthKpiGroups = (tasks = [], monthKey, stored = {}, prevStored = {}, history = {}) => {
   const auto = autoKpis(tasks, monthKey);
+  const carried = carriedKpis(history, monthKey);
   return PLAN_KPI_GROUPS.map((g) => ({
     ...g,
     items: PLAN_KPIS.filter((k) => k.group === g.id).map((k) => {
       const s = stored?.[k.id] || {};
       const prev = prevStored?.[k.id] || {};
       const manual = hasValue(s.value);
+      const inherited = !manual && k.carry ? carried[k.id] : null;
       const computed = k.auto ? auto[k.id] : null;
-      const value = manual ? s.value : k.auto ? computed : null;
-      const currency = k.money ? text(s.currency) : '';
+      const value = manual ? s.value : inherited ? inherited.value : k.auto ? computed : null;
+      const currency = k.money ? (text(manual ? s.currency : inherited?.currency) || (hasValue(value) ? text(k.defaultCurrency) : '')) : '';
       return {
         ...k,
         value,
         computed,
         manual,
+        inheritedFrom: inherited ? inherited.from : null,
         currency,
         note: text(s.note),
-        tag: text(s.tag),
+        tag: k.tag ? text(s.tag) : '',
         meetingTasks: k.id === 'meetings' ? auto.meetingTasks : undefined,
         visible: hasValue(value) && value > 0,
         change: k.group === 'performance' ? kpiChange(value, prev.value, currency, prev.currency) : null,
@@ -118,7 +130,7 @@ export const kpiFormValues = (stored = {}) => Object.fromEntries(PLAN_KPIS.map((
   const s = stored?.[k.id] || {};
   return [k.id, {
     value: hasValue(s.value) ? formatKpiNumber(s.value) : '',
-    currency: text(s.currency),
+    currency: text(s.currency) || text(k.defaultCurrency),
     note: text(s.note),
     tag: text(s.tag),
   }];
@@ -135,9 +147,9 @@ export const cleanKpis = (form = {}) => {
     if (Number.isNaN(value)) { errors[k.id] = 'Tiene que ser un número (ej: 848.160 o 1.250,50).'; return; }
     const entry = {};
     if (value !== null) entry.value = value;
-    if (k.money && text(f.currency)) entry.currency = text(f.currency);
+    if (k.money && text(f.currency) && value !== null) entry.currency = text(f.currency);
     if (text(f.note)) entry.note = text(f.note);
-    if (k.money && text(f.tag)) entry.tag = text(f.tag);
+    if (k.tag && text(f.tag)) entry.tag = text(f.tag);
     if (Object.keys(entry).length) kpis[k.id] = entry;
   });
   return { kpis, errors };

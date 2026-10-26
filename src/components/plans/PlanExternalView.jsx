@@ -102,7 +102,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
   const navy = theme.colors.dark;
   // KPIs del mes elegido (solo si es un mes; sin ninguno con valor no se muestran)
   const prevKey = previousMonthKey(month);
-  const kpiGroups = prevKey ? monthKpiGroups(tasks, month, plan.kpis?.[month], plan.kpis?.[prevKey]) : [];
+  const kpiGroups = prevKey ? monthKpiGroups(tasks, month, plan.kpis?.[month], plan.kpis?.[prevKey], plan.kpis) : [];
   const hasKpis = kpiGroups.some((g) => g.items.some((k) => k.visible));
   const initiatives = initiativeGroups(plan.initiatives || []);
 
@@ -177,7 +177,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
       {/* KPIs del mes */}
       {hasKpis && (
         <section className="px-6 sm:px-8 pt-6">
-          <ReportSectionTitle title={`KPIs del mes · ${selected?.label || ''}`} aside="Operativos y de performance" c={c} />
+          <ReportSectionTitle title={`KPIs del mes · ${selected?.label || ''}`} aside="Operativos, performance e investment" c={c} />
           <KpiGroupsView groups={kpiGroups} c={c} navy={navy} prevLabel={MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase()} />
         </section>
       )}

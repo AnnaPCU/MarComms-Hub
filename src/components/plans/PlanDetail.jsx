@@ -69,6 +69,7 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
   const c = dark ? theme.darkColors : theme.colors;
   const navy = theme.colors.dark;
   const kpisOf = (monthKey) => extras.kpiRows.find((r) => r.monthKey === monthKey)?.kpis || {};
+  const kpiHistory = Object.fromEntries(extras.kpiRows.map((r) => [r.monthKey, r.kpis || {}]));
   const pillarsDone = pillarItems.filter((it) => it.completed).length;
   const url = plan.publicToken ? publicPlanUrl(plan.publicToken) : '';
 
@@ -188,6 +189,7 @@ export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNam
                   tasks={tasks}
                   stored={kpisOf(month)}
                   prevStored={kpisOf(previousMonthKey(month))}
+                  history={kpiHistory}
                   c={c}
                   navy={navy}
                   missing={extras.missing}
