@@ -10,7 +10,9 @@
 //              corregir a mano). Ver src/utils/planKpis.js.
 //   money    — admite moneda (USD, EUR…); defaultCurrency: la que se
 //              propone (Investment: USD).
-//   tag      — admite etiqueta (ej. "8 MQLs").
+//   count    — cantidad que representa el monto, abajo del número (MQLs y
+//              Ventas: "8 MQLs", "2 ventas"). Deals es siempre una
+//              cantidad, sin moneda (oct 2026).
 //   carry    — si el mes no tiene valor, toma el último cargado en un mes
 //              anterior (Plan MarComms: USD 1.500 todos los meses hasta
 //              que se cambie).
@@ -31,9 +33,9 @@ export const PLAN_KPIS = [
   { id: 'deliverables', group: 'ops', label: 'Entregables completados', auto: true },
   { id: 'meetings', group: 'ops', label: 'Reuniones internas', auto: true },
   { id: 'contacts', group: 'ops', label: 'Contactos generados por BBDD' },
-  { id: 'deals', group: 'performance', label: 'Deals generados', money: true, tag: true },
-  { id: 'mqls', group: 'performance', label: 'MQLs generados', money: true, tag: true },
-  { id: 'sales', group: 'performance', label: 'Ventas generadas', money: true, tag: true },
+  { id: 'deals', group: 'performance', label: 'Deals generados' },
+  { id: 'mqls', group: 'performance', label: 'MQLs generados', money: true, count: { one: 'MQL', many: 'MQLs' } },
+  { id: 'sales', group: 'performance', label: 'Ventas generadas', money: true, count: { one: 'venta', many: 'ventas' } },
   { id: 'planFee', group: 'investment', label: 'Plan MarComms', money: true, defaultCurrency: 'USD', carry: true },
   { id: 'paidAlwaysOn', group: 'investment', kicker: 'Activation', label: 'Paid Media · Always On', money: true, defaultCurrency: 'USD', hint: 'Campañas recurrentes, que no se apagan' },
   { id: 'paidOneShot', group: 'investment', kicker: 'Activation', label: 'Paid Media · One Shot', money: true, defaultCurrency: 'USD', hint: 'Acciones puntuales (ej. el evento IFPA)' },

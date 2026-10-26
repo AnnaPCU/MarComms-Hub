@@ -38,7 +38,7 @@ describe('KPIs del mes', () => {
     const groups = monthKpiGroups(tasks, '2026-10', {
       meetings: { value: 9, note: 'con ventas' },
       contacts: { value: 0 },
-      deals: { value: 848160, currency: 'USD', note: '20 % de BBDD', tag: '' },
+      deals: { value: 40, currency: 'USD', note: '20 % de BBDD' },
       contactsX: { value: 1 },
     });
     expect(groups.map((g) => g.label)).toEqual(['Operativos', 'Performance', 'Investment']);
@@ -46,14 +46,14 @@ describe('KPIs del mes', () => {
     expect(by.deliverables).toMatchObject({ value: 1, computed: 1, manual: false, visible: true });
     expect(by.meetings).toMatchObject({ value: 9, computed: 8, manual: true, note: 'con ventas', visible: true });
     expect(by.contacts).toMatchObject({ value: 0, visible: false });
-    expect(by.deals).toMatchObject({ value: 848160, currency: 'USD', visible: true });
+    expect(by.deals).toMatchObject({ value: 40, currency: '', note: '20 % de BBDD', visible: true }); // deals: cantidad, sin moneda
     expect(by.mqls).toMatchObject({ value: null, visible: false });
     const empty = monthKpiGroups([], '2026-11', {}).flatMap((g) => g.items);
     expect(empty.some((k) => k.visible)).toBe(false);
   });
   it('performance compara con el mes anterior solo si los dos tienen valor > 0 y la misma moneda', () => {
-    const prev = { deals: { value: 1000, currency: 'USD' }, mqls: { value: 40000, currency: 'USD' }, sales: { value: 0 }, contacts: { value: 10 } };
-    const cur = { deals: { value: 500, currency: 'USD' }, mqls: { value: 80000, currency: 'USD' }, sales: { value: 5 }, contacts: { value: 20 } };
+    const prev = { deals: { value: 1000 }, mqls: { value: 40000, currency: 'USD' }, sales: { value: 0 }, contacts: { value: 10 } };
+    const cur = { deals: { value: 500 }, mqls: { value: 80000, currency: 'USD' }, sales: { value: 5 }, contacts: { value: 20 } };
     const by = Object.fromEntries(monthKpiGroups([], '2026-10', cur, prev).flatMap((g) => g.items).map((k) => [k.id, k]));
     expect(by.mqls.change).toEqual({ pct: 1, prevValue: 40000 });
     expect(by.deals.change).toEqual({ pct: -0.5, prevValue: 1000 });
@@ -89,8 +89,16 @@ describe('KPIs del mes', () => {
     expect(form.planFee.currency).toBe('USD');
     expect(cleanKpis(form).kpis).toEqual({});
     form.paidAlwaysOn.value = '1.200';
-    form.paidAlwaysOn.tag = 'no va';
+    form.paidAlwaysOn.count = '3';
     expect(cleanKpis(form).kpis).toEqual({ paidAlwaysOn: { value: 1200, currency: 'USD' } });
+  });
+  it('MQLs y Ventas muestran la cantidad abajo del monto (también lo cargado antes como etiqueta)', () => {
+    const by = Object.fromEntries(monthKpiGroups([], '2026-09', {
+      mqls: { value: 40000, currency: 'USD', count: 1 },
+      sales: { value: 10000, currency: 'USD', tag: '2 ventas' },
+    }).flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(by.mqls).toMatchObject({ count: 1, tag: '1 MQL' });
+    expect(by.sales).toMatchObject({ count: 2, tag: '2 ventas' });
   });
   it('números con formato argentino', () => {
     expect(parseKpiNumber('848.160')).toBe(848160);
@@ -104,16 +112,20 @@ describe('KPIs del mes', () => {
     expect(formatKpiNumber(null)).toBe('');
   });
   it('formulario ↔ guardado: sin vacíos, moneda y etiqueta solo en performance, errores', () => {
-    const form = kpiFormValues({ deals: { value: 848160, currency: 'USD' }, contacts: { value: 800, note: 'Top 5' } });
-    expect(form.deals).toEqual({ value: '848.160', currency: 'USD', note: '', tag: '' });
-    form.mqls = { value: '40.000', currency: 'USD', note: '', tag: '8 MQLs' };
+    const form = kpiFormValues({ deals: { value: 40 }, contacts: { value: 800, note: 'Top 5' }, sales: { value: 10000, currency: 'USD', tag: '2 ventas' } });
+    expect(form.deals).toEqual({ value: '40', currency: '', note: '', count: '' });
+    expect(form.sales).toEqual({ value: '10.000', currency: 'USD', note: '', count: '2' }); // etiqueta vieja → cantidad
+    form.sales = { value: '', currency: '', note: '', count: '' };
+    form.mqls = { value: '40.000', currency: 'USD', note: '', count: '8' };
+    form.deals.currency = 'USD';
     form.contacts.currency = 'USD';
-    form.meetings = { value: '', currency: '', note: ' ', tag: '' };
+    form.meetings = { value: '', currency: '', note: ' ', count: '' };
     expect(cleanKpis(form)).toEqual({
-      kpis: { contacts: { value: 800, note: 'Top 5' }, deals: { value: 848160, currency: 'USD' }, mqls: { value: 40000, currency: 'USD', tag: '8 MQLs' } },
+      kpis: { contacts: { value: 800, note: 'Top 5' }, deals: { value: 40 }, mqls: { value: 40000, currency: 'USD', count: 8 } },
       errors: {},
     });
     expect(cleanKpis({ sales: { value: 'diez' } }).errors.sales).toMatch(/número/);
+    expect(cleanKpis({ mqls: { value: '10', count: 'ocho' } }).errors.mqls).toMatch(/cantidad de MQLs/);
   });
 });
 

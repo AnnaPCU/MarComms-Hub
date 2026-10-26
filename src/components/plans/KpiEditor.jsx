@@ -8,8 +8,9 @@
 //   · Investment (en USD): Plan MarComms se arrastra del último mes
 //     cargado (`carried`); Paid Media Always On / One Shot va mes a mes.
 //   · Contactos generados por BBDD, Deals, MQLs y Ventas se cargan a mano.
-//     Los de performance aceptan moneda opcional y una etiqueta (ej.
-//     "8 MQLs"). Todos aceptan una descripción debajo del número.
+//     Deals es una cantidad (sin moneda). MQLs y Ventas: monto, moneda
+//     opcional y la cantidad que representan ("8 MQLs", "2 ventas").
+//     Todos aceptan una descripción debajo del número.
 // Vacío o en 0, el KPI no se muestra en el link externo. Los de
 // performance se comparan solos con el mes anterior.
 //
@@ -86,7 +87,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
                             value={f.value}
                             onChange={(e) => set(k.id, 'value', e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
-                            placeholder={k.auto ? String(auto[k.id]) : carried[k.id] ? formatKpiNumber(carried[k.id].value) : k.group === 'investment' ? 'Ej: 1.500' : k.money ? 'Ej: 848.160' : 'Ej: 800'}
+                            placeholder={k.auto ? String(auto[k.id]) : carried[k.id] ? formatKpiNumber(carried[k.id].value) : k.group === 'investment' ? 'Ej: 1.500' : k.money ? 'Ej: 40.000' : k.id === 'deals' ? 'Ej: 40' : 'Ej: 800'}
                             className={`${inputCls} font-mono ${errors[k.id] ? 'border-red-300 ring-2 ring-red-100' : ''}`}
                           />
                         </div>
@@ -99,10 +100,10 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
                             </select>
                           </div>
                         )}
-                        {k.tag ? (
+                        {k.count ? (
                           <div className="space-y-1">
-                            <label className={labelCls} htmlFor={`kpi-${k.id}-tag`}>Etiqueta <span className="normal-case tracking-normal font-bold text-slate-300">(opcional)</span></label>
-                            <input id={`kpi-${k.id}-tag`} value={f.tag} onChange={(e) => set(k.id, 'tag', e.target.value)} placeholder={k.id === 'sales' ? 'Ej: 2 ventas' : k.id === 'mqls' ? 'Ej: 8 MQLs' : 'Ej: 12 deals'} className={inputCls} />
+                            <label className={labelCls} htmlFor={`kpi-${k.id}-count`}>Cantidad de {k.count.many} <span className="normal-case tracking-normal font-bold text-slate-300">(va abajo del monto)</span></label>
+                            <input id={`kpi-${k.id}-count`} inputMode="numeric" value={f.count} onChange={(e) => set(k.id, 'count', e.target.value)} placeholder={k.id === 'sales' ? 'Ej: 2' : 'Ej: 8'} className={`${inputCls} font-mono`} />
                           </div>
                         ) : (
                           <div className="space-y-1">
@@ -111,7 +112,7 @@ export default function KpiEditor({ plan, monthKey, stored, auto, carried = {}, 
                           </div>
                         )}
                       </div>
-                      {k.money && k.tag && (
+                      {k.money && k.count && (
                         <div className="space-y-1">
                           <label className={labelCls} htmlFor={`kpi-${k.id}-note`}>Descripción <span className="normal-case tracking-normal font-bold text-slate-300">(opcional · va debajo del monto)</span></label>
                           <input id={`kpi-${k.id}-note`} value={f.note} onChange={(e) => set(k.id, 'note', e.target.value)} placeholder="Ej: 20 % proveniente de bases de datos creadas con la Commercial Tool" className={inputCls} />

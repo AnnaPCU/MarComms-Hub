@@ -3,7 +3,8 @@
 // ════════════════════════════════════════════════════════════════════
 //   KPIs:        autoKpis, monthKpiGroups, cleanKpis, kpiFormValues,
 //                parseKpiNumber, formatKpiNumber, isMeetingTask, meetingCount,
-//                previousMonthKey, kpiChange, formatKpiChange, carriedKpis
+//                previousMonthKey, kpiChange, formatKpiChange, carriedKpis,
+//                countText
 //   Iniciativas: initiativeGroups, initiativeCategories
 //
 // Automáticos (se pueden corregir a mano desde el editor de KPIs):
@@ -88,6 +89,15 @@ export const carriedKpis = (history = {}, monthKey) => Object.fromEntries(PLAN_K
   return [k.id, from ? { value: history[from][k.id].value, currency: text(history[from][k.id].currency), from } : null];
 }).filter(([, v]) => v));
 
+// Cantidad de MQLs / ventas: `count` (o, en lo cargado antes, el número
+// al principio de la etiqueta: "8 MQLs" → 8)
+const countOf = (s = {}) => {
+  if (hasValue(s.count)) return s.count;
+  const m = text(s.tag).match(/^(\d[\d.,]*)/);
+  return m ? parseKpiNumber(m[1]) : null;
+};
+export const countText = (k, n) => (hasValue(n) && k?.count ? `${formatKpiNumber(n)} ${n === 1 ? k.count.one : k.count.many}` : '');
+
 // Grupos para mostrar el mes: [{ id, label, items: [{ id, label, auto,
 // money, value, computed, manual, inheritedFrom, currency, note, tag,
 // visible, change }] }].
@@ -116,7 +126,8 @@ export const monthKpiGroups = (tasks = [], monthKey, stored = {}, prevStored = {
         inheritedFrom: inherited ? inherited.from : null,
         currency,
         note: text(s.note),
-        tag: k.tag ? text(s.tag) : '',
+        count: k.count ? countOf(s) : null,
+        tag: k.count ? countText(k, countOf(s)) : '',
         meetingTasks: k.id === 'meetings' ? auto.meetingTasks : undefined,
         visible: hasValue(value) && value > 0,
         change: k.group === 'performance' ? kpiChange(value, prev.value, currency, prev.currency) : null,
@@ -132,7 +143,7 @@ export const kpiFormValues = (stored = {}) => Object.fromEntries(PLAN_KPIS.map((
     value: hasValue(s.value) ? formatKpiNumber(s.value) : '',
     currency: text(s.currency) || text(k.defaultCurrency),
     note: text(s.note),
-    tag: text(s.tag),
+    count: k.count && hasValue(countOf(s)) ? formatKpiNumber(countOf(s)) : '',
   }];
 }));
 
@@ -145,11 +156,13 @@ export const cleanKpis = (form = {}) => {
     const f = form[k.id] || {};
     const value = parseKpiNumber(f.value);
     if (Number.isNaN(value)) { errors[k.id] = 'Tiene que ser un número (ej: 848.160 o 1.250,50).'; return; }
+    const count = k.count ? parseKpiNumber(f.count) : null;
+    if (Number.isNaN(count)) { errors[k.id] = `La cantidad de ${k.count.many} tiene que ser un número (ej: 8).`; return; }
     const entry = {};
     if (value !== null) entry.value = value;
     if (k.money && text(f.currency) && value !== null) entry.currency = text(f.currency);
     if (text(f.note)) entry.note = text(f.note);
-    if (k.tag && text(f.tag)) entry.tag = text(f.tag);
+    if (count !== null) entry.count = count;
     if (Object.keys(entry).length) kpis[k.id] = entry;
   });
   return { kpis, errors };
