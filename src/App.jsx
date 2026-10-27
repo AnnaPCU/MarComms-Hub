@@ -407,7 +407,7 @@ export default function App() {
     { id: 'programs', title: 'Programas', description: 'Campañas integrales: un objetivo con varios pilares (webinar, evento, email, paid, BBDD, investigación).', icon: <Layers className="w-8 h-8 text-violet-600" />, stats: `${programs.programs.length} ${programs.programs.length === 1 ? 'programa' : 'programas'}`, color: 'bg-violet-50' },
     { id: 'campaigns', title: 'Pilares', description: 'Webinars, Eventos, Email, Paid, BBDD e Investigación en un solo lugar.', icon: <Mail className="w-8 h-8 text-purple-600" />, stats: `${globalWebinars.length + globalEvents.length + globalCampaigns.filter(c => c.variant !== 'webinar').length} activos`, color: 'bg-purple-50' },
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
-    { id: 'crm', title: 'CRM HubSpot', description: 'Facturación mensual de licencias HubSpot por entidad: totales, Sales Pro / Core, usuarios y variaciones. Se actualiza importando el Excel.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${hubspotBilling.entities.length} entidades`, color: 'bg-sky-50' },
+    { id: 'crm', title: 'CRM HubSpot', description: 'Facturación mensual de licencias HubSpot por entidad (se actualiza importando el Excel) y Weekly check: checklist de implementación y próximos steps de cada entidad.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${hubspotBilling.entities.length} entidades`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
     { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
@@ -648,6 +648,7 @@ export default function App() {
             key={sectionEpoch}
             data={hubspotBilling}
             currentUser={currentUser}
+            dark={resolvedTheme === 'dark'}
             onBack={() => goToSection('main')}
           />
         </div>

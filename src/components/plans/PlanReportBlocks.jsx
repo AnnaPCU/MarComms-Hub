@@ -117,19 +117,20 @@ export function KpiGroupsView({ groups, c, navy, internal = false, hintOf, prevL
 }
 
 // groups: initiativeGroups(...). onRowClick(item) y footer(group) solo en
-// la vista interna (editar / agregar).
-export function InitiativesTables({ groups, c, navy, onRowClick, footer }) {
+// la vista interna (editar / agregar). También la usa el Weekly check de
+// CRM HubSpot para los próximos steps (titleLabel / otherLabel / rowHint).
+export function InitiativesTables({ groups, c, navy, onRowClick, footer, titleLabel = 'Iniciativa', otherLabel = 'Otras iniciativas', rowHint = 'Clic para editar la iniciativa' }) {
   return (
     <div className="space-y-5">
       {groups.map((g) => (
         <div key={g.key || 'sin-tipo'}>
-          {(g.label || groups.length > 1) && <GroupLabel label={g.label || 'Otras iniciativas'} count={g.items.length} c={c} />}
+          {(g.label || groups.length > 1) && <GroupLabel label={g.label || otherLabel} count={g.items.length} c={c} />}
           <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr style={{ background: navy }}>
                   <th className="w-12 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white">#</th>
-                  <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white sm:w-[34%]">Iniciativa</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white sm:w-[34%]">{titleLabel}</th>
                   <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white">Detalle</th>
                 </tr>
               </thead>
@@ -138,7 +139,7 @@ export function InitiativesTables({ groups, c, navy, onRowClick, footer }) {
                   <tr
                     key={it.id}
                     onClick={onRowClick ? () => onRowClick(it) : undefined}
-                    title={onRowClick ? 'Clic para editar la iniciativa' : undefined}
+                    title={onRowClick ? rowHint : undefined}
                     className={`border-t border-slate-100 align-top ${onRowClick ? 'cursor-pointer hover:bg-slate-50/60' : ''}`}
                   >
                     <td className="px-4 py-3 text-[12px]" style={{ color: c.label }}>{i + 1}</td>

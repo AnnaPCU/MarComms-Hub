@@ -10,12 +10,15 @@
 // importación.
 // Los datos se actualizan importando el Excel (BillingImportModal); el
 // realtime de Supabase hace que todos lo vean al instante.
+// Desde oct 2026 el header tiene dos vistas: «Facturación HubSpot» (esta)
+// y «Weekly check» (CrmWeeklyCheck: checklist de implementación y
+// próximos steps de cada entidad).
 //
-// Props: data (de useHubspotBilling), currentUser, onBack
+// Props: data (de useHubspotBilling), currentUser, dark, onBack
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Database, FileSpreadsheet, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Database, FileSpreadsheet, Receipt, Upload } from 'lucide-react';
 
 import { useConfirm } from '@/hooks/useConfirm';
 import { brandOfEntity } from '@/constants/hubspotBilling';
@@ -25,12 +28,19 @@ import MonthlyChart from './MonthlyChart';
 import EntitiesTable from './EntitiesTable';
 import ReviewPanel, { DismissButton, totalWarningId } from './ReviewPanel';
 import BillingImportModal from './BillingImportModal';
+import CrmWeeklyCheck from './CrmWeeklyCheck';
+
+const VIEWS = [
+  { id: 'billing', label: 'Facturación HubSpot', icon: Receipt },
+  { id: 'weekly', label: 'Weekly check', icon: ClipboardCheck },
+];
 
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
-export default function HubspotBillingApp({ data, currentUser, onBack }) {
+export default function HubspotBillingApp({ data, currentUser, dark = false, onBack }) {
   const { entities, imports, meta, dismissed, loading, error, importExcel, dismissWarning } = data;
   const confirm = useConfirm();
+  const [view, setView] = useState('billing');
   const [brand, setBrand] = useState('');
   const [month, setMonth] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -78,18 +88,32 @@ export default function HubspotBillingApp({ data, currentUser, onBack }) {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="bg-white text-blue-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> CRM</div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-black uppercase tracking-tight">Facturación HubSpot</h1>
+              <h1 className="text-2xl font-black uppercase tracking-tight">{view === 'weekly' ? 'Weekly check' : 'Facturación HubSpot'}</h1>
               <p className="text-[10px] text-sky-100 font-bold uppercase tracking-widest truncate">
-                {lastImport ? `Actualizado ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` por ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licencias por entidad · se actualiza importando el Excel'}
+                {view === 'weekly' ? 'Implementación de HubSpot por entidad · checklist y próximos steps' : lastImport ? `Actualizado ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` por ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licencias por entidad · se actualiza importando el Excel'}
               </p>
             </div>
           </div>
-          <button onClick={() => setShowImport(true)} className="bg-white text-blue-700 hover:bg-sky-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md">
-            <Upload className="w-4 h-4" /> Importar Excel
-          </button>
+          <div className="flex bg-white/15 rounded-xl p-1 gap-1" role="tablist" aria-label="Vista de CRM HubSpot">
+            {VIEWS.map(({ id, label, icon: Icon }) => (
+              <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)} className={`px-3 py-2 rounded-lg font-black text-[11px] uppercase tracking-widest flex items-center gap-1.5 transition-colors ${view === id ? 'bg-white text-blue-700 shadow' : 'text-white hover:bg-white/15'}`}>
+                <Icon className="w-3.5 h-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+          {view === 'billing' && (
+            <button onClick={() => setShowImport(true)} className="bg-white text-blue-700 hover:bg-sky-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md">
+              <Upload className="w-4 h-4" /> Importar Excel
+            </button>
+          )}
         </div>
       </header>
 
+      {view === 'weekly' ? (
+        <main className="max-w-7xl mx-auto w-full p-6">
+          <CrmWeeklyCheck currentUser={currentUser} dark={dark} />
+        </main>
+      ) : (
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">
         {flash && <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-2.5 text-xs font-black flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {flash}</div>}
         {dismissError && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">{dismissError}</div>}
@@ -138,6 +162,7 @@ export default function HubspotBillingApp({ data, currentUser, onBack }) {
           </>
         )}
       </main>
+      )}
 
       {showImport && <BillingImportModal currentEntities={entities} onImport={handleImport} onClose={() => setShowImport(false)} />}
     </div>
