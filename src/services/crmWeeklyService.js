@@ -1,10 +1,12 @@
 // ════════════════════════════════════════════════════════════════════
 // CRM WEEKLY SERVICE — Weekly check de CRM HubSpot
 // ════════════════════════════════════════════════════════════════════
-// Conectado a Supabase (migration 0043):
+// Conectado a Supabase (migrations 0043 y 0044):
+//   crm_check_items   — ítems del checklist (valen para todas las entidades)
 //   crm_weekly_checks — checklist: una fila por entidad e ítem
 //   crm_next_steps    — próximos steps de cada entidad
 //
+// Ítem (UI):  { id, label, hint, position, createdBy }
 // Check (UI): { id, entityCode, itemId, done, deadline ('YYYY-MM-DD' | ''),
 //               doneAt, updatedBy, updatedAt }
 // Step (UI):  { id, entityCode, category, title, detail, position,
@@ -13,8 +15,47 @@
 
 import { supabase } from '@/lib/supabaseClient';
 
+const ITEMS = 'crm_check_items';
 const CHECKS = 'crm_weekly_checks';
 const STEPS = 'crm_next_steps';
+
+// ── Ítems del checklist ──
+export const itemFromRow = (row) => (row ? {
+  id:        row.id,
+  label:     row.label || '',
+  hint:      row.hint || '',
+  position:  row.position ?? 0,
+  createdBy: row.created_by || '',
+} : null);
+
+export const listItems = async () => {
+  const { data, error } = await supabase.from(ITEMS).select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(itemFromRow);
+};
+export const createItem = async ({ id, label, hint, position, createdBy }) => {
+  const { data, error } = await supabase.from(ITEMS)
+    .insert({ id, label: String(label || '').trim(), hint: String(hint || '').trim() || null, position: position ?? 0, created_by: createdBy || null })
+    .select('*').single();
+  if (error) throw error;
+  return itemFromRow(data);
+};
+export const updateItem = async (id, patch) => {
+  const row = {};
+  if (patch.label !== undefined) row.label = String(patch.label || '').trim();
+  if (patch.hint !== undefined) row.hint = String(patch.hint || '').trim() || null;
+  const { data, error } = await supabase.from(ITEMS).update(row).eq('id', id).select('*').single();
+  if (error) throw error;
+  return itemFromRow(data);
+};
+// Borra el ítem y lo que tenía cargado cada entidad (tilde y deadline)
+export const deleteItem = async (id) => {
+  const { error } = await supabase.from(ITEMS).delete().eq('id', id);
+  if (error) throw error;
+  const { error: e2 } = await supabase.from(CHECKS).delete().eq('item_id', id);
+  if (e2) throw e2;
+  return true;
+};
 
 // ── Checklist ──
 export const checkFromRow = (row) => (row ? {
@@ -89,10 +130,11 @@ export const deleteStep = async (id) => {
   return true;
 };
 
-// ── Realtime (las dos tablas en un canal) ──
+// ── Realtime (las tres tablas en un canal) ──
 export const subscribeCrmWeekly = (onChange) => {
   const channel = supabase
     .channel('crm-weekly-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: ITEMS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: CHECKS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: STEPS }, (p) => onChange(p))
     .subscribe();

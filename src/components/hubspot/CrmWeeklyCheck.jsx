@@ -4,8 +4,10 @@
 // Seguimiento de la implementación de HubSpot en cada entidad: a la
 // izquierda las 16 entidades (avance del checklist y alertas de
 // deadline), a la derecha la entidad elegida con su checklist (tilde +
-// deadline que se pone más rojo cuanto más cerca está) y sus próximos
-// steps (como las iniciativas de los planes). Todo en tiempo real.
+// deadline en dd/mm/aaaa que se pone más rojo cuanto más cerca está) y sus
+// próximos steps (como las iniciativas de los planes). Los ítems del
+// checklist valen para todas las entidades y se pueden agregar, renombrar
+// y eliminar desde acá. Todo en tiempo real.
 //
 // Props: currentUser, dark
 // ════════════════════════════════════════════════════════════════════
@@ -15,7 +17,8 @@ import { AlertTriangle, Clock } from 'lucide-react';
 import { CRM_BRANDS, CRM_ENTITIES } from '@/constants/crmWeekly';
 import { useCrmWeekly } from '@/hooks/useCrmWeekly';
 import { todayIso as getTodayIso } from '@/utils/date';
-import { checksByEntity, entitySummary, weeklyTotals } from '@/utils/crmWeekly';
+import { checksByEntity, entitySummary, newCheckItemId, weeklyTotals } from '@/utils/crmWeekly';
+import { useConfirm } from '@/hooks/useConfirm';
 import { Kpi } from './BillingBits';
 import WeeklyChecklist from './WeeklyChecklist';
 import CrmNextSteps from './CrmNextSteps';
@@ -24,8 +27,6 @@ import CrmNextSteps from './CrmNextSteps';
 const LIGHT = { primary: '#0284c7', dark: '#0f172a', label: '#64748b', text: '#334155' };
 const DARK = { primary: '#38bdf8', dark: '#f1f5f9', label: '#94a3b8', text: '#cbd5e1' };
 const NAVY = '#0c4a6e';
-
-const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 function EntityButton({ entity, summary, active, onClick }) {
   return (
@@ -47,7 +48,8 @@ function EntityButton({ entity, summary, active, onClick }) {
 }
 
 export default function CrmWeeklyCheck({ currentUser, dark = false }) {
-  const { checks, steps, loading, error, missing, saveCheck, createStep, updateStep, removeStep } = useCrmWeekly();
+  const { items, checks, steps, loading, error, missing, saveCheck, createStep, updateStep, removeStep, createItem, updateItem, removeItem } = useCrmWeekly();
+  const confirm = useConfirm();
   const [brand, setBrand] = useState('');
   const [selected, setSelected] = useState(CRM_ENTITIES[0].code);
   const [saveError, setSaveError] = useState('');
@@ -59,8 +61,8 @@ export default function CrmWeeklyCheck({ currentUser, dark = false }) {
   const visible = CRM_ENTITIES.filter((e) => !brand || e.brand === brand);
   const entity = visible.find((e) => e.code === selected) || visible[0];
   const entitySteps = steps.filter((s) => s.entityCode === entity?.code);
-  const summary = entity ? entitySummary(map[entity.code], todayIso, entitySteps) : null;
-  const totals = weeklyTotals(visible, map, todayIso);
+  const summary = entity ? entitySummary(map[entity.code], todayIso, items) : null;
+  const totals = weeklyTotals(visible, map, todayIso, items);
 
   // En pantallas chicas la lista va arriba: al elegir, baja a la entidad
   const pick = (code) => {
@@ -72,6 +74,25 @@ export default function CrmWeeklyCheck({ currentUser, dark = false }) {
     setSaveError('');
     try { await saveCheck({ entityCode: entity.code, itemId, patch, updatedBy: currentUser?.name || '' }); }
     catch (_e) { setSaveError('No se pudo guardar el cambio. Probá de nuevo; si sigue fallando, revisá la consola.'); }
+  };
+
+  // Ítems del checklist (para todas las entidades)
+  const run = async (fn, msg) => {
+    setSaveError('');
+    try { await fn(); } catch (e) { setSaveError(msg); throw e; }
+  };
+  const addItem = (label) => run(
+    () => createItem({ id: newCheckItemId(), label, position: items.reduce((m, it) => Math.max(m, (it.position ?? 0) + 1), 0), createdBy: currentUser?.name || '' }),
+    'No se pudo agregar el ítem. Probá de nuevo.',
+  );
+  const renameItem = (it, label) => (label === it.label ? Promise.resolve() : run(() => updateItem(it.id, { label }), 'No se pudo renombrar el ítem. Probá de nuevo.'));
+  const deleteItem = async (it) => {
+    const ok = await confirm({
+      title: '¿Eliminar el ítem del checklist?',
+      message: `"${it.label}" se va a eliminar del checklist de las ${CRM_ENTITIES.length} entidades, junto con lo que tenía cargado cada una (tilde y deadline). Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar', tone: 'danger',
+    });
+    if (ok) await run(() => removeItem(it.id), 'No se pudo eliminar el ítem. Probá de nuevo.').catch(() => {});
   };
 
   if (missing) {
@@ -104,7 +125,7 @@ export default function CrmWeeklyCheck({ currentUser, dark = false }) {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
           <nav className="space-y-1.5 lg:sticky lg:top-36" aria-label="Entidades">
             {visible.map((e) => (
-              <EntityButton key={e.code} entity={e} summary={entitySummary(map[e.code], todayIso)} active={entity?.code === e.code} onClick={() => pick(e.code)} />
+              <EntityButton key={e.code} entity={e} summary={entitySummary(map[e.code], todayIso, items)} active={entity?.code === e.code} onClick={() => pick(e.code)} />
             ))}
           </nav>
 
@@ -115,9 +136,6 @@ export default function CrmWeeklyCheck({ currentUser, dark = false }) {
                   <div className="min-w-0">
                     <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{entity.code} · {entity.brand}</p>
                     <h2 className="text-lg font-black text-slate-900 leading-tight">{entity.name}</h2>
-                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                      {summary.lastUpdate ? `Última actualización ${fmtDateTime(summary.lastUpdate)}${summary.lastUpdateBy ? ` por ${summary.lastUpdateBy}` : ''}` : 'Sin cambios todavía'}
-                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-mono text-2xl font-black text-sky-600 leading-none">{summary.done}/{summary.total}</p>
@@ -127,8 +145,18 @@ export default function CrmWeeklyCheck({ currentUser, dark = false }) {
                 <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden mb-2">
                   <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-600" style={{ width: `${summary.pct}%` }} />
                 </div>
-                <WeeklyChecklist entityCode={entity.code} checks={map[entity.code]} todayIso={todayIso} dark={dark} onSave={onSave} />
-                <p className="mt-2 text-[10px] font-bold text-slate-400">El deadline se pone más rojo a medida que se acerca; al tildar el ítem deja de resaltarse.</p>
+                <WeeklyChecklist
+                  entityCode={entity.code}
+                  items={items}
+                  checks={map[entity.code]}
+                  todayIso={todayIso}
+                  dark={dark}
+                  onSave={onSave}
+                  onAddItem={addItem}
+                  onRenameItem={renameItem}
+                  onDeleteItem={deleteItem}
+                />
+                <p className="mt-2 text-[10px] font-bold text-slate-400">El deadline (dd/mm/aaaa) se pone más rojo a medida que se acerca; al tildar el ítem deja de resaltarse. Los ítems del checklist valen para todas las entidades.</p>
               </section>
 
               <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">

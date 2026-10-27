@@ -3,17 +3,21 @@
 // Mismo esquema que usePlanExtras.
 // ════════════════════════════════════════════════════════════════════
 // Devuelve:
-//   checks, steps, loading, error, missing
+//   items (ítems del checklist; CRM_CHECK_ITEMS si falta la migración
+//   0044), checks, steps, loading, error, missing
 //   saveCheck({ entityCode, itemId, patch: { done?, deadline? }, updatedBy })
 //     → se ve al instante (optimista) y se guarda; si falla, vuelve atrás
 //   createStep(obj) / updateStep(id, patch) / removeStep(id)
+//   createItem(obj) / updateItem(id, patch) / removeItem(id)
 //
 // Si las tablas todavía no existen en la base (falta la migración 0043),
 // `missing` = true y la vista muestra el aviso en vez de fallar.
 // ════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CRM_CHECK_ITEMS } from '@/constants/crmWeekly';
 import {
+  listItems, createItem, updateItem, deleteItem,
   listChecks, saveCheck, listSteps, createStep, updateStep, deleteStep, subscribeCrmWeekly,
 } from '@/services/crmWeeklyService';
 
@@ -21,6 +25,7 @@ const isMissingTable = (e) => e?.code === '42P01' || e?.code === 'PGRST205' || /
 
 export const useCrmWeekly = (options = {}) => {
   const { realtime = true } = options;
+  const [items, setItems] = useState(CRM_CHECK_ITEMS);
   const [checks, setChecks] = useState([]);
   const [steps, setSteps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +37,9 @@ export const useCrmWeekly = (options = {}) => {
     try {
       const [c, s] = await Promise.all([listChecks(), listSteps()]);
       setChecks(c); setSteps(s); setError(null); setMissing(false);
+      // Ítems: si la tabla todavía no existe, quedan los del código
+      try { const it = await listItems(); setItems(it.length ? it : CRM_CHECK_ITEMS); }
+      catch (e) { if (!isMissingTable(e)) throw e; setItems(CRM_CHECK_ITEMS); }
     } catch (e) {
       if (isMissingTable(e)) setMissing(true);
       else { console.error('[useCrmWeekly] fetch error:', e); setError(e); }
@@ -79,8 +87,11 @@ export const useCrmWeekly = (options = {}) => {
       createStep: wrap(createStep),
       updateStep: wrap(updateStep),
       removeStep: wrap(deleteStep),
+      createItem: wrap(createItem),
+      updateItem: wrap(updateItem),
+      removeItem: wrap(deleteItem),
     };
   }, [refetch]);
 
-  return { checks, steps, loading, error, missing, refetch, ...api };
+  return { items, checks, steps, loading, error, missing, refetch, ...api };
 };

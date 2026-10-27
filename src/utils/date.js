@@ -34,6 +34,36 @@ export const formatDate = (iso) => {
   return d.toLocaleDateString('es-AR');
 };
 
+// ── Fechas escritas a mano en español: dd/mm/aaaa (DateFieldEs) ──
+// '2026-11-05' → '05/11/2026'
+export const formatDmy = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
+
+// '27/10/2026' o '1/2/27' → '2026-10-27' / '2027-02-01'; null si no es
+// una fecha válida. Años de 2 cifras = 20xx.
+export const parseDmy = (text) => {
+  const m = String(text || '').trim().match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/);
+  if (!m) return null;
+  const d = Number(m[1]); const mo = Number(m[2]); const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+};
+
+// Mientras se escribe: solo números, y las barras se ponen solas después
+// del día y del mes ('27102026' → '27/10/2026'). Si se escribe la barra a
+// mano, se respeta ('5/11/2026').
+export const maskDmy = (text) => {
+  const segs = [''];
+  for (const ch of String(text || '')) {
+    const i = segs.length - 1;
+    if (/\d/.test(ch)) {
+      if (i < 2 && segs[i].length === 2) segs.push(ch);
+      else if (i < 2 || segs[i].length < 4) segs[i] += ch;
+    } else if (/[/.-]/.test(ch) && segs[i] && i < 2) segs.push('');
+  }
+  return segs.join('/');
+};
+
 // Devuelve true si la fecha es anterior a hoy
 export const isOverdue = (iso) => {
   if (!iso) return false;

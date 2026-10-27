@@ -1,8 +1,11 @@
 // ════════════════════════════════════════════════════════════════════
 // crmWeekly — «Weekly check» de CRM HubSpot (sin React ni Supabase)
 // ════════════════════════════════════════════════════════════════════
-//   daysUntil, deadlineTone, formatShortDate, checksByEntity,
-//   entitySummary, weeklyTotals
+//   daysUntil, deadlineTone, formatShortDate, parseDmy, maskDmy,
+//   checksByEntity, entitySummary, weeklyTotals, newCheckItemId
+//
+// Los ítems del checklist vienen de la base (crm_check_items, migration
+// 0044); CRM_CHECK_ITEMS es el respaldo si la tabla no está.
 //
 // Deadline de cada ítem del checklist: cuanto más cerca está, más rojo
 // (verde con DEADLINE_CALM_DAYS o más por delante → amarillo → naranja →
@@ -21,8 +24,11 @@ export const daysUntil = (deadline, todayIso) => {
   return Math.round((utcDay(deadline) - utcDay(todayIso.slice(0, 10))) / 86400000);
 };
 
-// '2026-11-05' → '05/11/2026'
-export const formatShortDate = (iso) => (DATE_RE.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '');
+// '2026-11-05' → '05/11/2026' (las fechas en español viven en utils/date)
+export { formatDmy as formatShortDate, parseDmy, maskDmy } from '@/utils/date';
+
+// Id de un ítem nuevo del checklist (lo que se guarda en item_id)
+export const newCheckItemId = () => `item-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -59,36 +65,25 @@ export const checksByEntity = (rows = []) => {
   return map;
 };
 
-// Resumen de una entidad: cumplidos, vencidos, los que vencen en 7 días o
-// menos (sin tildar) y la última actualización (checklist o steps).
-export const entitySummary = (entityChecks = {}, todayIso, steps = []) => {
+// Resumen de una entidad: cumplidos, vencidos y los que vencen en 7 días
+// o menos (sin tildar). items: los ítems del checklist.
+export const entitySummary = (entityChecks = {}, todayIso, items = CRM_CHECK_ITEMS) => {
   let done = 0; let overdue = 0; let soon = 0;
-  CRM_CHECK_ITEMS.forEach((it) => {
-    const c = entityChecks[it.id];
+  items.forEach((it) => {
+    const c = entityChecks?.[it.id];
     if (c?.done) { done += 1; return; }
     const d = daysUntil(c?.deadline, todayIso);
     if (d === null) return;
     if (d < 0) overdue += 1;
     else if (d <= 7) soon += 1;
   });
-  const stamps = [...Object.values(entityChecks), ...steps].map((x) => x?.updatedAt).filter(Boolean).sort();
-  const last = stamps[stamps.length - 1] || null;
-  const lastRow = last ? [...Object.values(entityChecks), ...steps].find((x) => x?.updatedAt === last) : null;
-  return {
-    done,
-    total: CRM_CHECK_ITEMS.length,
-    pct: Math.round((done / CRM_CHECK_ITEMS.length) * 100),
-    overdue,
-    soon,
-    lastUpdate: last,
-    lastUpdateBy: lastRow?.updatedBy || lastRow?.createdBy || '',
-  };
+  return { done, total: items.length, pct: items.length ? Math.round((done / items.length) * 100) : 0, overdue, soon };
 };
 
 // Totales de las entidades que se ven (filtro de marca)
-export const weeklyTotals = (entities = [], map = {}, todayIso) => entities.reduce((acc, e) => {
-  const s = entitySummary(map[e.code], todayIso);
+export const weeklyTotals = (entities = [], map = {}, todayIso, items = CRM_CHECK_ITEMS) => entities.reduce((acc, e) => {
+  const s = entitySummary(map[e.code], todayIso, items);
   acc.done += s.done; acc.total += s.total; acc.overdue += s.overdue; acc.soon += s.soon;
-  if (s.done === s.total) acc.complete += 1;
+  if (s.total && s.done === s.total) acc.complete += 1;
   return acc;
 }, { done: 0, total: 0, overdue: 0, soon: 0, complete: 0 });
