@@ -50,6 +50,16 @@ export const POST_STATUSES = [
 export const POST_STATUS_BY_ID = POST_STATUSES.reduce((acc, s) => { acc[s.id] = s; return acc; }, {});
 export const DEFAULT_POST_STATUS = 'en_proceso';
 
+// Dónde se programa un posteo (oct 2026, migration 0046). Al pasar a
+// «Programado» se pide plataforma, fecha y hora de publicación (las tres
+// obligatorias): en el editor y al cambiar el estado desde la hoja.
+export const SCHEDULED_STATUS = 'programado';
+export const SCHEDULE_PLATFORMS = [
+  { id: 'hubspot', label: 'HubSpot' },
+  { id: 'linkedin', label: 'LinkedIn' },
+];
+export const SCHEDULE_PLATFORM_BY_ID = SCHEDULE_PLATFORMS.reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
+
 // Estado siguiente al cliquear el chip (en proceso → listo → aprobado → programado → en proceso)
 export const nextPostStatus = (id) => {
   const idx = POST_STATUSES.findIndex((s) => s.id === id);

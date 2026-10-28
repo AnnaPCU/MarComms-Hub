@@ -2,6 +2,9 @@
 // PostEditor — Alta / edición de un posteo de la hoja de Social Media
 // ════════════════════════════════════════════════════════════════════
 // Campos: título, estado (4 chips), temática, posteo del mes (1..n), fecha de publicación, link, notas.
+// Con estado «Programado» (oct 2026) se piden, obligatorios, dónde se
+// programó (HubSpot / LinkedIn), la fecha y la hora de publicación
+// (ScheduleFields); sin eso no se puede guardar. Fechas en dd/mm/aaaa.
 //
 // Props:
 //   post             — posteo existente o null (nuevo)
@@ -15,8 +18,11 @@ import React, { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
-import { POST_STATUSES, DEFAULT_POST_STATUS } from '@/constants/socialPosts';
+import DateFieldEs from '@/components/shared/DateFieldEs';
+import { POST_STATUSES, DEFAULT_POST_STATUS, SCHEDULED_STATUS } from '@/constants/socialPosts';
 import { WORLD_DAY_THEMES } from '@/constants/worldDays';
+import { scheduleMissing } from '@/utils/socialPosts';
+import ScheduleFields from './ScheduleFields';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-pink-300';
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
@@ -29,15 +35,22 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
     theme:     post?.theme || '',
     weekStart: post?.weekStart || defaultWeekStart || (weeks[0] && weeks[0].start) || '',
     publishDate: post?.publishDate || '',
+    publishTime: post?.publishTime || '',
+    scheduledOn: post?.scheduledOn || '',
     link:      post?.link || '',
     notes:     post?.notes || '',
   });
   const [saving, setSaving] = useState(false);
+  const [tried, setTried] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const canSave = form.title.trim().length > 0 && !!form.weekStart && !saving;
+  const scheduled = form.status === SCHEDULED_STATUS;
+  const missing = scheduled ? scheduleMissing(form) : [];
 
   const submit = async () => {
     if (!canSave) return;
+    setTried(true);
+    if (missing.length) return;
     setSaving(true);
     try {
       await onSave({ ...form, title: form.title.trim() });
@@ -121,16 +134,30 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className={labelCls}>Fecha de publicación (opcional)</label>
-                <input type="date" value={form.publishDate} onChange={(e) => set('publishDate', e.target.value)} className={inputCls} title="Cuando está pactada, el posteo aparece en el calendario" />
+            {scheduled ? (
+              <>
+                <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">Programación · obligatoria</p>
+                  <ScheduleFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} showErrors={tried} idPrefix="post-editor" />
+                  {tried && missing.length > 0 && <p className="text-[11px] font-bold text-red-600">Para guardarlo como Programado falta: {missing.join(', ')}.</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className={labelCls}>Link (opcional)</label>
+                  <input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="Drive, Canva, LinkedIn…" className={inputCls} />
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className={labelCls} htmlFor="post-publish-date">Fecha de publicación (opcional)</label>
+                  <DateFieldEs id="post-publish-date" value={form.publishDate} onChange={(v) => set('publishDate', v)} ariaLabel="Fecha de publicación" className="!py-1 bg-slate-50" />
+                </div>
+                <div className="space-y-1">
+                  <label className={labelCls}>Link (opcional)</label>
+                  <input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="Drive, Canva, LinkedIn…" className={inputCls} />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className={labelCls}>Link (opcional)</label>
-                <input value={form.link} onChange={(e) => set('link', e.target.value)} placeholder="Drive, Canva, LinkedIn…" className={inputCls} />
-              </div>
-            </div>
+            )}
 
             <div className="space-y-1">
               <label className={labelCls}>Notas (opcional)</label>

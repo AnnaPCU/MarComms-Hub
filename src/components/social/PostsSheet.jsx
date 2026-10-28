@@ -29,11 +29,12 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Settings2, Check, X } from 'lucide-react';
 
-import { POST_STATUSES, POST_STATUS_BY_ID, ACCOUNT_PLAN_BY_ID, nextPostStatus, ACCOUNT_GROUPS, COUNTER_TONES, DEFAULT_POST_STATUS } from '@/constants/socialPosts';
+import { POST_STATUSES, POST_STATUS_BY_ID, ACCOUNT_PLAN_BY_ID, nextPostStatus, ACCOUNT_GROUPS, COUNTER_TONES, DEFAULT_POST_STATUS, SCHEDULED_STATUS, SCHEDULE_PLATFORM_BY_ID } from '@/constants/socialPosts';
 import { WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
-import { weeksOfMonth, expectedPostsBy, accountMonthSummary, counterTone } from '@/utils/socialPosts';
+import { weeksOfMonth, expectedPostsBy, accountMonthSummary, counterTone, scheduleLabel } from '@/utils/socialPosts';
 import { todayIso as getTodayIso } from '@/utils/date';
 import PostEditor from './PostEditor';
+import ScheduleModal from './ScheduleModal';
 import AccountsModal from './AccountsModal';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -49,6 +50,7 @@ export default function PostsSheet({
   const [filterGroup, setFilterGroup] = useState('all');
   const [editor, setEditor] = useState(null); // { post } | { account, weekStart }
   const [quick, setQuick] = useState(null);   // carga directa en celda: { accountId, weekStart, title, status, saving }
+  const [schedule, setSchedule] = useState(null); // pasar a «Programado»: { post } (cambio de estado) | { quick } (alta rápida)
   const [showAccounts, setShowAccounts] = useState(false);
 
   const isCurrentMonth = cursor.year === Number(today.slice(0, 4)) && cursor.month === Number(today.slice(5, 7));
@@ -81,11 +83,29 @@ export default function PostsSheet({
     return { count, expected, programmed };
   }, [activeAccounts, monthPosts, weeks]);
 
-  const rotateStatus = (post) => updatePost && updatePost(post.id, { status: nextPostStatus(post.status) });
+  // El punto de color pasa al estado siguiente; a «Programado» solo con
+  // plataforma, fecha y hora (ScheduleModal)
+  const rotateStatus = (post) => {
+    if (!updatePost) return;
+    const next = nextPostStatus(post.status);
+    if (next === SCHEDULED_STATUS) setSchedule({ post });
+    else updatePost(post.id, { status: next });
+  };
+
+  const confirmSchedule = async (data) => {
+    if (schedule.post) await updatePost(schedule.post.id, { ...data, status: SCHEDULED_STATUS });
+    else {
+      const q = schedule.quick;
+      await createPost({ accountId: q.accountId, weekStart: q.weekStart, title: q.title.trim(), status: SCHEDULED_STATUS, ...data, createdBy: currentUser?.name || '' });
+      setQuick(null);
+    }
+    setSchedule(null);
+  };
 
   // Carga directa en la celda (Enter guarda, Esc cancela)
   const saveQuick = async () => {
     if (!quick || !quick.title.trim() || quick.saving) return;
+    if (quick.status === SCHEDULED_STATUS) { setSchedule({ quick }); return; }
     setQuick((q) => ({ ...q, saving: true }));
     try {
       await createPost({
@@ -121,7 +141,7 @@ export default function PostsSheet({
         <button onClick={() => setEditor({ post })} className="flex-1 min-w-0 text-left px-1.5 py-1">
           <p className="truncate">{post.title || 'Sin título'}</p>
           <p className="text-[8px] font-black uppercase tracking-wider opacity-70 truncate">
-            {st.short}{theme ? ` · ${theme.label}` : ''}{post.publishDate ? ` · ${post.publishDate.slice(8, 10)}/${post.publishDate.slice(5, 7)}` : ''}
+            {st.short}{theme ? ` · ${theme.label}` : ''}{scheduleLabel(post, SCHEDULE_PLATFORM_BY_ID) ? ` · ${scheduleLabel(post, SCHEDULE_PLATFORM_BY_ID)}` : ''}
           </p>
         </button>
       </div>
@@ -292,7 +312,7 @@ export default function PostsSheet({
           <span key={s.id} className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />{s.label}</span>
         ))}
         <span className="text-slate-300">·</span>
-        <span>Clic en el punto del posteo para pasar al siguiente estado. Clic en el título para editarlo. El + carga directo en la celda.</span>
+        <span>Clic en el punto del posteo para pasar al siguiente estado (a Programado pide dónde, fecha y hora). Clic en el título para editarlo. El + carga directo en la celda.</span>
         <span className="text-slate-300">·</span>
         <span className="flex items-center gap-1.5">Conteo: <span className={`px-1.5 rounded border ${COUNTER_TONES.complete}`}>cumplió</span> <span className={`px-1.5 rounded border ${COUNTER_TONES.partial}`}>falta</span> <span className={`px-1.5 rounded border ${COUNTER_TONES.over}`}>se pasó</span></span>
       </div>
@@ -306,6 +326,15 @@ export default function PostsSheet({
           onSave={savePost}
           onDelete={editor.post ? async () => { await removePost(editor.post.id); setEditor(null); } : null}
           onClose={() => setEditor(null)}
+        />
+      )}
+      {schedule && (
+        <ScheduleModal
+          title={schedule.post ? schedule.post.title : schedule.quick.title}
+          account={activeAccounts.find((a) => a.id === (schedule.post ? schedule.post.accountId : schedule.quick.accountId))}
+          initial={schedule.post || {}}
+          onConfirm={confirmSchedule}
+          onClose={() => setSchedule(null)}
         />
       )}
       {showAccounts && (

@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mondayOf, monthKeyOfWeek, weeksOfMonth, weekLabel, expectedPostsBy,
   accountMonthSummary, missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, counterTone,
+  maskTime, parseTime, scheduleMissing, scheduleLabel,
   lastWeekOfMonth, monthCloseReminderActive, monthCloseSummary,
 } from './socialPosts';
 import { nextPostStatus, DEFAULT_SOCIAL_ACCOUNTS, ACCOUNT_GROUPS } from '@/constants/socialPosts';
@@ -151,5 +152,26 @@ describe('otros', () => {
     const keys = DEFAULT_SOCIAL_ACCOUNTS.map((a) => a.key);
     expect(new Set(keys).size).toBe(keys.length);
     DEFAULT_SOCIAL_ACCOUNTS.forEach((a) => expect(ACCOUNT_GROUPS).toContain(a.group));
+  });
+});
+
+describe('programación de posteos', () => {
+  it('hora a mano', () => {
+    expect(maskTime('1830')).toBe('18:30');
+    expect(maskTime('18')).toBe('18');
+    expect(maskTime('9:5')).toBe('9:5');
+    expect(parseTime('18:30')).toBe('18:30');
+    expect(parseTime('9:05')).toBe('09:05');
+    expect(parseTime('930')).toBe('09:30');
+    expect(parseTime('24:00')).toBeNull();
+    expect(parseTime('9:5')).toBeNull();
+    expect(parseTime('')).toBeNull();
+  });
+  it('qué falta para programar y cómo se ve', () => {
+    expect(scheduleMissing({})).toEqual(['dónde se programó', 'fecha de publicación', 'hora']);
+    expect(scheduleMissing({ scheduledOn: 'linkedin', publishDate: '2026-11-05', publishTime: '18:30' })).toEqual([]);
+    expect(scheduleMissing({ scheduledOn: 'hubspot', publishDate: '2026-11-05', publishTime: '25:00' })).toEqual(['hora']);
+    expect(scheduleLabel({ publishDate: '2026-11-05', publishTime: '18:30:00', scheduledOn: 'linkedin' }, { linkedin: { label: 'LinkedIn' } })).toBe('05/11 · 18:30 · LinkedIn');
+    expect(scheduleLabel({ publishDate: '2026-11-05' })).toBe('05/11');
   });
 });

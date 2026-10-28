@@ -6,7 +6,9 @@
 //
 // Cuenta (UI):  { id, key, group, name, plan, sortOrder, active }
 // Posteo (UI):  { id, accountId, weekStart, monthKey, title, theme,
-//                 status, publishDate, link, notes, createdBy, createdAt, updatedAt }
+//                 status, publishDate, publishTime ('HH:MM'), scheduledOn
+//                 ('hubspot' | 'linkedin', migration 0046), link, notes,
+//                 createdBy, createdAt, updatedAt }
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
@@ -48,6 +50,8 @@ export const postFromRow = (row) => (row ? {
   theme:     row.theme || '',
   status:    row.status || 'en_proceso',
   publishDate: row.publish_date || '',
+  publishTime: row.publish_time ? String(row.publish_time).slice(0, 5) : '',
+  scheduledOn: row.scheduled_on || '',
   link:      row.link || '',
   notes:     row.notes || '',
   createdBy: row.created_by || '',
@@ -66,6 +70,8 @@ export const postToRow = (obj) => {
   if (obj.theme     !== undefined) row.theme = obj.theme || null;
   if (obj.status    !== undefined) row.status = obj.status || 'en_proceso';
   if (obj.publishDate !== undefined) row.publish_date = obj.publishDate || null;
+  if (obj.publishTime !== undefined) row.publish_time = obj.publishTime || null;
+  if (obj.scheduledOn !== undefined) row.scheduled_on = obj.scheduledOn || null;
   if (obj.link      !== undefined) row.link = obj.link || null;
   if (obj.notes     !== undefined) row.notes = obj.notes || null;
   if (obj.createdBy !== undefined) row.created_by = obj.createdBy || null;

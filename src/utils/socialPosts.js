@@ -169,3 +169,40 @@ export const counterTone = (count, expected) => {
   if (count === expected) return 'complete';
   return 'partial';
 };
+
+// ── Programación (estado «Programado») ──
+// Hora escrita a mano: '1830' → '18:30', '9:5' se completa al validar.
+export const maskTime = (text) => {
+  const raw = String(text || '');
+  if (raw.includes(':')) {
+    const [h, m = ''] = raw.split(':');
+    return `${h.replace(/\D/g, '').slice(0, 2)}:${m.replace(/\D/g, '').slice(0, 2)}`;
+  }
+  const d = raw.replace(/\D/g, '').slice(0, 4);
+  return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d;
+};
+
+// '18:30', '9:05', '930' → 'HH:MM' (24 h); null si no es una hora válida
+export const parseTime = (text) => {
+  const t = String(text || '').trim();
+  const m = t.match(/^(\d{1,2}):?(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]); const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+};
+
+// Qué falta para poder dejar un posteo en «Programado».
+// data: { publishDate, publishTime, scheduledOn } → ['plataforma', 'fecha', 'hora']
+export const scheduleMissing = (data = {}) => [
+  !data.scheduledOn && 'dónde se programó',
+  !data.publishDate && 'fecha de publicación',
+  !parseTime(data.publishTime) && 'hora',
+].filter(Boolean);
+
+// "05/11 · 18:30 · LinkedIn" (lo que haya cargado)
+export const scheduleLabel = (post = {}, platforms = {}) => [
+  post.publishDate ? `${post.publishDate.slice(8, 10)}/${post.publishDate.slice(5, 7)}` : '',
+  post.publishTime ? post.publishTime.slice(0, 5) : '',
+  post.scheduledOn ? (platforms[post.scheduledOn]?.label || post.scheduledOn) : '',
+].filter(Boolean).join(' · ');

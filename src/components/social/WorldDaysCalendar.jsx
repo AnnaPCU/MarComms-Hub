@@ -33,7 +33,7 @@ import {
   WORLD_DAYS_NOTICE_BUSINESS_DAYS,
 } from '@/constants/worldDays';
 import { TEAM_MEMBERS } from '@/constants/team';
-import { COMPETITION_REVIEW, POST_STATUS_BY_ID } from '@/constants/socialPosts';
+import { COMPETITION_REVIEW, POST_STATUS_BY_ID, SCHEDULE_PLATFORM_BY_ID } from '@/constants/socialPosts';
 import { isCompetitionReviewDay } from '@/utils/socialPosts';
 import { worldDaysInMonth, monthGrid, upcomingWorldDays, worldDayCountries, worldDayCountriesText, accountsForWorldDay, isGlobalWorldDay } from '@/utils/worldDays';
 import { ACCOUNT_GROUPS } from '@/constants/socialPosts';
@@ -237,7 +237,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
           <>
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-pink-600">Posteo · {formatDate(selectedPost.publishDate)}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-pink-600">Posteo · {formatDate(selectedPost.publishDate)}{selectedPost.publishTime ? ` · ${selectedPost.publishTime} h` : ''}{selectedPost.scheduledOn && SCHEDULE_PLATFORM_BY_ID[selectedPost.scheduledOn] ? ` · ${SCHEDULE_PLATFORM_BY_ID[selectedPost.scheduledOn].label}` : ''}</p>
                 <h3 className="text-sm font-black text-slate-800 leading-snug mt-0.5">{selectedPost.title}</h3>
                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">{selectedPost.account?.group} · {selectedPost.account?.name}</p>
               </div>
