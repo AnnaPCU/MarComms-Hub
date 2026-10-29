@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 // TEAM MEMBERS — Equipo de Marketing & Comunicaciones
 // ════════════════════════════════════════════════════════════════════
-// 8 miembros totales: 3 Comunicación + 5 Marketing
+// 9 miembros totales: 3 Comunicación + 6 Marketing
 // Cada uno tiene un gradient único para sus avatars/cards.
 // ════════════════════════════════════════════════════════════════════
 
@@ -20,13 +20,14 @@ export const TEAM_MEMBERS = [
   { name: 'Francisco Capoulat',         short: 'Fran',  team: 'Marketing',    role: 'Marketing',        color: 'from-indigo-500 to-blue-500' },
   { name: 'Tomas Misrahi',              short: 'Tomi',  team: 'Marketing',    role: 'Marketing',        color: 'from-sky-500 to-blue-500' },
   { name: 'Eugenio Marotta',            short: 'Boli',  team: 'Marketing',    role: 'Marketing',        color: 'from-teal-500 to-emerald-500' },
+  { name: 'Valentino Redín',            short: 'Valen', team: 'Marketing',    role: 'Marketing',        color: 'from-emerald-500 to-green-500' },
 ];
 
 // ── Derivados ──
 // DESIGNERS: los 3 de Comunicación (asignan/diseñan piezas de contenido)
 export const DESIGNERS = TEAM_MEMBERS.filter(m => m.team === 'Comunicación').map(m => m.name);
 
-// MARCOMMS: los 5 de Marketing
+// MARCOMMS: los de Marketing
 export const MARCOMMS = TEAM_MEMBERS.filter(m => m.team === 'Marketing').map(m => m.name);
 
 // PEOPLE: todos los miembros (lista plana de nombres)

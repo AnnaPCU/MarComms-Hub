@@ -95,6 +95,7 @@ export const USER_GREETINGS = {
   'Francisco Capoulat':        '¡Hola Francisco! 🎯 Venga con las estrategias',
   'Tomas Misrahi':             '¡Hola Tomás! 🚀 Mirá qué hay para hoy',
   'Eugenio Marotta':           '¡Hola Eugenio! 💡 Tus tareas están listas',
+  'Valentino Redín':           '¡Hola Valentino! 👋 Mirá qué hay para hoy',
 };
 
 // ── Acentos personalizados para notificaciones (key = nombre completo) ──
@@ -110,6 +111,7 @@ export const USER_NOTIFICATION_ACCENT = {
   'Francisco Capoulat':         { color: 'indigo', emoji: '🎯', vibe: 'ejecutora' },
   'Tomas Misrahi':              { color: 'sky', emoji: '🚀', vibe: 'innovadora' },
   'Eugenio Marotta':            { color: 'teal', emoji: '🌿', vibe: 'equilibrada' },
+  'Valentino Redín':            { color: 'emerald', emoji: '🌱', vibe: 'proactiva' },
 };
 
 // ── Orden de prioridad de notificaciones por equipo ──
