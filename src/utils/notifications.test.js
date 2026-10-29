@@ -402,3 +402,35 @@ describe('15. month_close — lunes de la última semana del mes', () => {
     expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: full }, { now: new Date('2026-06-22T10:00:00Z') }).some(x => x.type === 'month_close')).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// 16. crm_deadline — Weekly check de CRM HubSpot: deadline en rojo
+// ════════════════════════════════════════════════════════════════════
+// NOW = mar 02/06/2026. Rojo = sin tildar y con 3 días o menos (o vencido).
+describe('16. crm_deadline — aviso a Valentino cuando un deadline se pone en rojo', () => {
+  const VALEN = { name: 'Valentino Redín', team: 'Marketing' };
+  const crmChecks = [
+    { entityCode: '538', itemId: 'outlook', done: false, deadline: '2026-06-05' },   // 3 días → rojo
+    { entityCode: '592', itemId: 'deals', done: false, deadline: '2026-05-30' },     // vencido
+    { entityCode: '583', itemId: 'documents', done: false, deadline: '2026-06-06' }, // 4 días → todavía no
+    { entityCode: '518', itemId: 'claude', done: true, deadline: '2026-06-01' },     // tildado
+  ];
+
+  it('Valentino recibe uno por ítem en rojo, con entidad, ítem y cuándo vence', () => {
+    const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmChecks }, opts).filter((n) => n.type === 'crm_deadline');
+    expect(notifs.map((n) => n.id)).toEqual(['crm-deadline-592-deals-2026-05-30', 'crm-deadline-538-outlook-2026-06-05']);
+    expect(notifs[0].title).toMatch(/^592 · Peterson Consultancy S\.A\.: «Deals nuevos cargados» venció hace 3 días/);
+    expect(notifs[1].title).toContain('«Outlook y calendario conectados» vence en 3 días');
+    expect(notifs[1]).toMatchObject({ source: 'CRM HubSpot', navTo: 'crm', navTab: 'weekly' });
+  });
+
+  it('el resto del equipo no lo recibe', () => {
+    const notifs = buildNotifications(FELO, { ...EMPTY_DATA, crmChecks }, opts);
+    expect(notifs.some((n) => n.type === 'crm_deadline')).toBe(false);
+  });
+
+  it('usa los ítems de la base (un ítem eliminado no avisa)', () => {
+    const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmChecks, crmItems: [{ id: 'deals', label: 'Deals' }] }, opts);
+    expect(notifs.filter((n) => n.type === 'crm_deadline').map((n) => n.id)).toEqual(['crm-deadline-592-deals-2026-05-30']);
+  });
+});

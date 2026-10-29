@@ -9,11 +9,12 @@
 //
 // Deadline de cada ítem del checklist: cuanto más cerca está, más rojo
 // (verde con DEADLINE_CALM_DAYS o más por delante → amarillo → naranja →
-// rojo el día del vencimiento y después). Tildado, deja de llamar la
-// atención.
+// rojo con DEADLINE_RED_DAYS días o menos y después del vencimiento).
+// Tildado, deja de llamar la atención. Cuando se pone en rojo, avisa a
+// CRM_WEEKLY_NOTIFY_USER (redDeadlines → utils/notifications).
 // ════════════════════════════════════════════════════════════════════
 
-import { CRM_CHECK_ITEMS, DEADLINE_CALM_DAYS } from '@/constants/crmWeekly';
+import { CRM_CHECK_ITEMS, CRM_ENTITIES, DEADLINE_CALM_DAYS, DEADLINE_RED_DAYS } from '@/constants/crmWeekly';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const utcDay = (iso) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
@@ -40,7 +41,8 @@ export const deadlineTone = (deadline, done, todayIso, dark = false) => {
   const days = daysUntil(deadline, todayIso);
   if (days === null) return null;
   if (done) return { tone: 'done', days, label: 'Cumplido', hue: null, text: null, bg: null, border: null };
-  const hue = Math.round(140 * Math.min(Math.max(days, 0), DEADLINE_CALM_DAYS) / DEADLINE_CALM_DAYS);
+  const span = DEADLINE_CALM_DAYS - DEADLINE_RED_DAYS;
+  const hue = Math.round(140 * Math.min(Math.max(days - DEADLINE_RED_DAYS, 0), span) / span);
   const overdue = days < 0;
   const label = overdue ? (days === -1 ? 'Venció ayer' : `Venció hace ${plural(-days, 'día', 'días')}`)
     : days === 0 ? 'Vence hoy' : days === 1 ? 'Vence mañana' : `Vence en ${plural(days, 'día', 'días')}`;
@@ -87,3 +89,16 @@ export const weeklyTotals = (entities = [], map = {}, todayIso, items = CRM_CHEC
   if (s.total && s.done === s.total) acc.complete += 1;
   return acc;
 }, { done: 0, total: 0, overdue: 0, soon: 0, complete: 0 });
+
+// Deadlines en rojo (sin tildar, con DEADLINE_RED_DAYS días o menos o
+// vencidos), de las entidades e ítems que existen:
+// [{ entity, item, deadline, days }], los más urgentes primero.
+export const redDeadlines = (checks = [], items = CRM_CHECK_ITEMS, todayIso, entities = CRM_ENTITIES) => {
+  const itemById = Object.fromEntries(items.map((it) => [it.id, it]));
+  const entityByCode = Object.fromEntries(entities.map((e) => [e.code, e]));
+  return checks
+    .map((c) => ({ c, entity: entityByCode[c.entityCode], item: itemById[c.itemId], days: daysUntil(c.deadline, todayIso) }))
+    .filter(({ c, entity, item, days }) => entity && item && !c.done && days !== null && days <= DEADLINE_RED_DAYS)
+    .map(({ c, entity, item, days }) => ({ entity, item, deadline: c.deadline, days }))
+    .sort((a, b) => a.days - b.days || a.entity.code.localeCompare(b.entity.code));
+};

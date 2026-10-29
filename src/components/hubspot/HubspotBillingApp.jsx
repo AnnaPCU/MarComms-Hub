@@ -14,7 +14,9 @@
 // y «Weekly check» (CrmWeeklyCheck: checklist de implementación y
 // próximos steps de cada entidad).
 //
-// Props: data (de useHubspotBilling), currentUser, dark, onBack
+// Props: data (de useHubspotBilling), weekly (de useCrmWeekly, lo carga App
+//   para los avisos), autoView ('weekly' al venir de un aviso) +
+//   onAutoViewDone, currentUser, dark, onBack
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -37,10 +39,11 @@ const VIEWS = [
 
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
-export default function HubspotBillingApp({ data, currentUser, dark = false, onBack }) {
+export default function HubspotBillingApp({ data, weekly, autoView = null, onAutoViewDone, currentUser, dark = false, onBack }) {
   const { entities, imports, meta, dismissed, loading, error, importExcel, dismissWarning } = data;
   const confirm = useConfirm();
-  const [view, setView] = useState('billing');
+  const [view, setView] = useState(autoView || 'billing');
+  useEffect(() => { if (autoView) { setView(autoView); if (onAutoViewDone) onAutoViewDone(); } }, [autoView]); // eslint-disable-line react-hooks/exhaustive-deps
   const [brand, setBrand] = useState('');
   const [month, setMonth] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -111,7 +114,7 @@ export default function HubspotBillingApp({ data, currentUser, dark = false, onB
 
       {view === 'weekly' ? (
         <main className="max-w-7xl mx-auto w-full p-6">
-          <CrmWeeklyCheck currentUser={currentUser} dark={dark} />
+          <CrmWeeklyCheck data={weekly} currentUser={currentUser} dark={dark} />
         </main>
       ) : (
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">

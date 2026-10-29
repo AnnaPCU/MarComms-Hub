@@ -46,7 +46,12 @@ export const CRM_CHECK_ITEMS = [
   { id: 'trainingAdmin', label: 'Entrenamientos SuperAdmin' },
 ];
 
-// Deadline: con esta cantidad de días (o más) por delante se ve en verde;
-// a medida que se acerca pasa por amarillo y naranja hasta el rojo (el
-// día del vencimiento y después).
+// Deadline: con DEADLINE_CALM_DAYS días (o más) por delante se ve en
+// verde; a medida que se acerca pasa por amarillo y naranja hasta el rojo,
+// que arranca con DEADLINE_RED_DAYS días o menos (y sigue si se venció).
 export const DEADLINE_CALM_DAYS = 21;
+export const DEADLINE_RED_DAYS = 3;
+
+// Quién recibe el aviso cuando un deadline del Weekly check se pone en rojo
+// (sin tildar y con DEADLINE_RED_DAYS días o menos, o vencido)
+export const CRM_WEEKLY_NOTIFY_USER = 'Valentino Redín';

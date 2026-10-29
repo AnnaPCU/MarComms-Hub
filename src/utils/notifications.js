@@ -29,6 +29,12 @@
 //  15. month_close                — lunes (y martes) de la última semana del mes: qué cuentas
 //                                   todavía no llegan a su plan
 //
+//   CRM HubSpot · Weekly check:
+//  16. crm_deadline               — un ítem del checklist de una entidad, sin tildar, con su
+//                                   deadline en rojo (3 días o menos, o vencido): aviso a
+//                                   CRM_WEEKLY_NOTIFY_USER (Valentino Redín). Uno por ítem y
+//                                   deadline; al tildarlo o mover la fecha deja de aparecer
+//
 //   Eliminados (sep 2026, van por el CRM): subtareas individuales de
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
 // ════════════════════════════════════════════════════════════════════
@@ -43,6 +49,8 @@ import { activeWorldDayNotices, accountsForWorldDay, isGlobalWorldDay, worldDayC
 import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
 import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
+import { CRM_WEEKLY_NOTIFY_USER } from '@/constants/crmWeekly';
+import { redDeadlines } from './crmWeekly';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
 // Nombre del mes en minúscula a partir de 'YYYY-MM' o 'YYYY-MM-DD'
@@ -86,6 +94,8 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     // assignedTasks: ya no genera notificaciones (seguimiento individual → CRM)
     socialAccounts = [],
     socialPosts = [],
+    crmChecks = [],
+    crmItems,
   } = data || {};
 
   const now = options.now instanceof Date ? options.now : new Date();
@@ -457,6 +467,25 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         navTo: 'content', navTab: 'posteos',
       });
     }
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 16. CRM_DEADLINE — Weekly check de CRM HubSpot: deadlines en rojo.
+  //     Solo para CRM_WEEKLY_NOTIFY_USER.
+  // ────────────────────────────────────────────────────────────────
+  if (sameName(options.crmWeeklyNotifyUser || CRM_WEEKLY_NOTIFY_USER)) {
+    const todayIso = toIsoDate(today);
+    redDeadlines(crmChecks, crmItems || undefined, todayIso).forEach(({ entity, item, deadline, days }) => {
+      const when = days < 0 ? (days === -1 ? 'venció ayer' : `venció hace ${-days} días`)
+        : days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
+      notifs.push({
+        id: `crm-deadline-${entity.code}-${item.id}-${deadline}`, type: 'crm_deadline', icon: AlertCircle, color: 'sky',
+        title: `${entity.code} · ${entity.name}: «${item.label}» ${when} (${formatDate(deadline)}) y todavía no está tildado`,
+        shortTitle: `⏰ ${item.label} · ${entity.code}`,
+        emoji: '⏰', project: entity.name, source: 'CRM HubSpot', date: deadline,
+        navTo: 'crm', navTab: 'weekly',
+      });
+    });
   }
 
   // ────────────────────────────────────────────────────────────────

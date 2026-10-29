@@ -2,7 +2,7 @@
 // Tests para utils/crmWeekly — Weekly check de CRM HubSpot
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { checksByEntity, daysUntil, deadlineTone, entitySummary, formatShortDate, maskDmy, newCheckItemId, parseDmy, weeklyTotals } from './crmWeekly';
+import { checksByEntity, daysUntil, deadlineTone, entitySummary, formatShortDate, maskDmy, newCheckItemId, parseDmy, redDeadlines, weeklyTotals } from './crmWeekly';
 
 const TODAY = '2026-10-27';
 
@@ -37,6 +37,9 @@ describe('deadline', () => {
     const two = deadlineTone('2026-10-29', false, TODAY);
     expect(week.hue).toBeGreaterThan(two.hue); // más cerca → más rojo
     expect(two.label).toBe('Vence en 2 días');
+    expect(two.hue).toBe(0); // con 3 días o menos ya es rojo
+    expect(deadlineTone('2026-10-30', false, TODAY).hue).toBe(0); // 3 días
+    expect(deadlineTone('2026-10-31', false, TODAY).hue).toBeGreaterThan(0); // 4 días: naranja
     expect(deadlineTone('2026-10-28', false, TODAY).label).toBe('Vence mañana');
     expect(deadlineTone(TODAY, false, TODAY)).toMatchObject({ hue: 0, label: 'Vence hoy' });
     expect(deadlineTone('2026-10-20', false, TODAY)).toMatchObject({ hue: 0, label: 'Venció hace 7 días' });
@@ -67,5 +70,21 @@ describe('resumen por entidad', () => {
   });
   it('totales', () => {
     expect(weeklyTotals([{ code: '538' }, { code: '592' }, { code: '583' }], map, TODAY)).toEqual({ done: 2, total: 24, overdue: 1, soon: 1, complete: 0 });
+  });
+});
+
+describe('aviso de deadlines en rojo', () => {
+  it('sin tildar, con 3 días o menos o vencidos; los más urgentes primero', () => {
+    const checks = [
+      { entityCode: '538', itemId: 'outlook', done: false, deadline: '2026-10-30' }, // 3 días
+      { entityCode: '538', itemId: 'deals', done: true, deadline: '2026-10-20' },    // tildado
+      { entityCode: '592', itemId: 'meetings', done: false, deadline: '2026-10-25' }, // vencido
+      { entityCode: '583', itemId: 'documents', done: false, deadline: '2026-10-31' }, // 4 días: todavía no
+      { entityCode: '999', itemId: 'outlook', done: false, deadline: '2026-10-27' },   // entidad que no existe
+      { entityCode: '538', itemId: 'viejo', done: false, deadline: '2026-10-27' },     // ítem eliminado
+      { entityCode: '518', itemId: 'claude', done: false, deadline: '' },
+    ];
+    const r = redDeadlines(checks, undefined, TODAY);
+    expect(r.map((x) => [x.entity.code, x.item.id, x.days])).toEqual([['592', 'meetings', -2], ['538', 'outlook', 3]]);
   });
 });

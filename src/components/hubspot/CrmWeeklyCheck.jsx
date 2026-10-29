@@ -9,13 +9,13 @@
 // checklist valen para todas las entidades y se pueden agregar, renombrar
 // y eliminar desde acá. Todo en tiempo real.
 //
-// Props: currentUser, dark
+// Props: data (de useCrmWeekly: lo carga App, que también arma los avisos
+//   de deadlines en rojo), currentUser, dark
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { CRM_BRANDS, CRM_ENTITIES } from '@/constants/crmWeekly';
-import { useCrmWeekly } from '@/hooks/useCrmWeekly';
 import { todayIso as getTodayIso } from '@/utils/date';
 import { checksByEntity, entitySummary, newCheckItemId, weeklyTotals } from '@/utils/crmWeekly';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -47,8 +47,8 @@ function EntityButton({ entity, summary, active, onClick }) {
   );
 }
 
-export default function CrmWeeklyCheck({ currentUser, dark = false }) {
-  const { items, checks, steps, loading, error, missing, saveCheck, createStep, updateStep, removeStep, createItem, updateItem, removeItem } = useCrmWeekly();
+export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
+  const { items, checks, steps, loading, error, missing, saveCheck, createStep, updateStep, removeStep, createItem, updateItem, removeItem } = data;
   const confirm = useConfirm();
   const [brand, setBrand] = useState('');
   const [selected, setSelected] = useState(CRM_ENTITIES[0].code);
