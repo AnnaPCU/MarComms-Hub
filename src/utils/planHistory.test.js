@@ -2,7 +2,7 @@
 // Tests para utils/planHistory — histórico de KPIs de un plan
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { historyMonths, kpiTimeline, niceScale, shortMonthLabel } from './planHistory';
+import { historyMonths, kpiTimeline, multiMonthLabel, niceScale, shortMonthLabel, sumMonthsKpiGroups } from './planHistory';
 
 const tasks = [
   { monthKey: '2026-08', title: 'Optimización web', status: 'Completado' },
@@ -47,5 +47,27 @@ describe('histórico', () => {
     expect(niceScale(2, { integer: true }).ticks).toEqual([0, 1, 2, 3, 4]);
     expect(niceScale(0).ticks).toEqual([0, 1, 2, 3, 4]);
     expect(niceScale(1500).max).toBe(1600);
+  });
+});
+
+describe('varios meses', () => {
+  it('suma los KPIs de los meses elegidos (y la cantidad de MQLs)', () => {
+    const groups = sumMonthsKpiGroups(tasks, kpis, ['2026-09', '2026-10']);
+    const by = Object.fromEntries(groups.flatMap((g) => g.items).map((k) => [k.id, k]));
+    expect(by.deals).toMatchObject({ value: 41, visible: true, change: null, note: '' });
+    expect(by.mqls).toMatchObject({ value: 37887, currency: 'USD', count: 9, tag: '9 MQLs' });
+    expect(by.planFee).toMatchObject({ value: 3000, currency: 'USD' }); // se arrastra: 1.500 + 1.500
+    expect(by.deliverables.value).toBe(9); // 8 a mano en sep + 1 automático en oct
+    expect(by.meetings.value).toBe(7);
+    expect(by.contacts.visible).toBe(false); // en 0
+  });
+  it('monedas distintas: no se suma', () => {
+    const g = sumMonthsKpiGroups([], { '2026-09': { sales: { value: 10, currency: 'USD' } }, '2026-10': { sales: { value: 20, currency: 'EUR' } } }, ['2026-09', '2026-10']);
+    expect(g.find((x) => x.id === 'performance').items.find((k) => k.id === 'sales')).toMatchObject({ mixed: true, visible: false });
+  });
+  it('título', () => {
+    expect(multiMonthLabel(['2026-10', '2026-09'])).toBe('Septiembre 2026 + Octubre 2026');
+    expect(multiMonthLabel(['2026-07', '2026-08', '2026-09', '2026-10'])).toBe('4 meses · Julio 2026 – Octubre 2026');
+    expect(multiMonthLabel([])).toBe('');
   });
 });

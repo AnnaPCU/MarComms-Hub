@@ -16,7 +16,9 @@
 //     vacíos no aparecen). Si el mes actual todavía no tiene, lo avisa y
 //     ofrece ir al último mes con acciones.
 //   - En el celular las tareas se ven como tarjetas (sin scroll lateral).
-//   - Selector de mes: el más reciente arriba y al final «Histórico»
+//   - Selector de mes: el más reciente arriba y al final «Varios meses…»
+//     (MonthsPicker: se eligen varios meses y se suman sus KPIs; se ven
+//     las acciones de todos, separadas por mes) y «Histórico»
 //     (PlanHistoryView: evolución de cada KPI en todos los meses).
 //   - Como el reporte mensual: KPIs del mes elegido arriba de las acciones
 //     (solo los que tienen valor mayor a 0; performance con la variación
@@ -36,12 +38,15 @@ import { brandTheme } from '@/constants/brands';
 import { CANCELLED_TASK_STATUS, MONTHS_ES } from '@/constants/planTasks';
 import { filterTasks, groupTasksByMonth, monthHistory, monthLabel, planBrand, taskStats } from '@/utils/planTasks';
 import { initiativeGroups, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { multiMonthLabel, sumMonthsKpiGroups } from '@/utils/planHistory';
 import { StatusBadge, TaskLinks, pctLabel } from './PlanBits';
 import { InitiativesTables, KpiGroupsView, ReportSectionTitle } from './PlanReportBlocks';
 import PlanHistoryView from './PlanHistoryView';
+import MonthsPicker from './MonthsPicker';
 
-// Opción del selector de mes con el histórico de todos los meses
+// Opciones del selector de mes: histórico de todos los meses y varios meses sumados
 const HISTORY = 'history';
+const MULTI = 'multi';
 
 const thCls = 'text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-widest';
 // Logo del equipo que firma el reporte (el mismo del menú del Hub)
@@ -89,23 +94,30 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
   const currentMonth = todayIso.slice(0, 7);
   const [pickedMonth, setMonth] = useState(null);
   const month = pickedMonth ?? currentMonth;
+  const [multiMonths, setMultiMonths] = useState([]);
+  const isMulti = month === MULTI;
   const [expanded, setExpanded] = useState(() => new Set());
   const history = useMemo(() => monthHistory(tasks, todayIso), [tasks, todayIso]);
   // Si el mes elegido se quedó sin tareas (cambio en vivo), se sigue mostrando en la lista
   const isHistory = month === HISTORY;
   // Meses en orden cronológico (las flechas: ← más viejo, → más nuevo)
-  const options = isHistory || history.options.some((o) => o.value === month)
+  const options = isHistory || isMulti || history.options.some((o) => o.value === month)
     ? history.options
     : [...history.options, { value: month, label: month === 'none' ? 'Sin mes' : monthLabel(month), count: 0, current: false }]
       .sort((a, b) => (a.value === 'none' ? 1 : b.value === 'none' ? -1 : a.value.localeCompare(b.value)));
   const monthOpts = options.filter((o) => o.value !== 'none');
   // En el selector: el más reciente arriba, después «Sin mes» y al final el histórico
-  const selectOptions = [...monthOpts].reverse().concat(options.filter((o) => o.value === 'none'), [{ value: HISTORY, label: 'Histórico (todos los meses)' }]);
+  const selectOptions = [...monthOpts].reverse().concat(options.filter((o) => o.value === 'none'), [{ value: MULTI, label: 'Varios meses…' }, { value: HISTORY, label: 'Histórico (todos los meses)' }]);
   const idx = options.findIndex((o) => o.value === month);
-  const prev = isHistory ? monthOpts[monthOpts.length - 1] : options[idx - 1];
-  const next = isHistory ? undefined : options[idx + 1];
-  const selected = isHistory ? { value: HISTORY, label: 'Histórico' } : options[idx];
-  const shown = filterTasks(tasks, { month });
+  const prev = isHistory ? monthOpts[monthOpts.length - 1] : isMulti ? undefined : options[idx - 1];
+  const next = isHistory || isMulti ? undefined : options[idx + 1];
+  const selected = isHistory ? { value: HISTORY, label: 'Histórico' } : isMulti ? { value: MULTI, label: multiMonthLabel(multiMonths) } : options[idx];
+  const shown = isMulti ? tasks.filter((t) => multiMonths.includes(t.monthKey)) : filterTasks(tasks, { month });
+  // «Varios meses…»: arranca con el mes que se estaba mirando (o el actual)
+  const pickMonth = (v) => {
+    if (v === MULTI && !multiMonths.length) setMultiMonths([/^\d{4}-\d{2}$/.test(month) ? month : currentMonth]);
+    setMonth(v);
+  };
   const groups = groupTasksByMonth(shown);
   const s = taskStats(tasks);
   const ms = taskStats(shown);
@@ -113,7 +125,9 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
   const navy = theme.colors.dark;
   // KPIs del mes elegido (solo si es un mes; sin ninguno con valor no se muestran)
   const prevKey = previousMonthKey(month);
-  const kpiGroups = prevKey ? monthKpiGroups(tasks, month, plan.kpis?.[month], plan.kpis?.[prevKey], plan.kpis) : [];
+  const kpiGroups = isMulti
+    ? sumMonthsKpiGroups(tasks, plan.kpis || {}, multiMonths)
+    : prevKey ? monthKpiGroups(tasks, month, plan.kpis?.[month], plan.kpis?.[prevKey], plan.kpis) : [];
   const hasKpis = kpiGroups.some((g) => g.items.some((k) => k.visible));
   const initiatives = initiativeGroups(plan.initiatives || []);
 
@@ -175,7 +189,7 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
             <button onClick={() => prev && setMonth(prev.value)} disabled={!prev} className={navBtn} style={{ color: c.dark }} title={prev ? prev.label : undefined} aria-label="Mes anterior">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <select value={month} onChange={(e) => setMonth(e.target.value)} className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none" style={{ color: c.dark }} aria-label="Mes">
+            <select value={month} onChange={(e) => pickMonth(e.target.value)} className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none" style={{ color: c.dark }} aria-label="Mes">
               {selectOptions.map((o) => <option key={o.value} value={o.value}>{o.label}{o.current ? ' (este mes)' : ''}</option>)}
             </select>
             <button onClick={() => next && setMonth(next.value)} disabled={!next} className={navBtn} style={{ color: c.dark }} title={next ? next.label : undefined} aria-label="Mes siguiente">
@@ -183,13 +197,14 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
             </button>
           </div>
         </div>
+        {isMulti && <MonthsPicker options={monthOpts} value={multiMonths} onChange={setMultiMonths} c={c} />}
       </section>
 
       {/* KPIs del mes */}
       {!isHistory && hasKpis && (
         <section className="px-6 sm:px-8 pt-6">
-          <ReportSectionTitle title={`KPIs del mes · ${selected?.label || ''}`} aside="Operativos, performance e investment" c={c} />
-          <KpiGroupsView groups={kpiGroups} c={c} navy={navy} prevLabel={MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase()} />
+          <ReportSectionTitle title={isMulti ? `KPIs · ${selected?.label || ''}` : `KPIs del mes · ${selected?.label || ''}`} aside={isMulti ? 'Suma de los meses elegidos' : 'Operativos, performance e investment'} c={c} />
+          <KpiGroupsView groups={kpiGroups} c={c} navy={navy} prevLabel={prevKey ? MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase() : ''} />
         </section>
       )}
 
@@ -207,7 +222,12 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
         {shown.length === 0 ? empty : (<>
         {/* Celular */}
         <div className="sm:hidden">
-          <ul>{groups.flatMap((g) => g.tasks).map((t) => <TaskCard key={t.id} t={t} c={c} open={expanded.has(t.id)} onToggle={() => toggleRow(t.id)} />)}</ul>
+          <ul>{groups.map((g) => (
+            <React.Fragment key={g.key || 'none'}>
+              {isMulti && <li className="px-2 pt-3 pb-1 text-[11px] font-bold uppercase tracking-widest" style={{ color: c.primary }}>{g.label}</li>}
+              {g.tasks.map((t) => <TaskCard key={t.id} t={t} c={c} open={expanded.has(t.id)} onToggle={() => toggleRow(t.id)} />)}
+            </React.Fragment>
+          ))}</ul>
         </div>
 
         {/* Escritorio */}
@@ -234,7 +254,17 @@ export default function PlanExternalView({ plan, tasks, todayIso, dark = false }
                 </tr>
               </thead>
               <tbody>
-                {groups.flatMap((g) => g.tasks).map((t) => {
+                {groups.flatMap((g) => [
+                  isMulti ? { header: true, key: `h-${g.key || 'none'}`, label: g.label, count: g.tasks.length } : null,
+                  ...g.tasks,
+                ].filter(Boolean)).map((t) => {
+                  if (t.header) {
+                    return (
+                      <tr key={t.key} className="border-b border-slate-100" style={{ background: c.soft }}>
+                        <td colSpan={7} className="px-3 py-2 text-[11px] font-bold uppercase tracking-widest" style={{ color: c.dark }}>{t.label} · {plural(t.count, 'acción', 'acciones')}</td>
+                      </tr>
+                    );
+                  }
                   const open = expanded.has(t.id);
                   return (
                     <tr key={t.id} className={`border-b border-slate-100 align-top ${t.status === CANCELLED_TASK_STATUS ? 'opacity-60' : ''}`}>

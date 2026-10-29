@@ -6,11 +6,16 @@
 // valores que «KPIs del mes» (monthKpiGroups: automáticos, corregidos a
 // mano y lo que se arrastra, como Plan MarComms). Un mes sin valor (o en
 // 0) no cuenta. Mientras más meses estén cargados, más completo se ve.
+//
+// «Varios meses» (oct 2026): sumMonthsKpiGroups suma los KPIs de los
+// meses elegidos (mismo formato que monthKpiGroups, para KpiGroupsView) y
+// multiMonthLabel arma el título.
 // ════════════════════════════════════════════════════════════════════
 
 import { PLAN_KPIS, PLAN_KPI_GROUPS } from '@/constants/planKpis';
 import { MONTHS_ES } from '@/constants/planTasks';
-import { monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { countText, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { monthLabel } from '@/utils/planTasks';
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const hasValue = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -87,4 +92,44 @@ export const niceScale = (max, { integer = false, parts = 4 } = {}) => {
     step = STEPS.map((s) => Number((s * pow).toPrecision(6))).find((s) => s >= raw && (!integer || Number.isInteger(s))) ?? 10 * pow;
   }
   return { max: step * parts, ticks: Array.from({ length: parts + 1 }, (_, i) => Number((step * i).toPrecision(12))) };
+};
+
+// ── Varios meses ──
+// KPIs de varios meses sumados, en el formato de monthKpiGroups. Por KPI:
+// suma los meses con valor (> 0), y también la cantidad (MQLs, ventas).
+// Con monedas distintas entre meses no se suma (no se muestra). Sin nota
+// ni variación (son del mes). `months`: los 'YYYY-MM' elegidos.
+export const sumMonthsKpiGroups = (tasks = [], kpiHistory = {}, months = []) => {
+  const perMonth = months.filter((m) => MONTH_RE.test(m)).map((m) => monthKpiGroups(tasks, m, kpiHistory[m], kpiHistory[previousMonthKey(m)], kpiHistory).flatMap((g) => g.items));
+  return PLAN_KPI_GROUPS.map((g) => ({
+    ...g,
+    items: PLAN_KPIS.filter((k) => k.group === g.id).map((k) => {
+      const parts = perMonth.map((items) => items.find((it) => it.id === k.id)).filter((it) => it && it.visible);
+      const currencies = [...new Set(parts.map((it) => it.currency || ''))];
+      const mixed = currencies.length > 1;
+      const value = parts.length && !mixed ? parts.reduce((n, it) => n + it.value, 0) : null;
+      const counts = parts.filter((it) => hasValue(it.count));
+      const count = k.count && counts.length ? counts.reduce((n, it) => n + it.count, 0) : null;
+      return {
+        ...k,
+        value,
+        currency: mixed ? '' : currencies[0] || '',
+        note: '',
+        count,
+        tag: k.count ? countText(k, count) : '',
+        months: parts.length,
+        mixed,
+        visible: hasValue(value) && value > 0,
+        change: null,
+      };
+    }),
+  }));
+};
+
+// 'Septiembre 2026 + Octubre 2026'; con más de 3: '4 meses · Julio 2026 – Octubre 2026'
+export const multiMonthLabel = (months = []) => {
+  const sorted = [...months].filter((m) => MONTH_RE.test(m)).sort();
+  if (!sorted.length) return '';
+  if (sorted.length <= 3) return sorted.map((m) => monthLabel(m)).join(' + ');
+  return `${sorted.length} meses · ${monthLabel(sorted[0])} – ${monthLabel(sorted[sorted.length - 1])}`;
 };
