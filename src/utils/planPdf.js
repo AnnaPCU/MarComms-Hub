@@ -8,6 +8,9 @@
 // mezclan): encabezado con MarComms y el logo de la marca, avance del plan,
 // KPIs del mes (solo los que van al link), acciones del mes (sin
 // Responsable ni Deadline), iniciativas y pie con la tagline.
+// Varios meses (nov 2026): con `months` (más de uno) los KPIs se suman como
+// en «Varios meses…» del link (sumMonthsKpiGroups) y las acciones van
+// separadas por mes.
 //
 // jsPDF nativo (sin capturas de pantalla), como src/utils/pdf.js: texto
 // nítido y seleccionable. Fuente Helvetica: los caracteres fuera de
@@ -19,6 +22,7 @@ import { CANCELLED_TASK_STATUS, MONTHS_ES } from '@/constants/planTasks';
 import { loadJsPdf } from '@/utils/pdf';
 import { filterTasks, groupTasksByMonth, monthLabel, planBrand, splitLinks, taskStats } from '@/utils/planTasks';
 import { formatKpiChange, formatKpiNumber, initiativeGroups, monthKpiGroups, previousMonthKey } from '@/utils/planKpis';
+import { multiMonthLabel, sumMonthsKpiGroups } from '@/utils/planHistory';
 
 const MARCOMMS_LOGO = '/logos/marcomms-color.png';
 const PAGE_W = 210;
@@ -55,26 +59,51 @@ export const pdfText = (s) => String(s ?? '')
 const slug = (s) => String(s || 'plan').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-export const planPdfFilename = (plan, monthKey) => `plan-${slug(plan?.name)}-${monthKey}.pdf`;
+// Un mes: plan-x-2026-10.pdf · varios: plan-x-2026-09_2026-10.pdf (más de 3: plan-x-2026-07_a_2026-10.pdf)
+export const planPdfFilename = (plan, monthKey, months = []) => {
+  const keys = [...new Set(months)].filter((m) => MONTH_RE.test(m)).sort();
+  const part = keys.length > 3 ? `${keys[0]}_a_${keys[keys.length - 1]}` : keys.length > 1 ? keys.join('_') : (keys[0] || monthKey);
+  return `plan-${slug(plan?.name)}-${part}.pdf`;
+};
 
 // Mes del PDF: el elegido si es un mes; si no ('all' / 'none'), el actual
 export const planPdfMonth = (monthKey, todayIso) => (MONTH_RE.test(monthKey || '') ? monthKey : todayIso.slice(0, 7));
 
-// Lo que va en el PDF (sin jsPDF, para poder probarlo)
-export const planPdfContent = ({ plan, tasks = [], kpiHistory = {}, initiatives = [], monthKey }) => {
-  const prevKey = previousMonthKey(monthKey);
-  const kpiGroups = monthKpiGroups(tasks, monthKey, kpiHistory[monthKey], kpiHistory[prevKey], kpiHistory)
+// Meses para elegir en «Varios meses» (del más viejo al más nuevo): los que
+// tienen acciones o algún KPI cargado, más el actual
+export const planPdfMonthOptions = (tasks = [], kpiHistory = {}, todayIso) => {
+  const current = todayIso.slice(0, 7);
+  const keys = new Set([current]);
+  tasks.forEach((t) => { if (MONTH_RE.test(t.monthKey || '')) keys.add(t.monthKey); });
+  Object.entries(kpiHistory || {}).forEach(([m, k]) => { if (MONTH_RE.test(m) && Object.keys(k || {}).length) keys.add(m); });
+  return [...keys].sort().map((m) => ({ value: m, label: monthLabel(m), current: m === current }));
+};
+
+// Lo que va en el PDF (sin jsPDF, para poder probarlo). `months`: varios
+// meses (si hay más de uno, reemplaza a monthKey).
+export const planPdfContent = ({ plan, tasks = [], kpiHistory = {}, initiatives = [], monthKey, months = [] }) => {
+  const keys = [...new Set(months)].filter((m) => MONTH_RE.test(m)).sort();
+  const multi = keys.length > 1;
+  const one = multi ? null : keys[0] || monthKey;
+  const prevKey = multi ? null : previousMonthKey(one);
+  const kpiGroups = (multi ? sumMonthsKpiGroups(tasks, kpiHistory, keys) : monthKpiGroups(tasks, one, kpiHistory[one], kpiHistory[prevKey], kpiHistory))
     .map((g) => ({ ...g, items: g.items.filter((k) => k.visible) }))
     .filter((g) => g.items.length > 0);
-  const monthTasks = groupTasksByMonth(filterTasks(tasks, { month: monthKey })).flatMap((g) => g.tasks);
+  const taskGroups = multi
+    ? groupTasksByMonth(tasks.filter((t) => keys.includes(t.monthKey))).map((g) => ({ key: g.key, label: g.label, tasks: g.tasks }))
+    : [{ key: one, label: monthLabel(one), tasks: groupTasksByMonth(filterTasks(tasks, { month: one })).flatMap((g) => g.tasks) }];
+  const monthTasks = taskGroups.flatMap((g) => g.tasks);
   return {
     theme: brandTheme(planBrand(plan.name)),
-    monthLabel: monthLabel(monthKey),
-    prevLabel: MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase(),
+    multi,
+    months: multi ? keys : [one],
+    monthLabel: multi ? multiMonthLabel(keys) : monthLabel(one),
+    prevLabel: prevKey ? MONTHS_ES[Number(prevKey.slice(5, 7)) - 1].toLowerCase() : '',
     stats: taskStats(tasks),
     monthStats: taskStats(monthTasks),
     kpiGroups,
     monthTasks,
+    taskGroups,
     initiativeGroups: initiativeGroups(initiatives),
   };
 };
@@ -110,11 +139,11 @@ const taskLinks = (value) => {
   return items;
 };
 
-export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiatives = [], monthKey }) => {
+export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiatives = [], monthKey, months = [] }) => {
   await loadJsPdf();
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const data = planPdfContent({ plan, tasks, kpiHistory, initiatives, monthKey });
+  const data = planPdfContent({ plan, tasks, kpiHistory, initiatives, monthKey, months });
   const { theme } = data;
   const c = theme.colors;
   const navy = c.dark;
@@ -204,14 +233,18 @@ export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiati
   fill('#ffffff'); pdf.roundedRect(MX + 6, y + 18, 110, 2, 1, 1, 'F');
   if (pct > 0) { fill(c.primary); pdf.roundedRect(MX + 6, y + 18, Math.max(2, 110 * (pct / 100)), 2, 1, 1, 'F'); }
   font(7, 'bold'); color(c.label);
-  pdf.text('MES', MX + CW - 6, y + 9, { align: 'right', charSpace: 0.3 });
-  font(12, 'bold'); color(navy);
+  pdf.text(data.multi ? 'MESES' : 'MES', MX + CW - 6, y + 9, { align: 'right', charSpace: 0.3 });
+  // a la derecha de la barra de avance: si el nombre es largo (varios meses), más chico
+  let monthSize = 12;
+  font(monthSize, 'bold');
+  while (monthSize > 7 && textW(pdfText(data.monthLabel)) > CW - 128) { monthSize -= 0.5; font(monthSize, 'bold'); }
+  color(navy);
   pdf.text(pdfText(data.monthLabel), MX + CW - 6, y + 16, { align: 'right' });
   y += 30;
 
   // ── 3. KPIs del mes ──
   if (data.kpiGroups.length) {
-    sectionTitle(`KPIs del mes · ${data.monthLabel}`, 'Operativos, performance e investment');
+    sectionTitle(data.multi ? `KPIs · ${data.monthLabel}` : `KPIs del mes · ${data.monthLabel}`, data.multi ? 'Suma de los meses elegidos' : 'Operativos, performance e investment');
     const gap = 4;
     const cardW = (CW - gap * 2) / 3;
     data.kpiGroups.forEach((g) => {
@@ -299,7 +332,15 @@ export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiati
   } else {
     ensure(20);
     tableHeader(cols);
-    data.monthTasks.forEach((t) => {
+    // Varios meses: una franja con el mes antes de sus acciones
+    const monthBand = (g) => {
+      if (ensure(14)) tableHeader(cols);
+      fill(c.soft); pdf.rect(MX, y, CW, 6, 'F');
+      font(6.5, 'bold'); color(navy);
+      pdf.text(spaced(`${g.label} · ${g.tasks.length} ${g.tasks.length === 1 ? 'acción' : 'acciones'}`), MX + 2.5, y + 4, { charSpace: 0.2 });
+      y += 6;
+    };
+    data.taskGroups.forEach((g) => { if (data.multi) monthBand(g); g.tasks.forEach((t) => {
       const cancelled = t.status === CANCELLED_TASK_STATUS;
       font(7.5, 'bold');
       const titleLines = lines(t.title, cols[0].w - 5);
@@ -332,7 +373,7 @@ export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiati
       });
       y += rowH;
       stroke(BORDER); pdf.setLineWidth(0.2); pdf.line(MX, y, MX + CW, y);
-    });
+    }); });
     y += 4;
   }
 
@@ -382,5 +423,5 @@ export const buildPlanPdf = async ({ plan, tasks = [], kpiHistory = {}, initiati
 
 export const downloadPlanPdf = async (args) => {
   const pdf = await buildPlanPdf(args);
-  pdf.save(planPdfFilename(args.plan, args.monthKey));
+  pdf.save(planPdfFilename(args.plan, args.monthKey, args.months));
 };
