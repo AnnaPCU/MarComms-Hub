@@ -58,7 +58,7 @@ import NotificationsWelcomeModal from '@/components/shared/NotificationsWelcomeM
 import LoginScreen from '@/components/login/LoginScreen';
 import CampanasApp from '@/components/campanas/CampanasApp';
 import SocialMediaApp from '@/components/social/SocialMediaApp';
-import FacturacionApp from '@/components/facturacion/FacturacionApp';
+import InvoicingApp from '@/components/invoicing/InvoicingApp';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import PortalHome from '@/components/client/PortalHome';
@@ -411,7 +411,7 @@ export default function App() {
     { id: 'content', title: 'Social Media', description: 'Mesa de contenido y diseño + calendario de días mundiales: Agus, Vicky, Delfi.', icon: <FileText className="w-8 h-8 text-pink-600" />, stats: 'Contenido + Diseño', color: 'bg-pink-50' },
     { id: 'crm', title: 'CRM HubSpot', description: 'Facturación mensual de licencias HubSpot por entidad (se actualiza importando el Excel) y Weekly check: checklist de implementación y próximos steps de cada entidad.', icon: <Database className="w-8 h-8 text-sky-600" />, stats: `${hubspotBilling.entities.length} entidades`, color: 'bg-sky-50' },
     { id: 'my_week', title: 'Mi Semana', description: 'Mis tareas con deadline próximo, cross módulos.', icon: <Clock className="w-8 h-8 text-orange-600" />, stats: 'Cross módulos', color: 'bg-orange-50' },
-    { id: 'facturacion', title: 'Facturación', description: 'ROI, presupuestos y gastos.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Q2 Pendiente', color: 'bg-emerald-50' },
+    { id: 'facturacion', title: 'Facturación', description: 'El Excel de facturación mes a mes: Fijo y facturas, Variables, MKT Plan, CRM y Entidades, editable y en tiempo real.', icon: <Receipt className="w-8 h-8 text-emerald-600" />, stats: 'Mes a mes', color: 'bg-emerald-50' },
     { id: 'success_cases', title: 'Casos de Éxito', description: 'Armá y descargá casos de éxito en PDF.', icon: <Trophy className="w-8 h-8 text-amber-600" />, stats: `${successCases.length} ${successCases.length === 1 ? 'caso' : 'casos'}`, color: 'bg-amber-50' },
     { id: 'extras', title: 'UTM Generator', description: 'Generá UTMs y reutilizá los que ya creó el equipo.', icon: <Link2 className="w-8 h-8 text-indigo-600" />, stats: 'Herramienta', color: 'bg-indigo-50' },
   ];
@@ -569,13 +569,9 @@ export default function App() {
     if (currentSection === 'facturacion') {
       return (
         <div className="relative animate-in fade-in duration-500 w-full h-full bg-slate-50 min-h-[calc(100vh-80px)]">
-           <FacturacionApp
+           <InvoicingApp
              onBack={() => setCurrentSection('main')}
-             webinars={globalWebinars}
-             campaigns={globalCampaigns}
-             events={globalEvents}
-             standaloneRequests={globalStandaloneRequests}
-             onNavigate={setCurrentSection}
+             currentUser={currentUser}
            />
         </div>
       );
