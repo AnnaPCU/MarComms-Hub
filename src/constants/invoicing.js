@@ -95,14 +95,19 @@ export const FIJO_HEADER_GROUPS = [{ from: 'plan', span: 3, label: 'CC: Fee fijo
 // Variables: seis bloques de Detalle · CC · Precio (y en la vista de
 // lista, un chip de color por categoría). `color` es el de cada categoría
 // en el gráfico de «Mes a mes» (paleta validada para daltonismo, con Fijo
-// en teal #0d9488)
+// en teal FIJO_CHART_COLOR). `cc` es lo que el Hub completa en la celda CC
+// al agregar un cargo de esa categoría. `hint` dice qué va en cada una (se
+// ve en el desglose de «Mes a mes», en el modal «¿Qué va en Otros?» y al
+// elegir la categoría de un cargo nuevo): salió de los cargos cargados
+// hasta ahora, se puede ajustar acá.
+export const FIJO_CHART_COLOR = '#0d9488';
 export const VARIABLE_CATEGORIES = [
-  { id: 'campanas', label: 'CC: Campañas', short: 'Campañas', cc: 'campañas', chip: 'bg-violet-100 text-violet-800 border-violet-200', color: '#7c3aed' },
-  { id: 'bbdd', label: 'CC: Campañas (BBDD)', short: 'BBDD', cc: 'campañas', chip: 'bg-emerald-100 text-emerald-800 border-emerald-200', color: '#16a34a' },
-  { id: 'eventos', label: 'CC: Eventos', short: 'Eventos', cc: 'events', chip: 'bg-pink-100 text-pink-800 border-pink-200', color: '#db2777' },
-  { id: 'content', label: 'CC: Content', short: 'Content', cc: 'content', tint: 'bg-pink-50', chip: 'bg-amber-100 text-amber-800 border-amber-200', color: '#d97706' },
-  { id: 'website', label: 'CC: Website', short: 'Website', cc: 'website', tint: 'bg-yellow-50', chip: 'bg-blue-100 text-blue-800 border-blue-200', color: '#2563eb' },
-  { id: 'otros', label: 'CC: Otros', short: 'Otros', cc: 'otros', chip: 'bg-yellow-100 text-yellow-900 border-yellow-200', color: '#a16207' },
+  { id: 'campanas', label: 'CC: Campañas', short: 'Campañas', cc: 'campañas', chip: 'bg-violet-100 text-violet-800 border-violet-200', color: '#7c3aed', hint: 'Gestión de paid media, envíos de email puntuales e investigación de mercado' },
+  { id: 'bbdd', label: 'CC: Campañas (BBDD)', short: 'BBDD', cc: 'campañas', chip: 'bg-emerald-100 text-emerald-800 border-emerald-200', color: '#16a34a', hint: 'Armado de bases de datos para campañas y webinars' },
+  { id: 'eventos', label: 'CC: Eventos', short: 'Eventos', cc: 'events', chip: 'bg-pink-100 text-pink-800 border-pink-200', color: '#db2777', hint: 'Webinars y eventos' },
+  { id: 'content', label: 'CC: Content', short: 'Content', cc: 'content', tint: 'bg-pink-50', chip: 'bg-amber-100 text-amber-800 border-amber-200', color: '#d97706', hint: 'Presentaciones y piezas de contenido' },
+  { id: 'website', label: 'CC: Website', short: 'Website', cc: 'website', tint: 'bg-yellow-50', chip: 'bg-blue-100 text-blue-800 border-blue-200', color: '#2563eb', hint: 'Trabajos puntuales en el sitio web (el mantenimiento mensual ya está en Fijo, en Country Website)' },
+  { id: 'otros', label: 'CC: Otros', short: 'Otros', cc: 'otros', chip: 'bg-yellow-100 text-yellow-900 border-yellow-200', color: '#a16207', hint: 'Lo que no entra en ninguna de las otras cinco categorías' },
 ];
 export const VARIABLE_CATEGORY_BY_ID = Object.fromEntries(VARIABLE_CATEGORIES.map((c) => [c.id, c]));
 

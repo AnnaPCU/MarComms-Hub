@@ -91,7 +91,7 @@ function EntityCard({ row, ri, grid, compact, change, isNew, prevLabel, onPatch,
           <>
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-1">Categoría:</span>
             {VARIABLE_CATEGORIES.map((c) => (
-              <button key={c.id} onClick={() => add(c.id)} className={`rounded-lg border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${c.chip}`}>{c.short}</button>
+              <button key={c.id} onClick={() => add(c.id)} title={c.hint} className={`rounded-lg border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${c.chip}`}>{c.short}</button>
             ))}
             <button onClick={() => setAdding(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-1">Cancelar</button>
           </>

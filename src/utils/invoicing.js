@@ -136,7 +136,7 @@ export const evalCell = (raw, ctx) => {
 // Número para sumar (vacío o con error → 0)
 export const cellNumber = (raw, ctx) => evalCell(raw, ctx).value ?? 0;
 
-const round2 = (n) => Math.round(n * 100) / 100;
+export const round2 = (n) => Math.round(n * 100) / 100;
 // Sin redondear a 2 decimales (como el Excel): solo limpia el ruido de los decimales
 const clean = (n) => Math.round(n * 1e9) / 1e9;
 
