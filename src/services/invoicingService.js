@@ -1,19 +1,24 @@
 // ════════════════════════════════════════════════════════════════════
-// INVOICING SERVICE — Facturación MarComms (migration 0048)
+// INVOICING SERVICE — Facturación MarComms (migrations 0048 y 0051)
 // ════════════════════════════════════════════════════════════════════
-//   invoicing_months — meses armados ('YYYY-MM')
-//   invoicing_rows   — filas de cada hoja: { id, month, sheet, position,
-//                      data (jsonb con las celdas) }. «Entidades» tiene
-//                      month en null.
+//   invoicing_months  — meses armados ('YYYY-MM')
+//   invoicing_rows    — filas de cada hoja: { id, month, sheet, position,
+//                       data (jsonb con las celdas) }. «Entidades» tiene
+//                       month en null.
+//   invoicing_changes — historial: lo escribe un trigger (quién, cuándo,
+//                       qué celda, antes y después)
 //
 // Las celdas se cambian con invoicing_patch_row (solo las claves tocadas),
-// así dos personas pueden editar la misma fila a la vez.
+// así dos personas pueden editar la misma fila a la vez. Al borrar una fila
+// primero se guarda quién (updated_by) y después se borra, así el
+// historial sabe quién fue.
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
 
 const MONTHS = 'invoicing_months';
 const ROWS = 'invoicing_rows';
+const CHANGES = 'invoicing_changes';
 const PAGE = 1000; // límite de filas por pedido de Supabase
 
 export const rowFromDb = (r) => ({
@@ -83,10 +88,40 @@ export const setRowPosition = async (id, position) => {
   return true;
 };
 
-export const deleteRow = async (id) => {
+// Primero deja quién borra (el trigger del historial lo lee de la fila) y
+// después borra
+export const deleteRow = async (id, by) => {
+  const { error: e1 } = await supabase.from(ROWS).update({ updated_by: by || null }).eq('id', id);
+  if (e1) throw e1;
   const { error } = await supabase.from(ROWS).delete().eq('id', id);
   if (error) throw error;
   return true;
+};
+
+// ── Historial ──
+export const changeFromRow = (c) => ({
+  id: c.id,
+  rowId: c.row_id,
+  month: c.month || null,
+  sheet: c.sheet,
+  rowLabel: c.row_label || '',
+  action: c.action,
+  key: c.key || null,
+  before: c.old_value ?? null,
+  after: c.new_value ?? null,
+  by: c.changed_by || '',
+  at: c.changed_at,
+});
+
+// Los últimos cambios (los más nuevos primero). before: changed_at desde
+// donde seguir (para «cargar más»).
+export const listChanges = async ({ month, limit = 300, before } = {}) => {
+  let q = supabase.from(CHANGES).select('*').order('changed_at', { ascending: false }).order('id', { ascending: false }).limit(limit);
+  if (month) q = q.eq('month', month);
+  if (before) q = q.lt('changed_at', before);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map(changeFromRow);
 };
 
 export const subscribeInvoicing = (onChange) => {
@@ -94,6 +129,14 @@ export const subscribeInvoicing = (onChange) => {
     .channel('invoicing-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: MONTHS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: ROWS }, (p) => onChange(p))
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+};
+
+export const subscribeChanges = (onChange) => {
+  const channel = supabase
+    .channel('invoicing-changes-realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: CHANGES }, (p) => onChange(p))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
 };

@@ -122,8 +122,8 @@ export const useInvoicing = (currentUser) => {
 
   const removeRow = useCallback((row) => {
     setRows((prev) => prev.filter((r) => r.id !== row.id));
-    return write(() => deleteRow(row.id));
-  }, [write]);
+    return write(() => deleteRow(row.id, by));
+  }, [write, by]);
 
   const createMonth = useCallback(({ toMonth, fromMonth, copyVariables = false }) => {
     const source = rows.filter((r) => r.month === fromMonth);

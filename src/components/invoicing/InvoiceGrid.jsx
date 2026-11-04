@@ -5,31 +5,37 @@
 // invoicing). Se escribe directo en las celdas (GridCell). A la izquierda,
 // el número de fila con su menú (insertar abajo, subir, bajar, eliminar y
 // las acciones propias de cada hoja). Abajo, la fila de totales.
+// Con groupBy, las filas se agrupan por país en bandas plegables con su
+// subtotal; en la vista compacta las columnas `sticky` quedan fijas a la
+// izquierda y los textos largos en una línea.
 //
 // Props:
 //   grid (id para moverse con el teclado), sheet, columns, headerGroups,
-//   rows (ya ordenadas), onPatch(row, patch, remove), onAddRow(after?),
+//   rows (visibles, ya ordenadas), ctxById (fila gris de cada fila, Fijo),
+//   compact, groupBy ('pais'), collapsed (Set), onToggleGroup(key),
+//   changes ({ cells, added: Set }) y prevLabel (puntos de «qué cambió»),
+//   onPatch(row, patch, remove), onStatus(row, next), onAddRow(after?),
 //   onMoveRow(row, dir), onDeleteRow(row), rowActions(row) → [acciones],
-//   rowClass(row), cellReadOnly(row, col), totals ({ [key]: n }),
-//   totalsLabel, listFor ({ [key]: datalistId }), canMove, addLabel
+//   rowClass(row), cellReadOnly(row, col), isBillable(row), totals
+//   ({ [key]: n }), totalsLabel, listFor ({ [key]: datalistId }), canMove,
+//   addLabel, emptyText
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
-import { MoreHorizontal, Plus } from 'lucide-react';
-import { formatAmount, repeatedFlags, rowTotal } from '@/utils/invoicing';
-import { normalizeCountryNames } from '@/utils/billing';
-import GridCell from './GridCell';
-import RowMenu from './RowMenu';
-
-const NUM_W = 46;
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { formatAmount, repeatedFlags } from '@/utils/invoicing';
+import { NUM_COL_WIDTH, bandTotal, cleanCountry, groupRows, stickyOffsets } from '@/utils/invoicingView';
+import GridRow from './GridRow';
 
 export default function InvoiceGrid({
-  grid, sheet, columns, headerGroups = [], rows = [], onPatch, onAddRow, onMoveRow, onDeleteRow,
-  rowActions, rowClass, cellReadOnly, totals, totalsLabel = 'Total', listFor = {}, canMove = true,
-  addLabel = 'Agregar fila', emptyText = 'Todavía no hay filas.',
+  grid, sheet, columns, headerGroups = [], rows = [], ctxById = {}, compact = false, groupBy = null, collapsed = new Set(), onToggleGroup,
+  changes, prevLabel, onPatch, onStatus, onAddRow, onMoveRow, onDeleteRow, rowActions, rowClass, cellReadOnly, isBillable,
+  totals, totalsLabel = 'Total', listFor = {}, canMove = true, addLabel = 'Agregar fila', emptyText = 'Todavía no hay filas.',
 }) {
   const [menu, setMenu] = useState(null);
-  const width = NUM_W + columns.reduce((s, c) => s + c.width, 0);
+  const cols = useMemo(() => columns.map((c) => ({ ...c, list: listFor[c.key] })), [columns, listFor]);
+  const width = NUM_COL_WIDTH + columns.reduce((s, c) => s + c.width, 0);
+  const sticky = useMemo(() => stickyOffsets(columns, compact), [columns, compact]);
 
   // Encabezado combinado: celdas de grupo y huecos
   const groupRow = useMemo(() => {
@@ -42,21 +48,26 @@ export default function InvoiceGrid({
     return out;
   }, [columns, headerGroups]);
 
-  const merged = useMemo(() => Object.fromEntries(columns.filter((c) => c.merge).map((c) => [c.key, repeatedFlags(rows, c.key)])), [columns, rows]);
+  const groups = useMemo(() => groupRows(rows, { by: groupBy, collapsed }), [rows, groupBy, collapsed]);
+  const visible = useMemo(() => groups.flatMap((g) => (g.hidden ? [] : g.rows)), [groups]);
+  const indexOf = useMemo(() => new Map(visible.map((r, i) => [r.id, i])), [visible]);
+  const merged = useMemo(() => Object.fromEntries(columns.filter((c) => c.merge).map((c) => [c.key, repeatedFlags(visible, c.key)])), [columns, visible]);
 
   const commit = (row, col, text) => {
     const key = col.type === 'total' ? 'totalManual' : col.key;
-    const raw = col.country ? normalizeCountryNames(text) : text;
+    const raw = col.country ? cleanCountry(text) : text;
     if (raw === '') onPatch(row, {}, [key]);
     else onPatch(row, { [key]: raw });
   };
+
+  const thSticky = (c, base) => (sticky[c.key] !== undefined ? { className: `sticky z-[6] ${base}`, style: { left: sticky[c.key] } } : { className: '', style: undefined });
 
   return (
     <div>
       <div className="overflow-auto max-h-[calc(100vh-300px)] min-h-[200px] rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="table-fixed border-collapse text-xs" style={{ width }}>
           <colgroup>
-            <col style={{ width: NUM_W }} />
+            <col style={{ width: NUM_COL_WIDTH }} />
             {columns.map((c) => <col key={c.key} style={{ width: c.width }} />)}
           </colgroup>
           <thead className="sticky top-0 z-20">
@@ -72,76 +83,86 @@ export default function InvoiceGrid({
             )}
             <tr className="bg-slate-100">
               <th className="sticky left-0 z-10 bg-slate-100 border-b border-r border-slate-200 text-[9px] font-black text-slate-400">#</th>
-              {columns.map((c) => (
-                <th key={c.key} className={`border-b border-r border-slate-200 px-2 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 ${c.type === 'number' || c.type === 'total' ? 'text-right' : 'text-left'} ${c.tint || ''}`}>
-                  {c.label}
-                </th>
-              ))}
+              {columns.map((c) => {
+                const s = thSticky(c, 'bg-slate-100');
+                return (
+                  <th key={c.key} style={s.style} className={`border-b border-r border-slate-200 px-2 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 ${c.type === 'number' || c.type === 'total' ? 'text-right' : 'text-left'} ${c.tint || ''} ${s.className}`}>
+                    {c.label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-xs font-bold text-slate-400">{emptyText}</td></tr>
             )}
-            {rows.map((row, ri) => {
-              const extra = rowClass?.(row) || '';
-              const actions = [
-                { label: 'Insertar fila abajo', onClick: () => onAddRow(row) },
-                ...(canMove ? [
-                  { label: 'Subir fila', onClick: () => onMoveRow(row, -1), disabled: ri === 0 },
-                  { label: 'Bajar fila', onClick: () => onMoveRow(row, 1), disabled: ri === rows.length - 1 },
-                ] : []),
-                ...(rowActions?.(row) || []),
-                { label: 'Eliminar fila', onClick: () => onDeleteRow(row), danger: true },
-              ];
-              return (
-                <tr key={row.id} className={`group ${extra}`}>
-                  <td className={`sticky left-0 z-10 border-b border-r border-slate-200 bg-slate-50 p-0 ${extra}`}>
-                    <div className="relative flex items-center justify-between pl-1.5 pr-0.5">
-                      <span className="font-mono text-[10px] text-slate-400">{ri + 1}</span>
-                      <button onClick={() => setMenu(menu === row.id ? null : row.id)} className="w-5 h-5 rounded hover:bg-slate-200 flex items-center justify-center opacity-40 group-hover:opacity-100 focus:opacity-100" title="Opciones de la fila" aria-label={`Opciones de la fila ${ri + 1}`}>
-                        <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
+            {groups.map((g) => (
+              <React.Fragment key={g.key ?? 'all'}>
+                {g.label && (
+                  <tr className="bg-emerald-50/70">
+                    <td colSpan={columns.length + 1} className="border-b border-emerald-100 p-0">
+                      <button onClick={() => onToggleGroup?.(g.key)} className="sticky left-0 flex items-center gap-2 px-2 py-1.5 text-[11px] font-black text-emerald-900 hover:text-emerald-700" aria-expanded={!g.hidden} title={g.hidden ? 'Mostrar las filas' : 'Ocultar las filas'}>
+                        {g.hidden ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        <span className="uppercase tracking-wider">{g.label}</span>
+                        <span className="font-bold text-emerald-700/70">· {g.rows.length} {g.rows.length === 1 ? 'fila' : 'filas'}</span>
+                        <span className="font-mono tabular-nums text-emerald-800">· {formatAmount(bandTotal(sheet, g.rows, ctxById))}</span>
                       </button>
-                      {menu === row.id && <RowMenu actions={actions} onClose={() => setMenu(null)} />}
-                    </div>
-                  </td>
-                  {columns.map((col, ci) => {
-                    const isTotal = col.type === 'total';
-                    const total = isTotal ? rowTotal(sheet, row.data) : null;
-                    const ro = cellReadOnly?.(row, col) || (isTotal && total === null);
-                    return (
-                      <td key={col.key} className={`border-b border-r border-slate-200 p-0 align-top ${col.tint || ''} ${isTotal ? 'bg-emerald-50/40' : ''}`}>
-                        <GridCell
-                          grid={grid}
-                          r={ri}
-                          c={ci}
-                          value={isTotal ? row.data?.totalManual : row.data?.[col.key]}
-                          type={col.type || 'text'}
-                          computed={total}
-                          multiline={!col.type && !col.mono && col.width >= 140}
-                          mono={col.mono}
-                          list={listFor[col.key]}
-                          readOnly={ro}
-                          placeholder={ro && isTotal ? '—' : ''}
-                          className={merged[col.key]?.[ri] ? 'text-slate-300 focus:text-slate-800' : ''}
-                          onCommit={(raw) => commit(row, col, raw)}
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                    </td>
+                  </tr>
+                )}
+                {!g.hidden && g.rows.map((row) => {
+                  const ri = indexOf.get(row.id);
+                  const actions = [
+                    { label: 'Insertar fila abajo', onClick: () => onAddRow(row) },
+                    ...(canMove ? [
+                      { label: 'Subir fila', onClick: () => onMoveRow(row, -1), disabled: ri === 0 },
+                      { label: 'Bajar fila', onClick: () => onMoveRow(row, 1), disabled: ri === visible.length - 1 },
+                    ] : []),
+                    ...(rowActions?.(row) || []),
+                    { label: 'Eliminar fila', onClick: () => onDeleteRow(row), danger: true },
+                  ];
+                  return (
+                    <GridRow
+                      key={row.id}
+                      row={row}
+                      ri={ri}
+                      columns={cols}
+                      sheet={sheet}
+                      grid={grid}
+                      ctx={ctxById[row.id]}
+                      compact={compact}
+                      sticky={sticky}
+                      merged={Object.fromEntries(Object.entries(merged).map(([k, flags]) => [k, flags[ri]]))}
+                      change={changes?.cells?.[row.id]}
+                      isNew={!!changes?.added?.has(row.id)}
+                      prevLabel={prevLabel}
+                      billable={isBillable ? isBillable(row) : true}
+                      actions={actions}
+                      menuOpen={menu === row.id}
+                      onToggleMenu={() => setMenu(menu === row.id ? null : row.id)}
+                      onCommit={(col, raw) => commit(row, col, raw)}
+                      onStatus={(next) => onStatus?.(row, next)}
+                      cellReadOnly={(col) => cellReadOnly?.(row, col)}
+                      rowClass={rowClass?.(row) || ''}
+                    />
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </tbody>
           {totals && rows.length > 0 && (
             <tfoot className="sticky bottom-0 z-20">
               <tr className="bg-emerald-50">
                 <td className="sticky left-0 z-10 bg-emerald-50 border-t-2 border-r border-emerald-200" />
-                {columns.map((c, i) => (
-                  <td key={c.key} className={`border-t-2 border-r border-emerald-200 px-2 py-2 font-black ${c.key in totals ? 'text-right font-mono tabular-nums text-emerald-800' : 'text-[10px] uppercase tracking-widest text-emerald-800'}`}>
-                    {c.key in totals ? formatAmount(totals[c.key]) : i === 0 ? totalsLabel : ''}
-                  </td>
-                ))}
+                {columns.map((c, i) => {
+                  const s = thSticky(c, 'bg-emerald-50');
+                  return (
+                    <td key={c.key} style={s.style} className={`border-t-2 border-r border-emerald-200 px-2 py-2 font-black ${c.key in totals ? 'text-right font-mono tabular-nums text-emerald-800' : 'text-[10px] uppercase tracking-widest text-emerald-800'} ${s.className}`}>
+                      {c.key in totals ? formatAmount(totals[c.key]) : i === 0 ? totalsLabel : ''}
+                    </td>
+                  );
+                })}
               </tr>
             </tfoot>
           )}
