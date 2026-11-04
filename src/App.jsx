@@ -59,6 +59,7 @@ import LoginScreen from '@/components/login/LoginScreen';
 import CampanasApp from '@/components/campanas/CampanasApp';
 import SocialMediaApp from '@/components/social/SocialMediaApp';
 import InvoicingApp from '@/components/invoicing/InvoicingApp';
+import { useInvoicing } from '@/hooks/useInvoicing';
 import MyWeekApp from '@/components/myweek/MyWeekApp';
 import ClientReportApp from '@/components/client/ClientReportApp';
 import PortalHome from '@/components/client/PortalHome';
@@ -257,6 +258,7 @@ export default function App() {
   // CRM HubSpot: facturación de licencias por entidad (réplica del Excel)
   const hubspotBilling = useHubspotBilling();
   const crmWeekly = useCrmWeekly(); // Weekly check de CRM HubSpot (vista + avisos de deadlines en rojo)
+  const invoicing = useInvoicing(currentUser); // Facturación (vista + avisos de etiquetas @ en las notas)
   // Planes: tareas de cada plan (réplica de "3) TAREAS" del Excel de seguimiento)
   const planTasks = usePlanTasks();
   if (planTasks.error) console.error('PlanTasks Supabase error:', planTasks.error);
@@ -572,6 +574,10 @@ export default function App() {
            <InvoicingApp
              onBack={() => setCurrentSection('main')}
              currentUser={currentUser}
+             invoicing={invoicing}
+             people={livePeople.length > 0 ? livePeople : PEOPLE}
+             autoView={contentAutoTab}
+             onAutoViewDone={() => setContentAutoTab(null)}
            />
         </div>
       );
@@ -755,11 +761,12 @@ export default function App() {
       socialPosts:    social.posts,
       crmChecks:      crmWeekly.checks,
       crmItems:       crmWeekly.items,
+      invoicingRows:  invoicing.rows,
     }, {
       peopleList:    validNames,
       serviceOwners: liveServiceOwners,
     }).filter(n => !n.navTo || !isSectionHidden(n.navTo)); // sin avisos hacia secciones ocultas
-  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks, social.accounts, social.posts, crmWeekly.checks, crmWeekly.items]);
+  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks, social.accounts, social.posts, crmWeekly.checks, crmWeekly.items, invoicing.rows]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
   const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));

@@ -7,7 +7,8 @@
 // sola (una clave por celda en data, ej. "A11").
 //
 // Props: grid, data ({ A1: '…', _rows, _cols }), onPatch(patch, remove),
-//   colWidths ([px] por columna; la última se repite)
+//   colWidths ([px] por columna; la última se repite), people (equipo:
+//   con @ se etiqueta a alguien y le llega un aviso)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
@@ -16,7 +17,7 @@ import { FREE_GRID_MIN_COLS, FREE_GRID_MIN_ROWS } from '@/constants/invoicing';
 import { cellKey, colName, freeGridSize } from '@/utils/invoicing';
 import GridCell from './GridCell';
 
-export default function FreeGrid({ grid, data = {}, onPatch, colWidths = [380, 120] }) {
+export default function FreeGrid({ grid, data = {}, onPatch, colWidths = [380, 120], people = [] }) {
   const { rows, cols } = freeGridSize(data, FREE_GRID_MIN_ROWS, FREE_GRID_MIN_COLS);
   const widthOf = (c) => colWidths[Math.min(c, colWidths.length - 1)];
   const width = 40 + Array.from({ length: cols }, (_, c) => widthOf(c)).reduce((s, w) => s + w, 0);
@@ -47,7 +48,7 @@ export default function FreeGrid({ grid, data = {}, onPatch, colWidths = [380, 1
                   const key = cellKey(r, c);
                   return (
                     <td key={key} className="border-b border-r border-slate-200 p-0 align-top">
-                      <GridCell grid={grid} r={r} c={c} value={data[key]} multiline onCommit={(raw) => commit(key, raw)} />
+                      <GridCell grid={grid} r={r} c={c} value={data[key]} multiline people={people} onCommit={(raw) => commit(key, raw)} />
                     </td>
                   );
                 })}

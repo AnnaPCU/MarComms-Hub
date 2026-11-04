@@ -9,13 +9,14 @@
 // tendencia, «Para revisar», buscador, filtro de marca, vista compacta,
 // «Qué cambió» contra el mes anterior y Exportar (Excel / PDF).
 //
-// Props: onBack, currentUser
+// Props: onBack, currentUser, invoicing (useInvoicing, lo carga App para
+//   armar los avisos de etiquetas), people (equipo), autoView
+//   ('YYYY-MM:hoja' al venir de un aviso) + onAutoViewDone
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CalendarPlus, Receipt } from 'lucide-react';
 import { DISMISSED_KEY, INVOICING_TABS } from '@/constants/invoicing';
-import { useInvoicing } from '@/hooks/useInvoicing';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useStoredPref } from '@/hooks/useStoredPref';
 import { monthSummary, nextMonthKey, sortRows } from '@/utils/invoicing';
@@ -38,8 +39,8 @@ const SHEET_VIEWS = { fijo: FijoSheet, variables: VariablesSheet, mkt: MktSheet,
 const MONTHLY_TABS = ['fijo', 'variables', 'mkt', 'crm'];
 const SHEET_TAB = { crm_extra: 'crm', mkt_libre: 'mkt', notas: 'fijo' };
 
-export default function InvoicingApp({ onBack, currentUser }) {
-  const api = useInvoicing(currentUser);
+export default function InvoicingApp({ onBack, currentUser, invoicing, people = [], autoView = null, onAutoViewDone }) {
+  const api = invoicing;
   const { months, rows, loading, error, missing } = api;
   const confirm = useConfirm();
   const [tab, setTab] = useState('fijo');
@@ -61,6 +62,17 @@ export default function InvoicingApp({ onBack, currentUser }) {
     const current = todayIso().slice(0, 7);
     setMonth(months.includes(current) ? current : months[months.length - 1] || '');
   }, [months, month]);
+
+  // Abrir el mes y la hoja de un aviso («te etiquetaron en …»). Espera a
+  // que terminen de cargar los meses; si el mes ya no está (o la carga
+  // falló), abre igual la hoja y da por usado el aviso.
+  useEffect(() => {
+    const m = /^(\d{4}-\d{2}):([a-z_]+)$/.exec(autoView || '');
+    if (!m || loading) return;
+    if (months.includes(m[1])) setMonth(m[1]);
+    setTab(SHEET_TAB[m[2]] || m[2]);
+    onAutoViewDone?.();
+  }, [autoView, months, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const idx = months.indexOf(month);
   const prevMonth = idx > 0 ? months[idx - 1] : null;
@@ -117,7 +129,7 @@ export default function InvoicingApp({ onBack, currentUser }) {
 
   const View = SHEET_VIEWS[tab];
   const sheetProps = {
-    month: monthly ? month : null, rows, api, run, askDelete, filters, compact, prevLabel,
+    month: monthly ? month : null, rows, api, run, askDelete, filters, compact, prevLabel, people,
     changes: sheetChanges(tab), focusRow: focus ? `${focus.tick}:${focus.id}` : null, varView,
   };
 

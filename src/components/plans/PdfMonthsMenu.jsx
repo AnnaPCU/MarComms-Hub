@@ -25,7 +25,7 @@ export default function PdfMonthsMenu({ options = [], initial = [], busy = false
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
-      <div className="absolute right-0 top-full mt-2 z-50 w-[min(92vw,360px)] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 space-y-3" role="dialog" aria-label="PDF de varios meses">
+      <div className="hub-popover absolute right-0 top-full mt-2 z-50 w-[min(92vw,360px)] bg-white border border-slate-200 rounded-2xl shadow-xl p-4 space-y-3" role="dialog" aria-label="PDF de varios meses">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-[11px] font-black uppercase tracking-widest text-slate-700">PDF de varios meses</p>

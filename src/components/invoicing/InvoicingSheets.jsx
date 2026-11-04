@@ -11,7 +11,8 @@
 // (corre una escritura y muestra el error si falla), askDelete(row) →
 // Promise<bool>, filters ({ q, brand }), compact, changes ({ cells,
 // added } de «Qué cambió», o null), prevLabel, focusRow (id para
-// resaltar) y, Variables, varView ('lista' | 'tabla').
+// resaltar), people (equipo, para etiquetar con @ en las notas) y,
+// Variables, varView ('lista' | 'tabla').
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo } from 'react';
@@ -62,9 +63,9 @@ const useFocusRow = (focusRow) => {
   }, [focusRow]);
 };
 
-function Notes({ month, rows, sheet, api, run }) {
+function Notes({ month, rows, sheet, api, run, people }) {
   const notes = sheetRows(rows, month, 'notas')[0]?.data || {};
-  return <SheetNotes value={notes[sheet] || ''} onSave={(text) => run(() => (text ? api.patchSingleton(month, 'notas', { [sheet]: text }) : api.patchSingleton(month, 'notas', {}, [sheet])))} />;
+  return <SheetNotes people={people} value={notes[sheet] || ''} onSave={(text) => run(() => (text ? api.patchSingleton(month, 'notas', { [sheet]: text }) : api.patchSingleton(month, 'notas', {}, [sheet])))} />;
 }
 
 export function FijoSheet(props) {
@@ -183,7 +184,7 @@ export function VariablesSheet(props) {
 }
 
 export function MktSheet(props) {
-  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow } = props;
+  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, people } = props;
   const sh = useInvoicingSheet({ rows, month, sheet: 'mkt', columns: MKT_COLUMNS, filters });
   useFocusRow(focusRow);
   const free = sheetRows(rows, month, 'mkt_libre')[0]?.data || {};
@@ -202,8 +203,8 @@ export function MktSheet(props) {
         {...gridHandlers({ ...props, sheet: 'mkt' })}
       />
       <div className="space-y-2">
-        <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Notas y cuentas de la hoja</p>
-        <FreeGrid grid="mkt-libre" data={free} onPatch={(patch, remove) => run(() => api.patchSingleton(month, 'mkt_libre', patch, remove))} />
+        <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Notas y cuentas de la hoja <span className="normal-case tracking-normal font-bold text-slate-400">· con @ etiquetás a alguien del equipo y le llega un aviso</span></p>
+        <FreeGrid grid="mkt-libre" data={free} people={people} onPatch={(patch, remove) => run(() => api.patchSingleton(month, 'mkt_libre', patch, remove))} />
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export default function RowMenu({ actions = [], onClose }) {
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
-      <div className="absolute left-full top-0 ml-1 z-50 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1" role="menu">
+      <div className="hub-popover absolute left-full top-0 ml-1 z-50 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1" role="menu">
         {actions.map((a) => (
           <button
             key={a.label}

@@ -35,11 +35,15 @@
 //                                   CRM_WEEKLY_NOTIFY_USER (Valentino Redín). Uno por ítem y
 //                                   deadline; al tildarlo o mover la fecha deja de aparecer
 //
+//   Facturación:
+//  17. invoicing_mention          — te etiquetaron con @ en las notas del mes de una hoja o
+//                                   en las notas de MKT Plan; abre ese mes y esa hoja
+//
 //   Eliminados (sep 2026, van por el CRM): subtareas individuales de
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
 // ════════════════════════════════════════════════════════════════════
 
-import { AlertCircle, Clock, MessageCircle, Sparkles, User, CheckCircle2, Calendar } from 'lucide-react';
+import { AlertCircle, AtSign, Clock, MessageCircle, Sparkles, User, CheckCircle2, Calendar } from 'lucide-react';
 import { SERVICE_OWNERS as DEFAULT_SERVICE_OWNERS, PEOPLE } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
@@ -51,6 +55,8 @@ import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mon
 import { formatDate, toIsoDate } from './date';
 import { CRM_WEEKLY_NOTIFY_USER } from '@/constants/crmWeekly';
 import { redDeadlines } from './crmWeekly';
+import { SHEET_LABELS as INVOICING_SHEET_LABELS } from '@/constants/invoicing';
+import { mentionsName, mentionSnippet, textHash } from './mentions';
 
 // Keys de las 21 sub-tareas del webinar (para contar atrasadas por proyecto)
 // Nombre del mes en minúscula a partir de 'YYYY-MM' o 'YYYY-MM-DD'
@@ -96,6 +102,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     socialPosts = [],
     crmChecks = [],
     crmItems,
+    invoicingRows = [],
   } = data || {};
 
   const now = options.now instanceof Date ? options.now : new Date();
@@ -487,6 +494,29 @@ export const buildNotifications = (currentUser, data, options = {}) => {
       });
     });
   }
+
+  // ────────────────────────────────────────────────────────────────
+  // 17. INVOICING_MENTION — te etiquetaron con @ en las notas de Facturación
+  //     (notas del mes de Fijo / Variables / CRM, o las notas y cuentas
+  //     de MKT Plan). Una por celda; si cambia el texto, vuelve a avisar.
+  // ────────────────────────────────────────────────────────────────
+  (invoicingRows || []).forEach((row) => {
+    if (!row || (row.sheet !== 'notas' && row.sheet !== 'mkt_libre') || !row.month) return;
+    Object.entries(row.data || {}).forEach(([key, value]) => {
+      if (key.startsWith('_') || typeof value !== 'string' || !mentionsName(value, currentUser.name)) return;
+      const sheet = row.sheet === 'mkt_libre' ? 'mkt' : key;
+      const label = INVOICING_SHEET_LABELS[sheet] || sheet;
+      const when = `${monthLabel(row.month)} ${String(row.month).slice(0, 4)}`;
+      const by = row.updatedBy && !sameName(row.updatedBy) ? ` (última edición: ${row.updatedBy})` : '';
+      notifs.push({
+        id: `invoicing-mention-${row.id}-${key}-${textHash(value)}`, type: 'invoicing_mention', icon: AtSign, color: 'emerald',
+        title: `Te etiquetaron en Facturación · ${when} · ${label}: «${mentionSnippet(value, currentUser.name)}»${by}`,
+        shortTitle: `@ Facturación · ${label}`,
+        emoji: '📝', project: `${label} · ${when}`, source: 'Facturación', date: row.updatedAt || '',
+        navTo: 'facturacion', navTab: `${row.month}:${sheet}`,
+      });
+    });
+  });
 
   // ────────────────────────────────────────────────────────────────
   // Dedup + ordenar por prioridad de equipo

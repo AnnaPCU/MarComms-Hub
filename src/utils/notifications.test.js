@@ -434,3 +434,30 @@ describe('16. crm_deadline — aviso a Valentino cuando un deadline se pone en r
     expect(notifs.filter((n) => n.type === 'crm_deadline').map((n) => n.id)).toEqual(['crm-deadline-592-deals-2026-05-30']);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// 17. invoicing_mention — te etiquetaron con @ en las notas de Facturación
+// ════════════════════════════════════════════════════════════════════
+describe('17. invoicing_mention — etiqueta con @ en las notas de Facturación', () => {
+  const invoicingRows = [
+    { id: 'n1', month: '2026-10', sheet: 'notas', updatedBy: 'Felipe Señorans', updatedAt: '2026-11-04T10:00:00Z', data: { variables: 'invoice Delphy @Victoria Colombo revisá el monto', fijo: 'nada', revisado: ['x'] } },
+    { id: 'm1', month: '2026-10', sheet: 'mkt_libre', updatedBy: 'Victoria Colombo', data: { A1: 'Plan Primus', B3: '@victoria colombo ver con Felo', _rows: 30 } },
+    { id: 'f1', month: '2026-10', sheet: 'fijo', data: { descripcion: '@Victoria Colombo no cuenta: no es una nota' } },
+  ];
+  it('Vicky recibe uno por celda donde está etiquetada, con mes, hoja y el texto', () => {
+    const notifs = buildNotifications(VICKY, { ...EMPTY_DATA, invoicingRows }, opts).filter((n) => n.type === 'invoicing_mention');
+    expect(notifs).toHaveLength(2);
+    expect(notifs[0].title).toBe('Te etiquetaron en Facturación · octubre 2026 · Variables: «invoice Delphy @Victoria Colombo revisá el monto» (última edición: Felipe Señorans)');
+    expect(notifs[0]).toMatchObject({ navTo: 'facturacion', navTab: '2026-10:variables', source: 'Facturación' });
+    expect(notifs[1]).toMatchObject({ navTab: '2026-10:mkt' });
+    expect(notifs[1].title).not.toContain('última edición'); // la editó ella misma
+    expect(notifs[0].id.startsWith('invoicing-mention-n1-variables-')).toBe(true);
+  });
+  it('el resto del equipo no lo recibe, y el id cambia si cambia el texto', () => {
+    expect(buildNotifications(FELO, { ...EMPTY_DATA, invoicingRows }, opts).some((n) => n.type === 'invoicing_mention')).toBe(false);
+    const edited = invoicingRows.map((r) => (r.id === 'n1' ? { ...r, data: { ...r.data, variables: 'otra cosa @Victoria Colombo' } } : r));
+    const a = buildNotifications(VICKY, { ...EMPTY_DATA, invoicingRows }, opts).find((n) => n.id.startsWith('invoicing-mention-n1'));
+    const b = buildNotifications(VICKY, { ...EMPTY_DATA, invoicingRows: edited }, opts).find((n) => n.id.startsWith('invoicing-mention-n1'));
+    expect(a.id).not.toBe(b.id);
+  });
+});

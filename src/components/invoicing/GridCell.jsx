@@ -16,11 +16,14 @@
 //   computed (para 'total'), ctx (fila gris, para "grupo"), multiline,
 //   compact (una sola línea, el texto completo al pasar el mouse), mono,
 //   list (id de datalist), readOnly, placeholder, onCommit(raw), grid,
-//   r, c (para moverse)
+//   r, c (para moverse), people (nombres del equipo: con @ se etiqueta a
+//   alguien y le llega un aviso; solo en las notas de MKT Plan)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { evalCell, formatAmount, isFormula, usesGroup } from '@/utils/invoicing';
+import { useMentionInput } from '@/hooks/useMentionInput';
+import MentionPicker from '@/components/shared/MentionPicker';
 
 export const focusCell = (grid, r, c) => {
   const el = document.querySelector(`[data-grid="${grid}"][data-r="${r}"][data-c="${c}"]`);
@@ -31,7 +34,7 @@ const BASE = 'block w-full bg-transparent px-2 text-xs outline-none focus:bg-whi
 
 export default function GridCell({
   value = '', type = 'text', computed = null, ctx, multiline = false, compact = false, mono = false, list, readOnly = false,
-  placeholder = '', onCommit, grid, r, c, className = '', title,
+  placeholder = '', onCommit, grid, r, c, className = '', title, people,
 }) {
   const raw = value === null || value === undefined ? '' : String(value);
   const [draft, setDraft] = useState(null); // null = no se está editando
@@ -39,6 +42,7 @@ export default function GridCell({
   const editing = draft !== null;
   const numeric = type === 'number' || type === 'total';
   const multi = multiline && !compact;
+  const mention = useMentionInput({ people: people || [], ref, setText: setDraft, enabled: !!people?.length && !readOnly && !numeric });
 
   // Textos largos: la celda crece con el contenido
   useLayoutEffect(() => {
@@ -64,6 +68,7 @@ export default function GridCell({
   };
 
   const onKeyDown = (e) => {
+    if (mention.onKeyDown(e)) return;
     if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); return; }
     if (e.key === 'Enter' && !(multi && (e.shiftKey || e.altKey))) {
       e.preventDefault();
@@ -103,8 +108,10 @@ export default function GridCell({
     'data-r': r,
     'data-c': c,
     onFocus: () => { if (!readOnly) setDraft(raw); },
-    onChange: (e) => setDraft(e.target.value),
-    onBlur: commit,
+    onChange: (e) => { setDraft(e.target.value); mention.update(); },
+    onKeyUp: mention.update,
+    onClick: mention.update,
+    onBlur: () => { mention.close(); commit(); },
     onKeyDown,
     className: `${BASE} ${tone} ${readOnly ? 'cursor-default text-slate-400' : ''} ${className}`,
   };
@@ -117,6 +124,7 @@ export default function GridCell({
       {isFormula(raw) && !editing && (
         <span className={`pointer-events-none absolute left-0.5 top-0.5 text-[8px] font-black italic ${linked ? 'text-sky-500' : 'text-emerald-500/70'}`} aria-hidden="true">ƒ</span>
       )}
+      {mention.open && <MentionPicker matches={mention.matches} active={mention.active} onPick={mention.pick} onHover={mention.setActive} />}
     </div>
   );
 }

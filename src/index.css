@@ -385,3 +385,7 @@ img[data-logo="white"] { display:none; }
 .dark .to-yellow-100 { --tw-gradient-to:rgba(234,179,8,0.2) var(--tw-gradient-to-position); }
 .dark .from-yellow-100 { --tw-gradient-from:rgba(234,179,8,0.2) var(--tw-gradient-from-position); --tw-gradient-to:rgba(234,179,8,0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 
+/* Menús flotantes (⋯ de las filas, Exportar, etiquetar con @): en oscuro
+   necesitan una superficie más clara que la tarjeta de abajo, si no se
+   confunden con el fondo. En claro no cambia nada (bg-white). */
+.dark .hub-popover { background-color:#1b2540; border-color:rgba(148,163,184,.45); box-shadow:0 14px 36px rgba(0,0,0,.6); }

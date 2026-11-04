@@ -100,7 +100,7 @@ export default function InvoiceGrid({
             {groups.map((g) => (
               <React.Fragment key={g.key ?? 'all'}>
                 {g.label && (
-                  <tr className="bg-emerald-50/70">
+                  <tr className="bg-emerald-50/60">
                     <td colSpan={columns.length + 1} className="border-b border-emerald-100 p-0">
                       <button onClick={() => onToggleGroup?.(g.key)} className="sticky left-0 flex items-center gap-2 px-2 py-1.5 text-[11px] font-black text-emerald-900 hover:text-emerald-700" aria-expanded={!g.hidden} title={g.hidden ? 'Mostrar las filas' : 'Ocultar las filas'}>
                         {g.hidden ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}

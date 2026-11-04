@@ -52,7 +52,7 @@ export default function InvoicingToolbar({ filters = { q: '', brand: '' }, onFil
           {exportOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} aria-hidden="true" />
-              <div className="absolute right-0 top-full mt-1 z-50 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1" role="menu">
+              <div className="hub-popover absolute right-0 top-full mt-1 z-50 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1" role="menu">
                 <button role="menuitem" onClick={() => { setExportOpen(false); onExport('xlsx'); }} className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Excel (.xlsx) · como el original</button>
                 <button role="menuitem" onClick={() => { setExportOpen(false); onExport('pdf'); }} className="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">PDF · resumen del mes</button>
               </div>
