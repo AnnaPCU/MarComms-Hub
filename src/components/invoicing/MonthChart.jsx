@@ -6,16 +6,14 @@
 // de cargos; paleta validada para daltonismo). Eje Y con tramos redondos,
 // el total arriba de cada barra, leyenda y, al pasar el mouse, cada tramo
 // con su valor. Cliquear una barra (o un tramo) abre el porcentaje y el
-// monto de cada categoría de ese mes (MonthSplitModal). En la leyenda,
-// el «?» al lado de Otros abre «¿Qué va en Otros?».
+// monto de cada categoría de ese mes (MonthSplitModal).
 //
 // Props: months (['YYYY-MM']), summaries ({ [month]: monthSummary }),
 //   selected (mes del modal abierto | null), onSelect(month, segmentId
-//   | null), onOtrosInfo()
+//   | null)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { HelpCircle } from 'lucide-react';
 import { FIJO_CHART_COLOR, VARIABLE_CATEGORIES } from '@/constants/invoicing';
 import { MONTHS_ES } from '@/constants/planTasks';
 import { formatAmount } from '@/utils/invoicing';
@@ -28,7 +26,7 @@ const short = (key) => `${MONTHS_ES[Number(key.slice(5, 7)) - 1].slice(0, 3)} ${
 
 const valueOf = (s, id) => (id === 'fijo' ? s?.fijo ?? 0 : s?.variablesByCategory?.[id] ?? 0);
 
-export default function MonthChart({ months = [], summaries = {}, selected = null, onSelect, onOtrosInfo }) {
+export default function MonthChart({ months = [], summaries = {}, selected = null, onSelect }) {
   if (!months.length) return null;
   const totals = months.map((m) => summaries[m]?.fijoMasVariables ?? 0);
   const scale = niceScale(Math.max(0, ...totals), { integer: true });
@@ -79,9 +77,6 @@ export default function MonthChart({ months = [], summaries = {}, selected = nul
         {SERIES.map((sr) => (
           <li key={sr.id} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
             <span className="w-3 h-3 rounded-[3px]" style={{ background: sr.color }} />{sr.label}
-            {sr.id === 'otros' && onOtrosInfo && (
-              <button type="button" onClick={onOtrosInfo} className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100" title="¿Qué va en Otros?" aria-label="¿Qué va en Otros?"><HelpCircle className="w-3 h-3" /></button>
-            )}
           </li>
         ))}
       </ul>

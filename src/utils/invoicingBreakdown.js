@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════════
-// invoicingBreakdown — «Mes a mes»: desglose de un mes y ejemplos por
-// categoría (sin React)
+// invoicingBreakdown — «Mes a mes»: desglose de un mes por categoría
+// (sin React)
 // ════════════════════════════════════════════════════════════════════
 //   monthBreakdown(rows del mes) → { total, fijo, variables, chargesSum,
 //     manualRows, segments }
@@ -11,9 +11,6 @@
 //     desconocida cae en Otros). Cada tramo lleva total, share (parte del
 //     mes) y count. chargesSum es lo que suman los cargos; si difiere de
 //     variables es porque hay totales escritos a mano (manualRows).
-//   categoryExamples(rows de todos los meses) → { [cat]: { items, ccUsed } }
-//     los cargos reales de cada categoría (más reciente primero) y los CC
-//     con los que se cargaron: para el modal «¿Qué va en Otros?».
 // ════════════════════════════════════════════════════════════════════
 
 import { FIJO_CHART_COLOR, VARIABLE_CATEGORIES } from '@/constants/invoicing';
@@ -50,7 +47,7 @@ export const monthBreakdown = (rows = []) => {
   groups.forEach((g) => { g.total = round2(g.sum); delete g.sum; });
 
   // Variables: cada cargo con precio, en su categoría
-  const cats = VARIABLE_CATEGORIES.map((c) => ({ id: c.id, label: c.label, short: c.short, color: c.color, cc: c.cc, hint: c.hint, sum: 0, items: [] }));
+  const cats = VARIABLE_CATEGORIES.map((c) => ({ id: c.id, label: c.label, short: c.short, color: c.color, cc: c.cc, sum: 0, items: [] }));
   const catById = Object.fromEntries(cats.map((c) => [c.id, c]));
   const manualRows = [];
   let variables = 0;
@@ -75,25 +72,6 @@ export const monthBreakdown = (rows = []) => {
     ...cats.map((c) => ({ ...c, count: c.items.length })),
   ].map((s) => ({ ...s, share: total ? s.total / total : 0 }));
   return { total, fijo: round2(fijo), variables: round2(variables), chargesSum: round2(cats.reduce((s, c) => s + c.total, 0)), manualRows, segments };
-};
-
-export const categoryExamples = (rows = []) => {
-  const out = Object.fromEntries(VARIABLE_CATEGORIES.map((c) => [c.id, { items: [], ccUsed: {} }]));
-  sortRows(rows.filter((r) => r.sheet === 'variables' && r.month)).forEach((r) => {
-    variableCharges(r.data).forEach((ch) => {
-      const detalle = String(ch.detalle || '').trim();
-      const precio = cellNumber(ch.precio);
-      if (!detalle && !precio) return;
-      const cc = String(ch.cc || '').trim();
-      const bucket = out[ch.cat] || out.otros;
-      bucket.items.push({ id: `${r.id}:${ch.id}`, month: r.month, ...place(r.data), detalle, cc, precio });
-      const ccKey = cc || '(sin CC)';
-      bucket.ccUsed[ccKey] = (bucket.ccUsed[ccKey] || 0) + 1;
-    });
-  });
-  // Más reciente primero (dentro del mes, en el orden de la hoja)
-  Object.values(out).forEach((b) => b.items.sort((a, c) => c.month.localeCompare(a.month)));
-  return out;
 };
 
 // Parte del mes como texto: 0,125 → «12,5 %»

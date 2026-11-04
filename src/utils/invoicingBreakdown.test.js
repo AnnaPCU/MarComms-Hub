@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categoryExamples, monthBreakdown, sharePct } from './invoicingBreakdown';
+import { monthBreakdown, sharePct } from './invoicingBreakdown';
 import { monthSummary } from './invoicing';
 
 const M = '2026-10';
@@ -86,28 +86,5 @@ describe('monthBreakdown', () => {
   it('mes vacío', () => {
     expect(monthBreakdown([])).toMatchObject({ total: 0, fijo: 0, variables: 0, chargesSum: 0, manualRows: [] });
     expect(monthBreakdown([]).segments.every((s) => s.share === 0 && s.count === 0)).toBe(true);
-  });
-});
-
-describe('categoryExamples', () => {
-  const sep = { id: 's1', sheet: 'variables', month: '2026-09', position: 9, data: { pais: 'Portugal', empresa: 'Certificaciones', 'cargo:p': { cat: 'campanas', detalle: 'campañas de paid media', cc: 'campañas', precio: '175', pos: 0 } } };
-  const noMonth = { id: 'e1', sheet: 'variables', month: null, position: 1, data: { pais: 'Entidades', 'cargo:q': { cat: 'campanas', detalle: 'no debería aparecer', cc: 'campañas', precio: '1', pos: 0 } } };
-  const ex = categoryExamples([sep, ...rows, noMonth]);
-
-  it('cargos reales por categoría, más reciente primero, con los CC usados', () => {
-    expect(ex.campanas.items.map((i) => [i.month, i.detalle])).toEqual([['2026-10', 'Fee de gestion paid media'], ['2026-09', 'campañas de paid media']]);
-    expect(ex.campanas.ccUsed).toEqual({ 'campañas': 2 });
-    expect(ex.eventos.items[0]).toMatchObject({ month: '2026-10', pais: 'Estados Unidos', empresa: 'Peterson', detalle: 'Webinar', cc: 'events', precio: 500 });
-  });
-
-  it('Otros junta la categoría desconocida y marca los cargos sin CC', () => {
-    expect(ex.otros.items.map((i) => i.detalle)).toEqual(['Sin categoría']);
-    expect(ex.otros.ccUsed).toEqual({ '(sin CC)': 1 });
-  });
-
-  it('un cargo con detalle y sin precio cuenta como ejemplo; sin mes o sin nada, no', () => {
-    expect(ex.website.items.map((i) => [i.detalle, i.precio])).toEqual([['solo detalle, sin precio', 0]]);
-    expect(ex.bbdd.items).toEqual([]);
-    expect(ex.campanas.items.some((i) => i.detalle === 'no debería aparecer')).toBe(false);
   });
 });

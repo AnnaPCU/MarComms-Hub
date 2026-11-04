@@ -5,30 +5,27 @@
 // tramo de la barra (Fijo y facturas + las seis categorías de Variables):
 // el porcentaje que representa en el total del mes, con su barra, y en
 // paralelo el monto. Si se cliqueó un tramo, esa fila queda resaltada.
-// Mismos números que la tabla de totales (monthBreakdown). En Otros, el
-// «?» abre «¿Qué va en Otros?».
+// Mismos números que la tabla de totales (monthBreakdown).
 //
 // Props: month, rows (del mes), focus (id del tramo cliqueado | null),
-//   paused (está abierto «¿Qué va en Otros?» encima: Esc cierra solo ese),
-//   onClose(), onOtrosInfo()
+//   onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo } from 'react';
-import { HelpCircle, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { formatAmount, round2 } from '@/utils/invoicing';
 import { monthBreakdown, sharePct } from '@/utils/invoicingBreakdown';
 import { monthLabel } from '@/utils/planTasks';
 
-export default function MonthSplitModal({ month, rows = [], focus = null, paused = false, onClose, onOtrosInfo }) {
+export default function MonthSplitModal({ month, rows = [], focus = null, onClose }) {
   const b = useMemo(() => monthBreakdown(rows), [rows]);
   const manualDiff = round2(b.variables - b.chargesSum);
   useEffect(() => {
-    if (paused) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, paused]);
+  }, [onClose]);
 
   return (
     <ModalPortal>
@@ -58,9 +55,6 @@ export default function MonthSplitModal({ month, rows = [], focus = null, paused
                       <span className={`inline-flex items-center gap-1.5 font-bold ${empty ? 'text-slate-400' : 'text-slate-700'}`}>
                         <span className="w-3 h-3 rounded-[3px] shrink-0" style={{ background: s.color, opacity: empty ? 0.35 : 1 }} />
                         {s.id === 'fijo' ? s.label : s.short}
-                        {s.id === 'otros' && onOtrosInfo && (
-                          <button type="button" onClick={onOtrosInfo} className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100" title="¿Qué va en Otros?" aria-label="¿Qué va en Otros?"><HelpCircle className="w-3 h-3" /></button>
-                        )}
                       </span>
                     </td>
                     <td className="py-2 pl-3 w-full">

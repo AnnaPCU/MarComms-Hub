@@ -5,8 +5,7 @@
 // con el mismo nombre que en el Excel, y un selector de mes (cada mes
 // tiene sus hojas). «Entidades» no depende del mes. «Mes a mes» pone los
 // totales de todos los meses lado a lado (gráfico + tabla; cliquear una
-// barra abre MonthSplitModal: % y monto de cada categoría; «?» en Otros abre
-// OtrosInfoModal) e «Historial» muestra quién cambió qué y cuándo. Arriba de cada hoja: totales con
+// barra abre MonthSplitModal: % y monto de cada categoría) e «Historial» muestra quién cambió qué y cuándo. Arriba de cada hoja: totales con
 // tendencia, «Para revisar», buscador, filtro de marca, vista compacta,
 // «Qué cambió» contra el mes anterior y Exportar (Excel / PDF).
 //
@@ -34,7 +33,6 @@ import ChangesPanel from './ChangesPanel';
 import MonthChart from './MonthChart';
 import MonthSummary from './MonthSummary';
 import MonthSplitModal from './MonthSplitModal';
-import OtrosInfoModal from './OtrosInfoModal';
 import HistoryView from './HistoryView';
 import NewMonthModal from './NewMonthModal';
 
@@ -59,7 +57,6 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
   const [showNew, setShowNew] = useState(false);
   const [creating, setCreating] = useState(false);
   const [breakdown, setBreakdown] = useState(null); // Mes a mes: { month, segment } del modal de categorías abierto
-  const [otrosInfo, setOtrosInfo] = useState(false); // Mes a mes: modal «¿Qué va en Otros?»
 
   // Arranca en el mes actual si existe; si no, en el último cargado
   useEffect(() => {
@@ -218,13 +215,11 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
               summaries={summaries}
               selected={breakdown?.month || null}
               onSelect={(m, segment) => setBreakdown({ month: m, segment: segment || null })}
-              onOtrosInfo={() => setOtrosInfo(true)}
             />
             {breakdown && months.includes(breakdown.month) && (
-              <MonthSplitModal month={breakdown.month} rows={breakdownRows} focus={breakdown.segment} paused={otrosInfo} onClose={() => setBreakdown(null)} onOtrosInfo={() => setOtrosInfo(true)} />
+              <MonthSplitModal month={breakdown.month} rows={breakdownRows} focus={breakdown.segment} onClose={() => setBreakdown(null)} />
             )}
             <MonthSummary months={months} rows={rows} onOpenMonth={(m) => openMonth(m)} />
-            {otrosInfo && <OtrosInfoModal rows={rows} months={months} onClose={() => setOtrosInfo(false)} />}
           </div>
         ) : tab === 'historial' ? (
           <HistoryView months={months} />
