@@ -46,6 +46,10 @@ describe('montos y nombres', () => {
     expect(cleanPlanName('CU Estados Unidos de América')).toBe('CU Estados Unidos');
     expect(normalizeCountryNames('Control Union Estados Unidos')).toBe('Control Union Estados Unidos');
     expect(normalizeCountryNames('Plan Peruano')).toBe('Plan Peruano'); // no toca palabras que contienen el alias
+    expect(normalizeCountryNames('Rep. Dominicana')).toBe('RD');
+    expect(normalizeCountryNames('Republica Dominicana')).toBe('RD');
+    expect(normalizeCountryNames('Brazil')).toBe('Brasil');
+    expect(normalizeCountryNames('USA')).toBe('Estados Unidos');
     expect(normalizeCountryNames('Plan Usuarios')).toBe('Plan Usuarios');
   });
 });

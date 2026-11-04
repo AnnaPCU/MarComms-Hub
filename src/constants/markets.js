@@ -43,6 +43,8 @@ export const COUNTRY_ALIASES = {
   'Canadá': 'Canada',
   'Brazil': 'Brasil',
   'República Dominicana': 'RD',
+  'Republica Dominicana': 'RD',
+  'Rep. Dominicana': 'RD',
 };
 
 // Mapping específico para webinars (subset que usa el módulo webinar)

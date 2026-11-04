@@ -17,6 +17,7 @@
 import React, { useMemo, useState } from 'react';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { formatAmount, repeatedFlags, rowTotal } from '@/utils/invoicing';
+import { normalizeCountryNames } from '@/utils/billing';
 import GridCell from './GridCell';
 import RowMenu from './RowMenu';
 
@@ -43,8 +44,9 @@ export default function InvoiceGrid({
 
   const merged = useMemo(() => Object.fromEntries(columns.filter((c) => c.merge).map((c) => [c.key, repeatedFlags(rows, c.key)])), [columns, rows]);
 
-  const commit = (row, col, raw) => {
+  const commit = (row, col, text) => {
     const key = col.type === 'total' ? 'totalManual' : col.key;
+    const raw = col.country ? normalizeCountryNames(text) : text;
     if (raw === '') onPatch(row, {}, [key]);
     else onPatch(row, { [key]: raw });
   };

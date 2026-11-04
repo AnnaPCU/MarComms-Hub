@@ -15,6 +15,8 @@
 //   merge: los valores repetidos seguidos se ven atenuados (como las
 //   celdas combinadas del Excel)
 //   sum: suma la columna en la fila de totales
+//   country: al guardar, el país queda como en el Hub ("USA" → "Estados
+//   Unidos", "Brazil" → "Brasil", "Rep. Dominicana" → "RD")
 // ════════════════════════════════════════════════════════════════════
 
 // Vistas (pestañas), con el nombre de cada hoja del Excel
@@ -36,7 +38,7 @@ export const MONTHLY_SHEETS = ['fijo', 'variables', 'mkt', 'mkt_libre', 'crm', '
 export const FIJO_ROW_KINDS = { row: 'fila', group: 'grupo' };
 
 export const FIJO_COLUMNS = [
-  { key: 'pais', label: 'País', width: 104 },
+  { key: 'pais', label: 'País', width: 104, country: true },
   { key: 'empresa', label: 'Empresa/Sector', width: 138 },
   { key: 'cuenta', label: 'Entidades', width: 118, mono: true },
   { key: 'cc', label: 'CC', width: 64 },
@@ -63,7 +65,7 @@ export const VARIABLE_CATEGORIES = [
 ];
 
 export const VARIABLES_BASE_COLUMNS = [
-  { key: 'pais', label: 'País', width: 150, merge: true },
+  { key: 'pais', label: 'País', width: 150, merge: true, country: true },
   { key: 'cuenta', label: 'Entidad', width: 112, mono: true },
   { key: 'codigo', label: 'Código Smartsheet', width: 86, mono: true },
   { key: 'empresa', label: 'Empresa/Sector', width: 120 },
