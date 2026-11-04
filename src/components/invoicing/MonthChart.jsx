@@ -5,12 +5,12 @@
 // categorías de Variables (los mismos colores que los chips de la lista
 // de cargos; paleta validada para daltonismo). Eje Y con tramos redondos,
 // el total arriba de cada barra, leyenda y, al pasar el mouse, cada tramo
-// con su valor. Cliquear una barra (o un tramo) abre el desglose de ese
-// mes debajo (MonthBreakdown) y la barra queda resaltada. En la leyenda,
+// con su valor. Cliquear una barra (o un tramo) abre el porcentaje y el
+// monto de cada categoría de ese mes (MonthSplitModal). En la leyenda,
 // el «?» al lado de Otros abre «¿Qué va en Otros?».
 //
 // Props: months (['YYYY-MM']), summaries ({ [month]: monthSummary }),
-//   selected (mes del desglose abierto | null), onSelect(month, segmentId
+//   selected (mes del modal abierto | null), onSelect(month, segmentId
 //   | null), onOtrosInfo()
 // ════════════════════════════════════════════════════════════════════
 
@@ -33,11 +33,11 @@ export default function MonthChart({ months = [], summaries = {}, selected = nul
   const totals = months.map((m) => summaries[m]?.fijoMasVariables ?? 0);
   const scale = niceScale(Math.max(0, ...totals), { integer: true });
   const pct = (v) => `${Math.min(100, (v / (scale.max || 1)) * 100)}%`;
-  // Si se cliqueó un tramo, va con su id (el desglose arranca en ese tramo)
+  // Si se cliqueó un tramo, va con su id (esa fila queda resaltada en el modal)
   const pick = (m, e) => onSelect?.(m, e.target.closest('[data-segment]')?.dataset.segment || null);
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4">Fijo + Variables por mes <span className="normal-case tracking-normal font-bold text-slate-400">· apilado por categoría · cliqueá una barra o un tramo para ver el desglose del mes</span></p>
+      <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4">Fijo + Variables por mes <span className="normal-case tracking-normal font-bold text-slate-400">· apilado por categoría · cliqueá una barra para ver el % y el monto de cada categoría</span></p>
       <div className="flex">
         <div className="relative w-14 shrink-0" style={{ height: PLOT_H }}>
           {scale.ticks.map((t) => (
@@ -54,12 +54,12 @@ export default function MonthChart({ months = [], summaries = {}, selected = nul
               const s = summaries[m];
               const isSel = selected === m;
               return (
-                <button key={m} type="button" onClick={(e) => pick(m, e)} aria-pressed={isSel} className={`flex-1 min-w-0 h-full flex items-end justify-center group transition-opacity ${selected && !isSel ? 'opacity-50 hover:opacity-90' : ''}`} title={`${monthLabel(m)}: ${formatAmount(totals[i])} · ver el desglose`} aria-label={`${monthLabel(m)}: ${formatAmount(totals[i])}`}>
+                <button key={m} type="button" onClick={(e) => pick(m, e)} aria-pressed={isSel} className={`flex-1 min-w-0 h-full flex items-end justify-center group transition-opacity ${selected && !isSel ? 'opacity-50 hover:opacity-90' : ''}`} title={`${monthLabel(m)}: ${formatAmount(totals[i])} · ver las categorías`} aria-label={`${monthLabel(m)}: ${formatAmount(totals[i])}`}>
                   <div className={`relative w-[64%] max-w-[72px] flex flex-col-reverse rounded-[4px] ${isSel ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}`} style={{ height: pct(totals[i]) }}>
                     {SERIES.map((sr) => {
                       const v = valueOf(s, sr.id);
                       if (!v || !totals[i]) return null;
-                      return <div key={sr.id} data-segment={sr.id} className="w-full rounded-[3px] group-hover:brightness-110 hover:brightness-125" style={{ height: `${(v / totals[i]) * 100}%`, background: sr.color, boxShadow: '0 0 0 2px #fff', marginTop: 2 }} title={`${monthLabel(m)} · ${sr.label}: ${formatAmount(v)} · ver el desglose`} />;
+                      return <div key={sr.id} data-segment={sr.id} className="w-full rounded-[3px] group-hover:brightness-110 hover:brightness-125" style={{ height: `${(v / totals[i]) * 100}%`, background: sr.color, boxShadow: '0 0 0 2px #fff', marginTop: 2 }} title={`${monthLabel(m)} · ${sr.label}: ${formatAmount(v)} · ver las categorías`} />;
                     })}
                     <span className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 text-[10px] font-black font-mono whitespace-nowrap ${isSel ? 'text-emerald-700' : 'text-slate-700'}`}>{formatAmount(totals[i])}</span>
                   </div>

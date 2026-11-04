@@ -6,7 +6,7 @@
 // Hub completa al agregar un cargo, y los cargos reales ya cargados como
 // ejemplo (categoryExamples: más reciente primero, hasta MAX_EXAMPLES por
 // categoría). Si todavía no hay nada en Otros, lo dice. Se abre desde la
-// leyenda del gráfico de «Mes a mes» y desde el tramo Otros del desglose.
+// leyenda del gráfico de «Mes a mes» y desde la fila Otros del modal de categorías del mes.
 //
 // Props: rows (todas, de todos los meses), months, onClose()
 // ════════════════════════════════════════════════════════════════════
@@ -37,7 +37,7 @@ export default function OtrosInfoModal({ rows = [], months = [], onClose }) {
 
   return (
     <ModalPortal>
-      <div className="fixed inset-0 z-[80] bg-slate-900/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Qué va en Otros" onClick={onClose}>
+      <div className="fixed inset-0 z-[90] bg-slate-900/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Qué va en Otros" onClick={onClose}>
         <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <header className="sticky top-0 z-10 bg-white px-6 pt-5 pb-3 border-b border-slate-100 flex items-start justify-between gap-3">
             <div>
