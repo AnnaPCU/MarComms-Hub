@@ -13,7 +13,7 @@ import {
   EXPORT_BASENAME, FIJO_COLUMNS, INVOICE_STATUS_BY_ID, MKT_COLUMNS, OFFICES_COLUMNS, VARIABLE_CATEGORIES,
 } from '@/constants/invoicing';
 import {
-  cellNumber, chargesTotal, colName, crmExtraValue, crmLicenses, evalCell, fijoContext, freeGridSize, isFormula, isGroupRow,
+  cellNumber, chargesTotal, colName, crmExtraValue, crmLicenses, evalCell, fijoContext, freeGridSize, isBillable, isFormula, isGroupRow,
   rowStatus, rowTotal, sortRows, tokenize, variableCharges,
 } from '@/utils/invoicing';
 import { CRM_LICENSES_REF } from '@/constants/invoicing';
@@ -144,7 +144,7 @@ const mktSheet = (rows, month) => {
     const rn = i + 4; const d = r.data || {};
     MKT_COLUMNS.forEach((c, ci) => {
       if (c.type === 'number') s.set(ci, rn, numCell(d[c.key]));
-      else if (c.type === 'total') { const t = rowTotal('mkt', d); s.set(ci, rn, d.totalManual !== undefined && d.totalManual !== '' ? { v: t } : { f: `SUM(B${rn}:D${rn})`, v: t }); } else s.text(ci, rn, d[c.key]);
+      else if (c.type === 'total') { const t = rowTotal('mkt', d); s.set(ci, rn, d.totalManual !== undefined && d.totalManual !== '' ? { v: t } : { f: `SUM(B${rn}:D${rn})`, v: t }); } else if (c.type === 'status') { if (isBillable('mkt', d)) s.set(ci, rn, statusText(d)); } else s.text(ci, rn, d[c.key]);
     });
   });
   const free = by(rows, month, 'mkt_libre')[0]?.data || {};

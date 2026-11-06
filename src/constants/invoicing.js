@@ -137,6 +137,7 @@ export const MKT_COLUMNS = [
   { key: 'descripcion', label: 'Descripción del servicio', width: 420 },
   { key: 'total', label: 'Valor total', type: 'total', width: 96, sum: true },
   { key: 'renovacion', label: 'Fecha renovación', width: 110 },
+  { key: 'estado', label: 'Estado', type: 'status', width: 104 },
 ];
 export const FREE_GRID_MIN_ROWS = 20;
 export const FREE_GRID_MIN_COLS = 6;

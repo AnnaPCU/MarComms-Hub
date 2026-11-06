@@ -263,11 +263,11 @@ export const crmExtraValue = (row, extraRows = [], licenses = 0) => {
 // ── Estado de cada cobro (pendiente / facturado / cobrado) ──
 export const rowStatus = (data) => (INVOICE_STATUS_IDS.includes(data?.estado) ? data.estado : PENDING_STATUS);
 
-// Una fila se factura si tiene plata: Fijo y Variables por su total,
-// CRM por el monto. Las filas grises no.
+// Una fila se factura si tiene plata: Fijo, Variables y MKT Plan por su
+// total, CRM por el monto. Las filas grises no.
 export const isBillable = (sheet, data = {}, ctx) => {
   if (sheet === 'crm') return cellNumber(data.monto) > 0;
-  if (sheet !== 'fijo' && sheet !== 'variables') return false;
+  if (sheet !== 'fijo' && sheet !== 'variables' && sheet !== 'mkt') return false;
   if (isGroupRow(data)) return false;
   return (rowTotal(sheet, data, ctx) ?? 0) > 0;
 };
@@ -319,6 +319,7 @@ export const monthSummary = (rows = []) => {
     status: {
       fijo: statusStats('fijo', fijoRows, ctxById),
       variables: statusStats('variables', varRows),
+      mkt: statusStats('mkt', of('mkt')),
       crm: statusStats('crm', of('crm')),
     },
   };

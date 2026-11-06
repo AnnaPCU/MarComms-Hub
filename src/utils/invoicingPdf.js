@@ -40,7 +40,7 @@ export const monthPdfContent = (rows = [], month) => {
     summary,
     fijo: fijo.map((r) => ({ group: isGroupRow(r.data), cells: [r.data.pais, r.data.empresa, r.data.cuenta, r.data.codigo, r.data.plan, num(r.data.valor, { ...ctx[r.id], key: 'valor' }), num(r.data.website, { ...ctx[r.id], key: 'website' }), num(r.data.planMkt), isGroupRow(r.data) ? '' : money(rowTotal('fijo', r.data, ctx[r.id])), isBillable('fijo', r.data, ctx[r.id]) ? status(r.data) : ''].map((x) => x ?? '') })),
     variables: variables.filter((r) => variableCharges(r.data).length).map((r) => ({ cells: [r.data.pais, r.data.empresa, variableCharges(r.data).map((c) => `${VARIABLE_CATEGORY_BY_ID[c.cat]?.short || c.cat}: ${c.detalle || 'sin detalle'}${c.cc ? ` (${c.cc})` : ''} · ${money(cellNumber(c.precio))}`).join('\n'), money(rowTotal('variables', r.data)), isBillable('variables', r.data) ? status(r.data) : ''].map((x) => x ?? '') })),
-    mkt: mkt.map((r) => ({ cells: [r.data.cliente, num(r.data.bbdd), num(r.data.email), num(r.data.paid), money(rowTotal('mkt', r.data)), r.data.renovacion].map((x) => x ?? '') })),
+    mkt: mkt.map((r) => ({ cells: [r.data.cliente, num(r.data.bbdd), num(r.data.email), num(r.data.paid), money(rowTotal('mkt', r.data)), r.data.renovacion, isBillable('mkt', r.data) ? status(r.data) : ''].map((x) => x ?? '') })),
     crm: crm.map((r) => ({ cells: [r.data.entidad, r.data.autoriza, num(r.data.monto), isBillable('crm', r.data) ? status(r.data) : ''].map((x) => x ?? '') })),
     crmExtra: extra.map((r) => ({ total: r.data.kind === 'total', cells: [r.data.concepto || 'Sin nombre', '', money(crmExtraValue(r, extra, licenses)), r.data.moneda || 'USD'].map((x) => x ?? '') })),
     licenses,
@@ -124,7 +124,7 @@ export const buildMonthPdf = async (rows, month) => {
   else { font(7); color(GREY); pdf.text('Sin cargos variables este mes.', MX, y); y += 8; }
 
   section('MKT Plan (Felo)');
-  if (data.mkt.length) table([{ label: 'País', w: 30 }, { label: 'BBDD', w: 16 }, { label: 'Email MKT', w: 16 }, { label: 'Paid Media', w: 16 }, { label: 'Valor total', w: 18 }, { label: 'Renovación', w: 24 }], data.mkt, { numeric: [1, 2, 3, 4], totals: [[4, money(data.summary.mkt)]] });
+  if (data.mkt.length) table([{ label: 'País', w: 30 }, { label: 'BBDD', w: 16 }, { label: 'Email MKT', w: 16 }, { label: 'Paid Media', w: 16 }, { label: 'Valor total', w: 18 }, { label: 'Renovación', w: 24 }, { label: 'Estado', w: 20 }], data.mkt, { numeric: [1, 2, 3, 4], totals: [[4, money(data.summary.mkt)]] });
   else { font(7); color(GREY); pdf.text('Sin planes cargados.', MX, y); y += 8; }
 
   section('CRM (Ale)');

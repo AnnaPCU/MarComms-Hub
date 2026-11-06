@@ -120,6 +120,11 @@ describe('totales de las hojas', () => {
   });
   it('MKT Plan', () => {
     expect(rowTotal('mkt', { bbdd: 150, email: 150, paid: 150 })).toBe(450);
+    // MKT Plan también tiene estado de cobro (nov 2026)
+    expect(isBillable('mkt', { bbdd: '150' })).toBe(true);
+    expect(isBillable('mkt', { descripcion: 'sin plata' })).toBe(false);
+    expect(statusStats('mkt', [{ id: 'a', data: { bbdd: '150', estado: 'facturado' } }, { id: 'b', data: { email: '100' } }, { id: 'c', data: {} }])).toMatchObject({ total: 2, amount: 250, byStatus: { facturado: { count: 1, amount: 150 }, pendiente: { count: 1, amount: 100 } } });
+    expect(monthSummary([{ id: 'm', sheet: 'mkt', month: '2026-10', data: { paid: '300', estado: 'cobrado' } }]).status.mkt).toMatchObject({ total: 1, byStatus: { cobrado: { count: 1, amount: 300 } } });
     expect(sheetTotals('mkt', [{ data: { bbdd: '150', email: '150', paid: '150' } }], MKT_COLUMNS)).toEqual({ bbdd: 150, email: 150, paid: 150, total: 450 });
   });
   it('CRM: licencias y totales de abajo', () => {

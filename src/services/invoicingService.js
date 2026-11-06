@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// INVOICING SERVICE — Facturación MarComms (migrations 0048 y 0051)
+// INVOICING SERVICE — Facturación MarComms (migrations 0048, 0051 y 0052)
 // ════════════════════════════════════════════════════════════════════
 //   invoicing_months  — meses armados ('YYYY-MM')
 //   invoicing_rows    — filas de cada hoja: { id, month, sheet, position,
@@ -139,4 +139,21 @@ export const subscribeChanges = (onChange) => {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: CHANGES }, (p) => onChange(p))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
+};
+
+// ── Link externo (migration 0052) ──
+// Token del link de solo lectura (una sola fila). null si la tabla no está.
+export const getPublicLinkToken = async () => {
+  const { data, error } = await supabase.from('invoicing_public_link').select('public_token').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  return data?.public_token || null;
+};
+
+// Lo que ve la página externa: meses y filas de las hojas (sin notas del
+// mes, zona libre de MKT Plan ni historial). null si el token no existe.
+export const getPublicInvoicing = async (token) => {
+  const { data, error } = await supabase.rpc('get_public_invoicing', { p_token: token });
+  if (error) throw error;
+  if (!data) return null;
+  return { months: data.months || [], rows: (data.rows || []).map(rowFromDb), updatedAt: data.updatedAt || null };
 };

@@ -11,8 +11,10 @@
 // (corre una escritura y muestra el error si falla), askDelete(row) →
 // Promise<bool>, filters ({ q, brand }), compact, changes ({ cells,
 // added } de «Qué cambió», o null), prevLabel, focusRow (id para
-// resaltar), people (equipo, para etiquetar con @ en las notas) y,
-// Variables, varView ('lista' | 'tabla').
+// resaltar), people (equipo, para etiquetar con @ en las notas),
+// Variables, varView ('lista' | 'tabla') y readOnly (link externo de
+// Facturación: no se edita, sin notas del mes, ayudas de edición ni zona
+// libre de MKT Plan; Variables siempre como tabla).
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo } from 'react';
@@ -42,7 +44,9 @@ const Internal = () => (
 const real = (r) => r?.raw || r;
 
 // Acciones comunes de una grilla de un mes
-const gridHandlers = ({ month, sheet, api, run, askDelete }) => ({
+const NOOP = () => {};
+const READ_ONLY_HANDLERS = { onPatch: NOOP, onStatus: NOOP, onAddRow: null, onMoveRow: NOOP, onDeleteRow: NOOP, readOnly: true };
+const gridHandlers = ({ month, sheet, api, run, askDelete, readOnly }) => (readOnly ? READ_ONLY_HANDLERS : {
   onPatch: (row, patch, remove) => run(() => api.patchCell(real(row), patch, remove)),
   onStatus: (row, next) => run(() => (next === PENDING_STATUS ? api.patchCell(real(row), {}, ['estado']) : api.patchCell(real(row), { estado: next }))),
   onAddRow: (after) => run(() => api.addRow(month, sheet, real(after))),
@@ -63,13 +67,14 @@ const useFocusRow = (focusRow) => {
   }, [focusRow]);
 };
 
-function Notes({ month, rows, sheet, api, run, people }) {
+function Notes({ month, rows, sheet, api, run, people, readOnly }) {
+  if (readOnly) return null;
   const notes = sheetRows(rows, month, 'notas')[0]?.data || {};
   return <SheetNotes people={people} value={notes[sheet] || ''} onSave={(text) => run(() => (text ? api.patchSingleton(month, 'notas', { [sheet]: text }) : api.patchSingleton(month, 'notas', {}, [sheet])))} />;
 }
 
 export function FijoSheet(props) {
-  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow } = props;
+  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, readOnly } = props;
   const sh = useInvoicingSheet({ rows, month, sheet: 'fijo', columns: FIJO_COLUMNS, filters });
   useFocusRow(focusRow);
   return (
@@ -99,7 +104,7 @@ export function FijoSheet(props) {
         emptyText={sh.filtered ? 'Ninguna fila coincide con el filtro.' : 'Todavía no hay filas.'}
         {...gridHandlers({ ...props, sheet: 'fijo' })}
       />
-      <Hint>Total a cobrar = Valor + Country Website + Valor Plan MKT. Las filas grises son de grupo (el valor que se reparte entre las de abajo) y no suman. Las filas que las siguen usan <span className="font-mono">=grupo/3</span> (ƒ celeste): si cambia la fila gris, se actualizan solas; para fijar un número, escribilo en la celda. También valen cuentas como <span className="font-mono">=350/4*3</span>.</Hint>
+      {!readOnly && <Hint>Total a cobrar = Valor + Country Website + Valor Plan MKT. Las filas grises son de grupo (el valor que se reparte entre las de abajo) y no suman. Las filas que las siguen usan <span className="font-mono">=grupo/3</span> (ƒ celeste): si cambia la fila gris, se actualizan solas; para fijar un número, escribilo en la celda. También valen cuentas como <span className="font-mono">=350/4*3</span>.</Hint>}
       <Notes {...props} sheet="fijo" />
     </div>
   );
@@ -119,7 +124,8 @@ function CategoryTotals({ totals }) {
 }
 
 export function VariablesSheet(props) {
-  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, varView = 'lista' } = props;
+  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, readOnly } = props;
+  const varView = readOnly ? 'tabla' : props.varView || 'lista';
   const columns = useMemo(() => variablesColumns(), []);
   const sh = useInvoicingSheet({ rows, month, sheet: 'variables', columns, filters });
   useFocusRow(focusRow);
@@ -156,7 +162,7 @@ export function VariablesSheet(props) {
           cellReadOnly={(r, col) => !!(col.cat && r.data?._multi?.[col.cat])}
           emptyText={sh.filtered ? 'Ninguna fila coincide con el filtro.' : 'Todavía no hay filas.'}
           {...handlers}
-          onPatch={onPatchView}
+          onPatch={readOnly ? handlers.onPatch : onPatchView}
         />
       ) : (
         <>
@@ -177,20 +183,21 @@ export function VariablesSheet(props) {
           />
         </>
       )}
-      <Hint>{varView === 'tabla' ? 'La tabla como en el Excel. Una categoría con dos o más cargos muestra la suma y se edita desde la vista de lista.' : 'Cada entidad con sus cargos del mes; puede haber varios por categoría. El total de la entidad suma todos sus cargos.'} Si un país repite el de arriba, se ve en gris (como las celdas combinadas del Excel).</Hint>
+      {!readOnly && <Hint>{varView === 'tabla' ? 'La tabla como en el Excel. Una categoría con dos o más cargos muestra la suma y se edita desde la vista de lista.' : 'Cada entidad con sus cargos del mes; puede haber varios por categoría. El total de la entidad suma todos sus cargos.'} Si un país repite el de arriba, se ve en gris (como las celdas combinadas del Excel).</Hint>}
       <Notes {...props} sheet="variables" />
     </div>
   );
 }
 
 export function MktSheet(props) {
-  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, people } = props;
+  const { month, rows, api, run, filters, compact, changes, prevLabel, focusRow, people, readOnly } = props;
   const sh = useInvoicingSheet({ rows, month, sheet: 'mkt', columns: MKT_COLUMNS, filters });
   useFocusRow(focusRow);
   const free = sheetRows(rows, month, 'mkt_libre')[0]?.data || {};
   return (
     <div className="space-y-4">
       <Internal />
+      <StatusBar stats={sh.stats} picked={sh.statusPick} onPick={sh.setStatusPick} />
       <InvoiceGrid
         grid="mkt"
         sheet="mkt"
@@ -200,18 +207,19 @@ export function MktSheet(props) {
         changes={changes}
         prevLabel={prevLabel}
         totals={sh.totals}
+        isBillable={(r) => isBillable('mkt', r.data)}
         {...gridHandlers({ ...props, sheet: 'mkt' })}
       />
-      <div className="space-y-2">
+      {!readOnly && <div className="space-y-2">
         <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Notas y cuentas de la hoja <span className="normal-case tracking-normal font-bold text-slate-400">· con @ etiquetás a alguien del equipo y le llega un aviso</span></p>
         <FreeGrid grid="mkt-libre" data={free} people={people} onPatch={(patch, remove) => run(() => api.patchSingleton(month, 'mkt_libre', patch, remove))} />
-      </div>
+      </div>}
     </div>
   );
 }
 
 export function CrmSheet(props) {
-  const { month, rows, api, run, askDelete, filters, compact, changes, prevLabel, focusRow } = props;
+  const { month, rows, api, run, askDelete, filters, compact, changes, prevLabel, focusRow, readOnly } = props;
   const sh = useInvoicingSheet({ rows, month, sheet: 'crm', columns: CRM_COLUMNS, filters });
   useFocusRow(focusRow);
   const extra = sheetRows(rows, month, 'crm_extra');
@@ -239,6 +247,7 @@ export function CrmSheet(props) {
           grid="crm-extra"
           rows={extra}
           licenses={licenses}
+          readOnly={readOnly}
           onPatch={(row, patch, remove) => run(() => api.patchCell(row, patch, remove))}
           onAdd={(data) => run(() => api.addRow(month, 'crm_extra', null, data))}
           onMove={(row, dir) => run(() => api.moveRow(row, dir))}

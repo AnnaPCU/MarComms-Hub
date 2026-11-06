@@ -9,7 +9,7 @@
 //   gris), compact, sticky ({ key: left }), merged ({ key: bool }),
 //   change ({ key: { before, label } }), isNew, prevLabel, billable,
 //   actions, menuOpen, onToggleMenu, onCommit(col, raw), onStatus(next),
-//   cellReadOnly(col), rowClass
+//   cellReadOnly(col), rowClass, readOnly (todo de solo lectura)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
@@ -22,7 +22,7 @@ import StatusChip from './StatusChip';
 
 export default function GridRow({
   row, ri, columns, sheet, grid, ctx, compact = false, sticky = {}, merged = {}, change, isNew = false, prevLabel = 'el mes anterior',
-  billable = true, actions = [], menuOpen = false, onToggleMenu, onCommit, onStatus, cellReadOnly, rowClass = '',
+  billable = true, actions = [], menuOpen = false, onToggleMenu, onCommit, onStatus, cellReadOnly, rowClass = '', readOnly = false,
 }) {
   const stickyCls = (key, base) => (sticky[key] !== undefined ? `sticky z-[5] ${base || 'bg-white'}` : '');
   const stickyStyle = (key) => (sticky[key] !== undefined ? { left: sticky[key] } : undefined);
@@ -36,10 +36,10 @@ export default function GridRow({
             {ri + 1}
             {isNew && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title={`Fila nueva (no estaba en ${prevLabel})`} />}
           </span>
-          <button onClick={onToggleMenu} className="w-5 h-5 rounded hover:bg-slate-200 flex items-center justify-center opacity-40 group-hover:opacity-100 focus:opacity-100" title="Opciones de la fila" aria-label={`Opciones de la fila ${ri + 1}`}>
+          {!readOnly && <button onClick={onToggleMenu} className="w-5 h-5 rounded hover:bg-slate-200 flex items-center justify-center opacity-40 group-hover:opacity-100 focus:opacity-100" title="Opciones de la fila" aria-label={`Opciones de la fila ${ri + 1}`}>
             <MoreHorizontal className="w-3.5 h-3.5 text-slate-500" />
-          </button>
-          {menuOpen && <RowMenu actions={actions} onClose={onToggleMenu} />}
+          </button>}
+          {menuOpen && !readOnly && <RowMenu actions={actions} onClose={onToggleMenu} />}
         </div>
       </td>
       {columns.map((col, ci) => {
@@ -51,11 +51,11 @@ export default function GridRow({
         if (col.type === 'status') {
           return (
             <td key={col.key} className={`border-b border-r border-slate-200 px-1.5 ${compact ? 'py-0.5' : 'py-1'} align-top ${stickyCls(col.key, rowClass || 'bg-white')}`} style={stickyStyle(col.key)}>
-              {billable ? <StatusChip status={rowStatus(row.data)} onChange={onStatus} /> : <span className="text-slate-300 text-[10px] px-1">—</span>}
+              {billable ? <StatusChip status={rowStatus(row.data)} onChange={onStatus} disabled={readOnly} /> : <span className="text-slate-300 text-[10px] px-1">—</span>}
             </td>
           );
         }
-        const ro = cellReadOnly?.(col) || (isTotal && total === null);
+        const ro = readOnly || cellReadOnly?.(col) || (isTotal && total === null);
         return (
           <td key={col.key} className={`relative border-b border-r border-slate-200 p-0 align-top ${col.tint || ''} ${isTotal ? 'bg-emerald-50/40' : ''} ${stickyCls(col.key, rowClass || col.tint || 'bg-white')}`} style={stickyStyle(col.key)}>
             <GridCell
@@ -73,7 +73,7 @@ export default function GridRow({
               readOnly={ro}
               placeholder={ro && isTotal ? '—' : ''}
               className={merged[col.key] ? 'text-slate-300 focus:text-slate-800' : ''}
-              title={ro && !isTotal ? (row.data?._multi?.[col.cat] ? `${row.data._multi[col.cat]} cargos en esta categoría: editalos en la vista de lista` : undefined) : undefined}
+              title={ro && !isTotal && !readOnly ? (row.data?._multi?.[col.cat] ? `${row.data._multi[col.cat]} cargos en esta categoría: editalos en la vista de lista` : undefined) : undefined}
               onCommit={(raw) => onCommit(col, raw)}
             />
             {dot}

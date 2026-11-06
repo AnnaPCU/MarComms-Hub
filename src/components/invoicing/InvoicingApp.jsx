@@ -33,6 +33,7 @@ import ChangesPanel from './ChangesPanel';
 import MonthChart from './MonthChart';
 import MonthSummary from './MonthSummary';
 import MonthSplitModal from './MonthSplitModal';
+import PublicLinkButton from './PublicLinkButton';
 import HistoryView from './HistoryView';
 import NewMonthModal from './NewMonthModal';
 
@@ -150,6 +151,7 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <PublicLinkButton />
             {months.length > 0 && (
               <select value={month} onChange={(e) => setMonth(e.target.value)} disabled={!monthly} aria-label="Mes" className="bg-white text-emerald-700 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md outline-none border-0 disabled:opacity-60">
                 {[...months].reverse().map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}

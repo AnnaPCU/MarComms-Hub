@@ -18,7 +18,8 @@
 //   onMoveRow(row, dir), onDeleteRow(row), rowActions(row) → [acciones],
 //   rowClass(row), cellReadOnly(row, col), isBillable(row), totals
 //   ({ [key]: n }), totalsLabel, listFor ({ [key]: datalistId }), canMove,
-//   addLabel, emptyText
+//   addLabel, emptyText, readOnly (link externo: sin editar, sin menú de
+//   fila ni «Agregar fila», el estado se ve pero no cambia)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -30,7 +31,7 @@ import GridRow from './GridRow';
 export default function InvoiceGrid({
   grid, sheet, columns, headerGroups = [], rows = [], ctxById = {}, compact = false, groupBy = null, collapsed = new Set(), onToggleGroup,
   changes, prevLabel, onPatch, onStatus, onAddRow, onMoveRow, onDeleteRow, rowActions, rowClass, cellReadOnly, isBillable,
-  totals, totalsLabel = 'Total', listFor = {}, canMove = true, addLabel = 'Agregar fila', emptyText = 'Todavía no hay filas.',
+  totals, totalsLabel = 'Total', listFor = {}, canMove = true, addLabel = 'Agregar fila', emptyText = 'Todavía no hay filas.', readOnly = false,
 }) {
   const [menu, setMenu] = useState(null);
   const cols = useMemo(() => columns.map((c) => ({ ...c, list: listFor[c.key] })), [columns, listFor]);
@@ -113,7 +114,7 @@ export default function InvoiceGrid({
                 )}
                 {!g.hidden && g.rows.map((row) => {
                   const ri = indexOf.get(row.id);
-                  const actions = [
+                  const actions = readOnly ? [] : [
                     { label: 'Insertar fila abajo', onClick: () => onAddRow(row) },
                     ...(canMove ? [
                       { label: 'Subir fila', onClick: () => onMoveRow(row, -1), disabled: ri === 0 },
@@ -145,6 +146,7 @@ export default function InvoiceGrid({
                       onStatus={(next) => onStatus?.(row, next)}
                       cellReadOnly={(col) => cellReadOnly?.(row, col)}
                       rowClass={rowClass?.(row) || ''}
+                      readOnly={readOnly}
                     />
                   );
                 })}
@@ -168,7 +170,7 @@ export default function InvoiceGrid({
           )}
         </table>
       </div>
-      {onAddRow && (
+      {onAddRow && !readOnly && (
         <button onClick={() => onAddRow(null)} className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:border-emerald-400 hover:text-emerald-700">
           <Plus className="w-3.5 h-3.5" /> {addLabel}
         </button>
