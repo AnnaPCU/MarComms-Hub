@@ -57,7 +57,7 @@ export default function InvoicingPublicPage({ token }) {
       {state.status === 'loading' && <Message title="Cargando la facturación…" />}
       {state.status === 'notfound' && <Message title="Este link no está disponible" text="Puede haber cambiado o haberse desactivado. Pedí el link actualizado al equipo de MarComms." />}
       {state.status === 'error' && <Message title="No se pudo cargar la facturación" text="Probá de nuevo en unos minutos." />}
-      {state.status === 'ok' && <InvoicingExternalView months={state.data.months} rows={state.data.rows} updatedAt={state.data.updatedAt} loadedAt={state.loadedAt} />}
+      {state.status === 'ok' && <InvoicingExternalView allMonths={state.data.months} historic={state.data.historic} rows={state.data.rows} updatedAt={state.data.updatedAt} loadedAt={state.loadedAt} />}
     </div>
   );
 }

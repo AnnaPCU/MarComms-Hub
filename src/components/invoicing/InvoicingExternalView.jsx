@@ -7,7 +7,8 @@
 // readOnly (sin notas del mes, ayudas de edición ni zona libre; Variables
 // como tabla). Sin «Para revisar», «Qué cambió», exportar ni historial.
 //
-// Props: months, rows, updatedAt (último cambio en la base), loadedAt
+// Props: allMonths (todos), historic (cargados de los Excel viejos: solo
+//   en «Mes a mes»), rows, updatedAt (último cambio en la base), loadedAt
 //   (última lectura)
 // ════════════════════════════════════════════════════════════════════
 
@@ -31,7 +32,8 @@ const FILTERS = { q: '', brand: '' };
 const MARCOMMS_LOGO = '/logos/marcomms-white.png';
 const timeOf = (d) => (d ? new Date(d).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '');
 
-export default function InvoicingExternalView({ months = [], rows = [], updatedAt = null, loadedAt = null }) {
+export default function InvoicingExternalView({ allMonths = [], historic = [], rows = [], updatedAt = null, loadedAt = null }) {
+  const months = useMemo(() => allMonths.filter((m) => !historic.includes(m)), [allMonths, historic]);
   const [tab, setTab] = useState('fijo');
   const [month, setMonth] = useState('');
   const [split, setSplit] = useState(null); // Mes a mes: { month, segment }
@@ -43,7 +45,7 @@ export default function InvoicingExternalView({ months = [], rows = [], updatedA
     setMonth(months.includes(current) ? current : months[months.length - 1] || '');
   }, [months, month]);
 
-  const summaries = useMemo(() => Object.fromEntries(months.map((m) => [m, monthSummary(rows.filter((r) => r.month === m))])), [months, rows]);
+  const summaries = useMemo(() => Object.fromEntries(allMonths.map((m) => [m, monthSummary(rows.filter((r) => r.month === m))])), [allMonths, rows]);
   const monthly = MONTHLY.includes(tab);
   const View = SHEET_VIEWS[tab];
   const sheetProps = { month: monthly ? month : null, rows, api: {}, run: NOOP, askDelete: NOOP, filters: FILTERS, compact: false, prevLabel: '', changes: null, focusRow: null, readOnly: true };
@@ -83,9 +85,9 @@ export default function InvoicingExternalView({ months = [], rows = [], updatedA
         {monthly && month && <TrendKpis months={months} summaries={summaries} month={month} />}
         {tab === 'resumen' ? (
           <div className="space-y-4">
-            <MonthChart months={months} summaries={summaries} selected={split?.month || null} onSelect={(m, segment) => setSplit({ month: m, segment: segment || null })} />
-            <MonthSummary months={months} rows={rows} onOpenMonth={(m) => { setMonth(m); setTab('fijo'); }} />
-            {split && months.includes(split.month) && (
+            <MonthChart months={allMonths} summaries={summaries} selected={split?.month || null} onSelect={(m, segment) => setSplit({ month: m, segment: segment || null })} />
+            <MonthSummary months={allMonths} historic={historic} rows={rows} onOpenMonth={(m) => { setMonth(m); setTab('fijo'); }} />
+            {split && allMonths.includes(split.month) && (
               <MonthSplitModal month={split.month} rows={rows.filter((r) => r.month === split.month)} focus={split.segment} onClose={() => setSplit(null)} />
             )}
           </div>

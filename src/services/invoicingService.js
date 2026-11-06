@@ -31,10 +31,12 @@ export const rowFromDb = (r) => ({
   updatedAt: r.updated_at || null,
 });
 
+// [{ month, historic }]: historic = cargado de los Excel viejos (migration
+// 0053), solo para «Mes a mes»
 export const listMonths = async () => {
-  const { data, error } = await supabase.from(MONTHS).select('month').order('month', { ascending: true });
+  const { data, error } = await supabase.from(MONTHS).select('*').order('month', { ascending: true });
   if (error) throw error;
-  return (data || []).map((m) => m.month);
+  return (data || []).map((m) => ({ month: m.month, historic: !!m.historic }));
 };
 
 export const listRows = async () => {
@@ -155,5 +157,5 @@ export const getPublicInvoicing = async (token) => {
   const { data, error } = await supabase.rpc('get_public_invoicing', { p_token: token });
   if (error) throw error;
   if (!data) return null;
-  return { months: data.months || [], rows: (data.rows || []).map(rowFromDb), updatedAt: data.updatedAt || null };
+  return { months: data.months || [], historic: data.historic || [], rows: (data.rows || []).map(rowFromDb), updatedAt: data.updatedAt || null };
 };

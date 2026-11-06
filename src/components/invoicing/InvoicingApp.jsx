@@ -44,6 +44,8 @@ const SHEET_TAB = { crm_extra: 'crm', mkt_libre: 'mkt', notas: 'fijo' };
 export default function InvoicingApp({ onBack, currentUser, invoicing, people = [], autoView = null, onAutoViewDone }) {
   const api = invoicing;
   const { months, rows, loading, error, missing } = api;
+  const allMonths = api.allMonths || months; // + históricos (solo «Mes a mes»)
+  const historicMonths = api.historicMonths || [];
   const confirm = useConfirm();
   const [tab, setTab] = useState('fijo');
   const [month, setMonth] = useState('');
@@ -81,7 +83,7 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
   const prevMonth = idx > 0 ? months[idx - 1] : null;
   const prevLabel = prevMonth ? monthLabel(prevMonth) : '';
   const nextMonth = months.length ? nextMonthKey(months[months.length - 1]) : todayIso().slice(0, 7);
-  const summaries = useMemo(() => Object.fromEntries(months.map((m) => [m, monthSummary(rows.filter((r) => r.month === m))])), [months, rows]);
+  const summaries = useMemo(() => Object.fromEntries(allMonths.map((m) => [m, monthSummary(rows.filter((r) => r.month === m))])), [allMonths, rows]);
   const breakdownRows = useMemo(() => (breakdown ? rows.filter((r) => r.month === breakdown.month) : []), [rows, breakdown]);
   const openMonth = (m, t = 'fijo') => { setMonth(m); setTab(t); };
   const monthRows = useMemo(() => rows.filter((r) => r.month === month), [rows, month]);
@@ -213,15 +215,15 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
         ) : tab === 'resumen' ? (
           <div className="space-y-4">
             <MonthChart
-              months={months}
+              months={allMonths}
               summaries={summaries}
               selected={breakdown?.month || null}
               onSelect={(m, segment) => setBreakdown({ month: m, segment: segment || null })}
             />
-            {breakdown && months.includes(breakdown.month) && (
+            {breakdown && allMonths.includes(breakdown.month) && (
               <MonthSplitModal month={breakdown.month} rows={breakdownRows} focus={breakdown.segment} onClose={() => setBreakdown(null)} />
             )}
-            <MonthSummary months={months} rows={rows} onOpenMonth={(m) => openMonth(m)} />
+            <MonthSummary months={allMonths} historic={historicMonths} rows={rows} onOpenMonth={(m) => openMonth(m)} />
           </div>
         ) : tab === 'historial' ? (
           <HistoryView months={months} />

@@ -2,7 +2,9 @@
 // useInvoicing — Facturación MarComms (Supabase + realtime)
 // ════════════════════════════════════════════════════════════════════
 // Devuelve:
-//   months (['YYYY-MM'], del más viejo al más nuevo), rows, loading,
+//   months (['YYYY-MM'] que se trabajan, del más viejo al más nuevo),
+//   historicMonths (los cargados de los Excel viejos: solo «Mes a mes»),
+//   allMonths (todos, ordenados), rows, loading,
 //   error, missing (falta la migración 0048)
 //   patchCell(row, patch, remove?) → se ve al instante y se guarda
 //   patchSingleton(month, sheet, patch) → notas / zona libre (crea la
@@ -14,7 +16,7 @@
 // por realtime: se vuelve a leer cuando terminan.
 // ════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createMonth as createMonthDb, deleteRow, insertRows, listMonths, listRows, patchRow,
   setRowPosition, subscribeInvoicing,
@@ -35,7 +37,7 @@ const applyPatch = (data, patch, remove = []) => {
 };
 
 export const useInvoicing = (currentUser) => {
-  const [months, setMonths] = useState([]);
+  const [monthList, setMonthList] = useState([]); // [{ month, historic }]
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,13 +46,16 @@ export const useInvoicing = (currentUser) => {
   const stale = useRef(false);
   const timer = useRef(null);
   const by = currentUser?.name || '';
+  const months = useMemo(() => monthList.filter((m) => !m.historic).map((m) => m.month), [monthList]);
+  const historicMonths = useMemo(() => monthList.filter((m) => m.historic).map((m) => m.month), [monthList]);
+  const allMonths = useMemo(() => monthList.map((m) => m.month), [monthList]);
 
   const refetch = useCallback(async () => {
     if (pending.current > 0) { stale.current = true; return; }
     try {
       const [m, r] = await Promise.all([listMonths(), listRows()]);
       if (pending.current > 0) { stale.current = true; return; }
-      setMonths(m); setRows(r); setError(null); setMissing(false);
+      setMonthList(m); setRows(r); setError(null); setMissing(false);
     } catch (e) {
       if (isMissingTable(e)) setMissing(true);
       else { console.error('[useInvoicing] fetch error:', e); setError(e); }
@@ -128,10 +133,10 @@ export const useInvoicing = (currentUser) => {
   const createMonth = useCallback(({ toMonth, fromMonth, copyVariables = false }) => {
     const source = rows.filter((r) => r.month === fromMonth);
     const copy = fromMonth ? buildMonthCopy(source, { toMonth, copyVariables, newId }) : [];
-    setMonths((prev) => [...new Set([...prev, toMonth])].sort());
+    setMonthList((prev) => (prev.some((m) => m.month === toMonth) ? prev : [...prev, { month: toMonth, historic: false }].sort((a, b) => a.month.localeCompare(b.month))));
     setRows((prev) => [...prev, ...copy]);
     return write(() => createMonthDb(toMonth, copy, by));
   }, [rows, write, by]);
 
-  return { months, rows, loading, error, missing, refetch, patchCell, patchSingleton, addRow, moveRow, removeRow, createMonth };
+  return { months, historicMonths, allMonths, rows, loading, error, missing, refetch, patchCell, patchSingleton, addRow, moveRow, removeRow, createMonth };
 };
