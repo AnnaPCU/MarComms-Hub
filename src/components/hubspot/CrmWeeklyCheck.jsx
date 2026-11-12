@@ -24,7 +24,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { CalendarClock, LayoutList, Pencil, Plus } from 'lucide-react';
 import { TRAFFIC_LIGHTS } from '@/constants/crmWeekly';
 import { todayIso as getTodayIso } from '@/utils/date';
-import { checksByEntity, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight, weeklyTotals } from '@/utils/crmWeekly';
+import { checksByEntity, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight, weeklyTotals } from '@/utils/crmWeekly';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useStoredPref } from '@/hooks/useStoredPref';
 import { Kpi } from './BillingBits';
@@ -69,7 +69,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   const map = useMemo(() => checksByEntity(checks), [checks]);
   const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, items)])), [entities, map, todayIso, items]);
   const tags = useMemo(() => entityTags(entities), [entities]);
-  const countries = useMemo(() => [...new Set(entities.map((e) => e.country).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es')), [entities]);
+  const countries = useMemo(() => countryOptions(entities), [entities]);
   // Los colores del semáforo cuentan sin el filtro de color (para poder cambiar de color)
   const lightCounts = useMemo(() => filterEntities(entities, { ...filters, light: '' }, summaries).reduce((acc, e) => {
     const l = trafficLight(summaries[e.code]); if (l) acc[l.id] = (acc[l.id] || 0) + 1; return acc;

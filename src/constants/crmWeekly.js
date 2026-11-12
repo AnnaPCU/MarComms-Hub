@@ -38,6 +38,17 @@ export const CRM_ENTITIES = [
 
 export const CRM_BRANDS = ['Control Union', 'Peterson'];
 
+// Países de América (los 35), para sugerir al sumar o editar una entidad.
+// Se escriben como en el resto del Hub («Canada», «Estados Unidos»). El
+// campo País acepta igual cualquier otro (España, Portugal, Alemania…).
+export const AMERICA_COUNTRIES = [
+  'Antigua y Barbuda', 'Argentina', 'Bahamas', 'Barbados', 'Belice', 'Bolivia', 'Brasil', 'Canada',
+  'Chile', 'Colombia', 'Costa Rica', 'Cuba', 'Dominica', 'Ecuador', 'El Salvador', 'Estados Unidos',
+  'Granada', 'Guatemala', 'Guyana', 'Haití', 'Honduras', 'Jamaica', 'México', 'Nicaragua', 'Panamá',
+  'Paraguay', 'Perú', 'República Dominicana', 'San Cristóbal y Nieves', 'San Vicente y las Granadinas',
+  'Santa Lucía', 'Surinam', 'Trinidad y Tobago', 'Uruguay', 'Venezuela',
+];
+
 export const CRM_CHECK_ITEMS = [
   { id: 'outlook', label: 'Outlook y calendario conectados' },
   { id: 'deals', label: 'Deals nuevos cargados', hint: 'Y las renovaciones, en las entidades de certificación' },

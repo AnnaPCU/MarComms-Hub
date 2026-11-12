@@ -4,7 +4,7 @@
 //   daysUntil, deadlineTone, formatShortDate, parseDmy, maskDmy,
 //   checksByEntity, entitySummary, weeklyTotals, newCheckItemId,
 //   trafficLight, sortEntities, filterEntities, entityTags, cleanTags,
-//   entityProblem, entityActivities, activityGroups
+//   entityProblem, entityActivities, activityGroups, countryOptions
 //
 // Los ítems del checklist vienen de la base (crm_check_items, migration
 // 0044); CRM_CHECK_ITEMS es el respaldo si la tabla no está.
@@ -16,7 +16,7 @@
 // CRM_WEEKLY_NOTIFY_USER (redDeadlines → utils/notifications).
 // ════════════════════════════════════════════════════════════════════
 
-import { CRM_CHECK_ITEMS, CRM_ENTITIES, CRM_PRIORITIES, DEADLINE_CALM_DAYS, DEADLINE_RED_DAYS, TRAFFIC_LIGHTS, TRAFFIC_YELLOW_PCT } from '@/constants/crmWeekly';
+import { AMERICA_COUNTRIES, CRM_CHECK_ITEMS, CRM_ENTITIES, CRM_PRIORITIES, DEADLINE_CALM_DAYS, DEADLINE_RED_DAYS, TRAFFIC_LIGHTS, TRAFFIC_YELLOW_PCT } from '@/constants/crmWeekly';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const utcDay = (iso) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
@@ -204,4 +204,16 @@ export const activityGroups = (entities = [], by = 'entity') => {
     groups.get(key).entities.push(e);
   });
   return [...groups.values()];
+};
+
+// Países para el campo País de una entidad: los 35 de América más los que
+// ya usan las entidades (ej. España, Alemania), sin repetir (sin distinguir
+// acentos ni mayúsculas) y en orden alfabético.
+export const countryOptions = (entities = []) => {
+  const seen = new Map();
+  [...AMERICA_COUNTRIES, ...entities.map((e) => e.country)].forEach((c) => {
+    const v = String(c || '').trim();
+    if (v && !seen.has(norm(v))) seen.set(norm(v), v);
+  });
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'es'));
 };

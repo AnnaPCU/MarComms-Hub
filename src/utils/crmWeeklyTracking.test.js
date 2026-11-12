@@ -3,7 +3,8 @@
 // próximas actividades del Weekly check (nov 2026)
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { activityGroups, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, trafficLight } from './crmWeekly';
+import { AMERICA_COUNTRIES } from '@/constants/crmWeekly';
+import { activityGroups, countryOptions, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, trafficLight } from './crmWeekly';
 
 const TODAY = '2026-11-12';
 const ITEMS = [{ id: 'a', label: 'A', position: 0 }, { id: 'b', label: 'B', position: 1 }, { id: 'c', label: 'C', position: 2 }, { id: 'd', label: 'D', position: 3 }];
@@ -97,5 +98,16 @@ describe('próximas actividades', () => {
   });
   it('entitySummary sigue igual con los ítems de la base', () => {
     expect(entitySummary(checks['1'], TODAY, ITEMS)).toMatchObject({ done: 1, total: 4, overdue: 1 });
+  });
+});
+
+describe('países para el alta', () => {
+  it('están los 35 de América más los que ya se usan, sin repetir', () => {
+    expect(AMERICA_COUNTRIES).toHaveLength(35);
+    const list = countryOptions([{ country: 'España' }, { country: 'argentina' }, { country: 'Alemania' }, { country: '' }]);
+    expect(list).toHaveLength(37);
+    expect(list).toEqual(expect.arrayContaining(['Uruguay', 'Venezuela', 'Canada', 'México', 'España', 'Alemania']));
+    expect(list.filter((c) => c.toLowerCase() === 'argentina')).toEqual(['Argentina']);
+    expect(list[0]).toBe('Alemania');
   });
 });
