@@ -22,12 +22,10 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { CalendarClock, LayoutList, Pencil, Plus } from 'lucide-react';
-import { TRAFFIC_LIGHTS } from '@/constants/crmWeekly';
 import { todayIso as getTodayIso } from '@/utils/date';
-import { checksByEntity, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight, weeklyTotals } from '@/utils/crmWeekly';
+import { checksByEntity, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight } from '@/utils/crmWeekly';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useStoredPref } from '@/hooks/useStoredPref';
-import { Kpi } from './BillingBits';
 import WeeklyChecklist from './WeeklyChecklist';
 import CrmNextSteps from './CrmNextSteps';
 import EntityButton, { PriorityChip } from './EntityButton';
@@ -54,7 +52,10 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   } = data;
   const confirm = useConfirm();
   const [filters, setFilters] = useState({ brand: '', light: '', priority: '', tag: '' });
-  const [sort, setSort] = useStoredPref('marcomms_hub_crm_weekly_sort', 'manual');
+  const [sortFirst, setSortFirst] = useStoredPref('marcomms_hub_crm_weekly_sort', 'manual');
+  const [sortSecond, setSortSecond] = useStoredPref('marcomms_hub_crm_weekly_sort2', 'manual');
+  const sort = [sortFirst, sortSecond];
+  const setSort = ([a, b]) => { setSortFirst(a); setSortSecond(b); };
   const [subview, setSubview] = useStoredPref('marcomms_hub_crm_weekly_view', 'entities');
   const [range, setRange] = useStoredPref('marcomms_hub_crm_weekly_range', '14');
   const [groupBy, setGroupBy] = useStoredPref('marcomms_hub_crm_weekly_group', 'entity');
@@ -74,12 +75,11 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   const lightCounts = useMemo(() => filterEntities(entities, { ...filters, light: '' }, summaries).reduce((acc, e) => {
     const l = trafficLight(summaries[e.code]); if (l) acc[l.id] = (acc[l.id] || 0) + 1; return acc;
   }, {}), [entities, filters, summaries]);
-  const visible = useMemo(() => sortEntities(filterEntities(entities, filters, summaries), sort, summaries), [entities, filters, summaries, sort]);
+  const visible = useMemo(() => sortEntities(filterEntities(entities, filters, summaries), sort, summaries), [entities, filters, summaries, sortFirst, sortSecond]); // eslint-disable-line react-hooks/exhaustive-deps
   const entity = visible.find((e) => e.code === selected) || visible[0];
   const entitySteps = steps.filter((s) => s.entityCode === entity?.code);
   const summary = entity ? summaries[entity.code] : null;
   const light = trafficLight(summary);
-  const totals = weeklyTotals(visible, map, todayIso, items);
 
   // En pantallas chicas la lista va arriba: al elegir, baja a la entidad
   const pick = (code) => {
@@ -158,17 +158,6 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
       </div>
 
       <EntityFilters filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} sort={sort} onSort={setSort} lightCounts={lightCounts} tags={tags} />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Ítems cumplidos" value={`${totals.done}/${totals.total}`} accent="text-sky-600" hint={`${totals.total ? Math.round((totals.done / totals.total) * 100) : 0} % del checklist`} />
-        <Kpi label="Vencidos" value={totals.overdue} accent={totals.overdue ? 'text-red-600' : 'text-slate-800'} hint="Sin tildar y con la fecha pasada" />
-        <Kpi label="Vencen en 7 días" value={totals.soon} accent={totals.soon ? 'text-amber-600' : 'text-slate-800'} hint="Sin tildar" />
-        <Kpi
-          label="Semáforo"
-          value={<span className="flex items-center gap-3 text-xl md:text-2xl">{Object.values(TRAFFIC_LIGHTS).map((l) => <span key={l.id} className="flex items-center gap-1" title={`${l.label}: ${l.range}`}><span className={`w-3 h-3 rounded-full ${l.dot}`} />{visible.filter((e) => trafficLight(summaries[e.code])?.id === l.id).length}</span>)}</span>}
-          hint={`${visible.length} entidades · verde 100 %, amarillo 50–99 %, rojo < 50 %`}
-        />
-      </div>
 
       {!tracking && !loading && <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-[11px] font-bold">Para sumar entidades, ponerles importancia y tags, y cargar fechas en los próximos steps, falta correr la migración 0070 en Supabase. Mientras tanto se ven las 16 entidades de siempre.</p>}
 

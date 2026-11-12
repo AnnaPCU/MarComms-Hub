@@ -2,22 +2,29 @@
 // EntityFilters — Filtros y orden de las entidades del Weekly check
 // ════════════════════════════════════════════════════════════════════
 // Marca · semáforo (con cuántas entidades hay de cada color) · importancia
-// · tag · orden. Valen para la lista de entidades y para «Próximas
+// · tag · orden doble («Ordenar por» + «y después por», con un botón para
+// darlos vuelta). Valen para la lista de entidades y para «Próximas
 // actividades».
 //
 // Props: filters ({ brand, light, priority, tag }), onChange(patch),
-//   sort, onSort, lightCounts ({ green, yellow, red }), tags (los usados)
+//   sort ([primero, segundo]), onSort([primero, segundo]),
+//   lightCounts ({ green, yellow, red }), tags (los usados)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { ArrowUpDown, Tag } from 'lucide-react';
+import { ArrowLeftRight, ArrowUpDown, Tag } from 'lucide-react';
 import { CRM_BRANDS, CRM_PRIORITIES, CRM_SORTS, TRAFFIC_LIGHTS } from '@/constants/crmWeekly';
 
 const pill = (on) => `px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${on ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`;
 const selectCls = 'bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-[11px] font-black text-slate-600 outline-none focus:ring-2 focus:ring-sky-200';
 
-export default function EntityFilters({ filters, onChange, sort, onSort, lightCounts = {}, tags = [] }) {
+export default function EntityFilters({ filters, onChange, sort = ['manual', 'manual'], onSort, lightCounts = {}, tags = [] }) {
   const { brand, light, priority, tag } = filters;
+  const [first, second] = sort;
+  // El segundo criterio no puede repetir al primero (ni el semáforo al revés)
+  const family = (id) => (id === 'redFirst' || id === 'greenFirst' ? 'light' : id);
+  const secondOptions = CRM_SORTS.filter((s) => s.id === 'manual' || family(s.id) !== family(first));
+  const setFirst = (id) => onSort([id, id === 'manual' || family(second) === family(id) ? 'manual' : second]);
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
@@ -39,11 +46,30 @@ export default function EntityFilters({ filters, onChange, sort, onSort, lightCo
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-          <ArrowUpDown className="w-3.5 h-3.5" /> Orden
-          <select value={sort} onChange={(e) => onSort(e.target.value)} className={selectCls}>
+          <ArrowUpDown className="w-3.5 h-3.5" /> Ordenar por
+          <select value={first} onChange={(e) => setFirst(e.target.value)} className={selectCls}>
             {CRM_SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </label>
+        {first !== 'manual' && (
+          <>
+            <button
+              onClick={() => second !== 'manual' && onSort([second, first])}
+              disabled={second === 'manual'}
+              title="Dar vuelta: el segundo criterio pasa a ser el primero"
+              aria-label="Dar vuelta el orden"
+              className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-sky-700 hover:border-sky-300 flex items-center justify-center disabled:opacity-30"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+            </button>
+            <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+              y después por
+              <select value={second} onChange={(e) => onSort([first, e.target.value])} className={selectCls}>
+                {secondOptions.map((s) => <option key={s.id} value={s.id}>{s.id === 'manual' ? '—' : s.label}</option>)}
+              </select>
+            </label>
+          </>
+        )}
         <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
           Importancia
           <select value={priority} onChange={(e) => onChange({ priority: e.target.value })} className={selectCls}>

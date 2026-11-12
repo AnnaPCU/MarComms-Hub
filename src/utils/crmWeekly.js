@@ -121,21 +121,27 @@ const priorityRank = (e) => PRIORITY_RANK[e?.priority] ?? CRM_PRIORITIES.length;
 const exactPct = (s) => (s && s.total ? s.done / s.total : 0);
 
 // Ordena las entidades. summaries: { [code]: entitySummary }.
+// sort: un criterio o una lista de criterios que se aplican en orden (el
+// segundo desempata al primero; nov 2026: «semáforo y después importancia»
+// o al revés). Criterios:
 //   manual: como están (position); redFirst / greenFirst: por color del
 //   semáforo y, dentro del color, por avance; priority: alta → baja (sin
 //   importancia al final); country: país A–Z.
-// Desempate: position y código.
+// Al final siempre desempata position y código.
 export const sortEntities = (entities = [], sort = 'manual', summaries = {}) => {
   const base = (a, b) => (a.position ?? 0) - (b.position ?? 0) || String(a.code).localeCompare(String(b.code));
   const light = (e) => trafficLight(summaries[e.code])?.rank ?? -1;
-  const cmp = {
-    manual: base,
-    redFirst: (a, b) => light(a) - light(b) || exactPct(summaries[a.code]) - exactPct(summaries[b.code]) || priorityRank(a) - priorityRank(b) || base(a, b),
-    greenFirst: (a, b) => light(b) - light(a) || exactPct(summaries[b.code]) - exactPct(summaries[a.code]) || priorityRank(a) - priorityRank(b) || base(a, b),
-    priority: (a, b) => priorityRank(a) - priorityRank(b) || light(a) - light(b) || base(a, b),
-    country: (a, b) => norm(a.country).localeCompare(norm(b.country)) || base(a, b),
-  }[sort] || base;
-  return [...entities].sort(cmp);
+  const by = {
+    redFirst: (a, b) => light(a) - light(b) || exactPct(summaries[a.code]) - exactPct(summaries[b.code]),
+    greenFirst: (a, b) => light(b) - light(a) || exactPct(summaries[b.code]) - exactPct(summaries[a.code]),
+    priority: (a, b) => priorityRank(a) - priorityRank(b),
+    country: (a, b) => norm(a.country).localeCompare(norm(b.country)),
+  };
+  const keys = (Array.isArray(sort) ? sort : [sort]).filter((k) => by[k]);
+  return [...entities].sort((a, b) => {
+    for (const k of keys) { const d = by[k](a, b); if (d) return d; }
+    return base(a, b);
+  });
 };
 
 // Filtros: marca, color del semáforo, importancia y tag (vacío = todos)

@@ -37,6 +37,16 @@ describe('orden y filtros', () => {
     expect(sortEntities(ENTS, 'redFirst', SUMS).map((e) => e.code)).toEqual(['4', '2', '3', '1']);
     expect(sortEntities(ENTS, 'greenFirst', SUMS).map((e) => e.code)).toEqual(['1', '3', '2', '4']);
   });
+  it('orden doble: el segundo criterio desempata al primero', () => {
+    const tie = [
+      { code: 'a', priority: 'baja', position: 0 }, { code: 'b', priority: 'alta', position: 1 },
+      { code: 'c', priority: 'alta', position: 2 }, { code: 'd', priority: null, position: 3 },
+    ];
+    const s = { a: sum(1), b: sum(4), c: sum(1), d: sum(1) };
+    expect(sortEntities(tie, ['redFirst', 'priority'], s).map((e) => e.code)).toEqual(['c', 'a', 'd', 'b']);
+    expect(sortEntities(tie, ['priority', 'redFirst'], s).map((e) => e.code)).toEqual(['c', 'b', 'a', 'd']);
+    expect(sortEntities(tie, ['priority', 'manual'], s).map((e) => e.code)).toEqual(['b', 'c', 'a', 'd']);
+  });
   it('por importancia, país y orden original', () => {
     expect(sortEntities(ENTS, 'priority', SUMS).map((e) => e.code)).toEqual(['2', '4', '1', '3']);
     expect(sortEntities(ENTS, 'country', SUMS).map((e) => e.code)).toEqual(['2', '4', '3', '1']);

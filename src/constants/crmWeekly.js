@@ -86,7 +86,8 @@ export const CRM_PRIORITIES = [
   { id: 'baja',  label: 'Baja',  rank: 2, chip: 'bg-white text-slate-500 border-slate-300' },
 ];
 
-// Orden de la lista de entidades
+// Orden de la lista de entidades: «Ordenar por» + «y después por» (el
+// segundo desempata al primero; 'manual' = sin segundo criterio)
 export const CRM_SORTS = [
   { id: 'manual',   label: 'Orden original' },
   { id: 'redFirst', label: 'Semáforo: rojo primero' },
