@@ -102,6 +102,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     socialPosts = [],
     crmChecks = [],
     crmItems,
+    crmEntities,
     invoicingRows = [],
   } = data || {};
 
@@ -482,7 +483,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   // ────────────────────────────────────────────────────────────────
   if (sameName(options.crmWeeklyNotifyUser || CRM_WEEKLY_NOTIFY_USER)) {
     const todayIso = toIsoDate(today);
-    redDeadlines(crmChecks, crmItems || undefined, todayIso).forEach(({ entity, item, deadline, days }) => {
+    redDeadlines(crmChecks, crmItems || undefined, todayIso, crmEntities || undefined).forEach(({ entity, item, deadline, days }) => {
       const when = days < 0 ? (days === -1 ? 'venció ayer' : `venció hace ${-days} días`)
         : days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
       notifs.push({

@@ -3,28 +3,39 @@
 // Mismo esquema que usePlanExtras.
 // ════════════════════════════════════════════════════════════════════
 // Devuelve:
+//   entities (de crm_weekly_entities; CRM_ENTITIES si falta la migración
+//   0070), tracking (true si la 0070 está: se pueden sumar entidades,
+//   importancia, tags y fecha / estado de los steps),
 //   items (ítems del checklist; CRM_CHECK_ITEMS si falta la migración
 //   0044), checks, steps, loading, error, missing
 //   saveCheck({ entityCode, itemId, patch: { done?, deadline? }, updatedBy })
 //     → se ve al instante (optimista) y se guarda; si falla, vuelve atrás
 //   createStep(obj) / updateStep(id, patch) / removeStep(id)
 //   createItem(obj) / updateItem(id, patch) / removeItem(id)
+//   createEntity(obj) / updateEntity(code, patch) / removeEntity(code)
+//   (updateEntity se ve al instante: tags, importancia)
+//   updateStepOptimistic(id, patch): igual que updateStep, pero se ve al
+//   instante (tildar un step desde «Próximas actividades»)
 //
 // Si las tablas todavía no existen en la base (falta la migración 0043),
 // `missing` = true y la vista muestra el aviso en vez de fallar.
 // ════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CRM_CHECK_ITEMS } from '@/constants/crmWeekly';
+import { CRM_CHECK_ITEMS, CRM_ENTITIES } from '@/constants/crmWeekly';
 import {
+  listEntities, createEntity, updateEntity, deleteEntity,
   listItems, createItem, updateItem, deleteItem,
   listChecks, saveCheck, listSteps, createStep, updateStep, deleteStep, subscribeCrmWeekly,
 } from '@/services/crmWeeklyService';
 
 const isMissingTable = (e) => e?.code === '42P01' || e?.code === 'PGRST205' || /does not exist|schema cache/i.test(e?.message || '');
+const FALLBACK_ENTITIES = CRM_ENTITIES.map((e, i) => ({ ...e, priority: null, tags: [], position: i }));
 
 export const useCrmWeekly = (options = {}) => {
   const { realtime = true } = options;
+  const [entities, setEntities] = useState(FALLBACK_ENTITIES);
+  const [tracking, setTracking] = useState(false);
   const [items, setItems] = useState(CRM_CHECK_ITEMS);
   const [checks, setChecks] = useState([]);
   const [steps, setSteps] = useState([]);
@@ -40,6 +51,9 @@ export const useCrmWeekly = (options = {}) => {
       // Ítems: si la tabla todavía no existe, quedan los del código
       try { const it = await listItems(); setItems(it.length ? it : CRM_CHECK_ITEMS); }
       catch (e) { if (!isMissingTable(e)) throw e; setItems(CRM_CHECK_ITEMS); }
+      // Entidades: si falta la 0070, quedan las del código y sin edición
+      try { const en = await listEntities(); setEntities(en.length ? en : FALLBACK_ENTITIES); setTracking(true); }
+      catch (e) { if (!isMissingTable(e)) throw e; setEntities(FALLBACK_ENTITIES); setTracking(false); }
     } catch (e) {
       if (isMissingTable(e)) setMissing(true);
       else { console.error('[useCrmWeekly] fetch error:', e); setError(e); }
@@ -90,8 +104,18 @@ export const useCrmWeekly = (options = {}) => {
       createItem: wrap(createItem),
       updateItem: wrap(updateItem),
       removeItem: wrap(deleteItem),
+      createEntity: wrap(createEntity),
+      updateEntity: wrap(async (code, patch) => {
+        setEntities((prev) => prev.map((e) => (e.code === code ? { ...e, ...patch, code } : e)));
+        return updateEntity(code, patch);
+      }),
+      removeEntity: wrap(deleteEntity),
+      updateStepOptimistic: wrap(async (id, patch) => {
+        setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+        return updateStep(id, patch);
+      }),
     };
   }, [refetch]);
 
-  return { items, checks, steps, loading, error, missing, refetch, ...api };
+  return { entities, tracking, items, checks, steps, loading, error, missing, refetch, ...api };
 };

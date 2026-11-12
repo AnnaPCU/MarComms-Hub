@@ -2,25 +2,30 @@
 // CrmNextSteps — Próximos steps de una entidad (Weekly check)
 // ════════════════════════════════════════════════════════════════════
 // Igual que las iniciativas de los planes: una tabla por tipo (# · Próximo
-// step · Detalle). Clic en una fila → editor; «Agregar step» al pie de
-// cada tabla carga directo (Enter guarda, Esc cancela); «Nuevo step»
-// abre el editor.
+// step · Detalle; desde nov 2026, con la 0070, también Fecha y tilde de
+// completado, StepsTable). Clic en una fila → editor; «Agregar step» al
+// pie de cada tabla carga directo (Enter guarda, Esc cancela); «Nuevo
+// step» abre el editor. Los completados se esconden (botón para verlos).
+// Los steps sin completar con fecha aparecen en «Próximas actividades».
 //
 // Props: entity, steps (los de la entidad), c, navy, currentUser,
-//   createStep / updateStep / removeStep
+//   tracking, todayIso, dark, createStep / updateStep / removeStep
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
 import { Check, ListTodo, Plus, X } from 'lucide-react';
 import { initiativeCategories, initiativeGroups } from '@/utils/planKpis';
-import { InitiativesTables, ReportSectionTitle } from '@/components/plans/PlanReportBlocks';
+import { ReportSectionTitle } from '@/components/plans/PlanReportBlocks';
 import NextStepEditor from './NextStepEditor';
+import StepsTable from './StepsTable';
 
-export default function CrmNextSteps({ entity, steps, c, navy, currentUser, createStep, updateStep, removeStep }) {
+export default function CrmNextSteps({ entity, steps, c, navy, currentUser, tracking = false, todayIso, dark = false, createStep, updateStep, removeStep }) {
   const [editor, setEditor] = useState(null); // { step } | { defaults }
   const [quick, setQuick] = useState(null);   // { key, category, title, saving }
   const [flashError, setFlashError] = useState('');
-  const groups = initiativeGroups(steps);
+  const [showDone, setShowDone] = useState(false);
+  const doneCount = steps.filter((s) => s.done).length;
+  const groups = initiativeGroups(showDone ? steps : steps.filter((s) => !s.done));
   const categories = initiativeCategories(steps);
   const nextPosition = steps.reduce((m, s) => Math.max(m, (s.position ?? 0) + 1), 0);
   const showError = (msg) => { setFlashError(msg); setTimeout(() => setFlashError(''), 6000); };
@@ -42,6 +47,11 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, crea
     if (editor.step) { if (Object.keys(data).length) await updateStep(editor.step.id, data); }
     else await createStep({ ...data, entityCode: entity.code, position: nextPosition, createdBy: by });
     setEditor(null);
+  };
+
+  const toggleDone = async (s) => {
+    try { await updateStep(s.id, { done: !s.done }); }
+    catch (_e) { showError('No se pudo guardar el cambio. Probá de nuevo.'); }
   };
 
   const footer = (g) => (
@@ -80,23 +90,29 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, crea
       {groups.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-slate-200 px-4 py-8 text-center">
           <ListTodo className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-          <p className="text-[11px] font-bold text-slate-400">Todavía no hay próximos steps para esta entidad. Cargá el primero con «Nuevo step».</p>
+          <p className="text-[11px] font-bold text-slate-400">{doneCount ? 'No quedan steps pendientes en esta entidad.' : 'Todavía no hay próximos steps para esta entidad.'} Cargá uno con «Nuevo step».</p>
         </div>
       ) : (
-        <>
-          <InitiativesTables
-            groups={groups}
-            c={c}
-            navy={navy}
-            titleLabel="Próximo step"
-            otherLabel="Otros steps"
-            rowHint="Clic para editar el step"
-            onRowClick={(s) => setEditor({ step: s })}
-            footer={footer}
-          />
-          <p className="mt-2 px-1 text-[10px] font-bold text-slate-400">Clic en un step para editarlo (tipo, nombre, detalle) o eliminarlo.</p>
-        </>
+        <StepsTable
+          groups={groups}
+          c={c}
+          navy={navy}
+          todayIso={todayIso}
+          dark={dark}
+          tracking={tracking}
+          onRowClick={(s) => setEditor({ step: s })}
+          onToggleDone={toggleDone}
+          footer={footer}
+        />
       )}
+      <div className="mt-2 px-1 flex items-center gap-3 flex-wrap">
+        <p className="flex-1 text-[10px] font-bold text-slate-400">Clic en un step para editarlo ({tracking ? 'tipo, nombre, detalle, fecha' : 'tipo, nombre, detalle'}) o eliminarlo.{tracking ? ' Los que tienen fecha aparecen en «Próximas actividades».' : ''}</p>
+        {doneCount > 0 && (
+          <button onClick={() => setShowDone((v) => !v)} className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-sky-700">
+            {showDone ? 'Esconder completados' : `Ver completados (${doneCount})`}
+          </button>
+        )}
+      </div>
 
       {editor && (
         <NextStepEditor
@@ -104,6 +120,7 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, crea
           entity={entity}
           defaults={editor.defaults}
           categories={categories}
+          tracking={tracking}
           onSave={saveEditor}
           onDelete={editor.step ? async () => {
             try { await removeStep(editor.step.id); setEditor(null); }

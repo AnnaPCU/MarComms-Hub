@@ -1,23 +1,80 @@
 // ════════════════════════════════════════════════════════════════════
 // CRM WEEKLY SERVICE — Weekly check de CRM HubSpot
 // ════════════════════════════════════════════════════════════════════
-// Conectado a Supabase (migrations 0043 y 0044):
+// Conectado a Supabase (migrations 0043, 0044 y 0070):
+//   crm_weekly_entities — entidades (países) del Weekly check (0070)
 //   crm_check_items   — ítems del checklist (valen para todas las entidades)
 //   crm_weekly_checks — checklist: una fila por entidad e ítem
 //   crm_next_steps    — próximos steps de cada entidad
 //
+// Entidad (UI): { code, name, brand, country, priority, tags, position, createdBy }
 // Ítem (UI):  { id, label, hint, position, createdBy }
 // Check (UI): { id, entityCode, itemId, done, deadline ('YYYY-MM-DD' | ''),
 //               doneAt, updatedBy, updatedAt }
 // Step (UI):  { id, entityCode, category, title, detail, position,
+//               dueDate ('YYYY-MM-DD' | ''), done, doneAt (0070),
 //               createdBy, createdAt, updatedAt }
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
 
+const ENTITIES = 'crm_weekly_entities';
 const ITEMS = 'crm_check_items';
 const CHECKS = 'crm_weekly_checks';
 const STEPS = 'crm_next_steps';
+
+// ── Entidades ──
+export const entityFromRow = (row) => (row ? {
+  code:      row.code,
+  name:      row.name || '',
+  brand:     row.brand || 'Control Union',
+  country:   row.country || '',
+  priority:  row.priority || null,
+  tags:      Array.isArray(row.tags) ? row.tags : [],
+  position:  row.position ?? 0,
+  createdBy: row.created_by || '',
+} : null);
+
+const entityToRow = (obj) => {
+  const row = {};
+  if (obj.code      !== undefined) row.code = String(obj.code || '').trim();
+  if (obj.name      !== undefined) row.name = String(obj.name || '').trim();
+  if (obj.brand     !== undefined) row.brand = obj.brand || 'Control Union';
+  if (obj.country   !== undefined) row.country = String(obj.country || '').trim() || null;
+  if (obj.priority  !== undefined) row.priority = obj.priority || null;
+  if (obj.tags      !== undefined) row.tags = obj.tags || [];
+  if (obj.position  !== undefined) row.position = obj.position ?? 0;
+  if (obj.createdBy !== undefined) row.created_by = obj.createdBy || null;
+  return row;
+};
+
+export const listEntities = async () => {
+  const { data, error } = await supabase.from(ENTITIES).select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(entityFromRow);
+};
+export const createEntity = async (obj) => {
+  const { data, error } = await supabase.from(ENTITIES).insert(entityToRow(obj)).select('*').single();
+  if (error) throw error;
+  return entityFromRow(data);
+};
+// El código no se cambia (lo usan los checks y los steps)
+export const updateEntity = async (code, patch) => {
+  const { code: _ignored, ...rest } = patch || {};
+  const { data, error } = await supabase.from(ENTITIES).update(entityToRow(rest)).eq('code', code).select('*').single();
+  if (error) throw error;
+  return entityFromRow(data);
+};
+// Borra la entidad y lo que tenía cargado (checklist y próximos steps)
+export const deleteEntity = async (code) => {
+  const { error } = await supabase.from(ENTITIES).delete().eq('code', code);
+  if (error) throw error;
+  const { error: e2 } = await supabase.from(CHECKS).delete().eq('entity_code', code);
+  if (e2) throw e2;
+  const { error: e3 } = await supabase.from(STEPS).delete().eq('entity_code', code);
+  if (e3) throw e3;
+  return true;
+};
 
 // ── Ítems del checklist ──
 export const itemFromRow = (row) => (row ? {
@@ -93,6 +150,9 @@ export const stepFromRow = (row) => (row ? {
   title:      row.title || '',
   detail:     row.detail || '',
   position:   row.position ?? 0,
+  dueDate:    row.due_date || '',
+  done:       !!row.done,
+  doneAt:     row.done_at || null,
   createdBy:  row.created_by || '',
   createdAt:  row.created_at || null,
   updatedAt:  row.updated_at || null,
@@ -105,6 +165,9 @@ export const stepToRow = (obj) => {
   if (obj.title      !== undefined) row.title = String(obj.title || '').trim();
   if (obj.detail     !== undefined) row.detail = String(obj.detail || '').trim() || null;
   if (obj.position   !== undefined) row.position = obj.position ?? 0;
+  // dueDate y done solo existen desde la 0070: se mandan solo si vienen
+  if (obj.dueDate    !== undefined) row.due_date = obj.dueDate || null;
+  if (obj.done       !== undefined) { row.done = !!obj.done; row.done_at = obj.done ? new Date().toISOString() : null; }
   if (obj.createdBy  !== undefined) row.created_by = obj.createdBy || null;
   return row;
 };
@@ -130,10 +193,11 @@ export const deleteStep = async (id) => {
   return true;
 };
 
-// ── Realtime (las tres tablas en un canal) ──
+// ── Realtime (las cuatro tablas en un canal) ──
 export const subscribeCrmWeekly = (onChange) => {
   const channel = supabase
     .channel('crm-weekly-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: ENTITIES }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: ITEMS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: CHECKS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: STEPS }, (p) => onChange(p))

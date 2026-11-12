@@ -2,27 +2,31 @@
 // NextStepEditor — Alta / edición de un próximo step de una entidad
 // ════════════════════════════════════════════════════════════════════
 // Como el editor de iniciativas de los planes: Tipo (agrupa, opcional) ·
-// Próximo step · Detalle. Solo el step es obligatorio. Al editar se
-// guardan solo los campos que cambiaron.
+// Próximo step · Detalle (+ Fecha y Completado con la migración 0070,
+// `tracking`). Solo el step es obligatorio. Al editar se guardan solo los
+// campos que cambiaron.
 //
 // Props: step (o null), entity, defaults ({ category }), categories,
-//   onSave(data) (async), onDelete() | null, onClose()
+//   tracking, onSave(data) (async), onDelete() | null, onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
+import DateFieldEs from '@/components/shared/DateFieldEs';
 import { useConfirm } from '@/hooks/useConfirm';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-300';
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
 
-export default function NextStepEditor({ step, entity, defaults = {}, categories = [], onSave, onDelete, onClose }) {
+export default function NextStepEditor({ step, entity, defaults = {}, categories = [], tracking = false, onSave, onDelete, onClose }) {
   const confirm = useConfirm();
   const [form, setForm] = useState({
     category: step ? step.category || '' : defaults.category || '',
     title: step?.title || '',
     detail: step?.detail || '',
+    dueDate: step?.dueDate || '',
+    done: !!step?.done,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -34,8 +38,10 @@ export default function NextStepEditor({ step, entity, defaults = {}, categories
     setSaving(true); setError('');
     try {
       const data = { category: form.category.trim(), title: form.title.trim(), detail: form.detail.trim() };
+      if (tracking) { data.dueDate = form.dueDate || ''; data.done = form.done; }
       if (!step) { await onSave(data); return; }
-      await onSave(Object.fromEntries(Object.entries(data).filter(([k, v]) => v !== (step[k] || ''))));
+      const before = (k) => (k === 'done' ? !!step.done : step[k] || '');
+      await onSave(Object.fromEntries(Object.entries(data).filter(([k, v]) => v !== before(k))));
     } catch (_e) {
       setError('No se pudo guardar el step. Probá de nuevo; si sigue fallando, revisá la consola.');
       setSaving(false);
@@ -78,6 +84,19 @@ export default function NextStepEditor({ step, entity, defaults = {}, categories
               <label className={labelCls} htmlFor="step-detail">Detalle</label>
               <textarea id="step-detail" rows={4} value={form.detail} onChange={(e) => set('detail', e.target.value)} placeholder="Ej: Quiénes, para cuándo y qué falta." className={`${inputCls} resize-y font-medium leading-snug`} />
             </div>
+            {tracking && (
+              <div className="flex items-end gap-4 flex-wrap">
+                <div className="space-y-1">
+                  <span className={labelCls}>Fecha <span className="normal-case tracking-normal font-bold text-slate-300">(opcional)</span></span>
+                  <DateFieldEs id="step-due" value={form.dueDate} onChange={(v) => set('dueDate', v)} ariaLabel="Fecha del step" />
+                </div>
+                <label className="flex items-center gap-2 pb-2 text-xs font-bold text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={form.done} onChange={(e) => set('done', e.target.checked)} className="w-4 h-4 accent-sky-600" />
+                  Completado
+                </label>
+                <p className="basis-full text-[10px] font-bold text-slate-400">Con fecha y sin completar, aparece en «Próximas actividades» (se pone más rojo a medida que se acerca).</p>
+              </div>
+            )}
             {error && <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
           </div>
 
