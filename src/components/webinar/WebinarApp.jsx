@@ -41,6 +41,7 @@ import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useNavSync } from '@/hooks/useNavState';
 
 export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCreated, onWebinarMailToggled, onWebinarDeleted, onWebinarPlaceChanged, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
@@ -61,6 +62,15 @@ export default function WebinarApp({ webinars, setWebinars, onBack, onWebinarCre
       if (fresh && fresh !== activeW) setActiveW(fresh);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [webinars]);
+
+  // ─── «Atrás» del navegador: el webinar abierto queda en el historial ───
+  useNavSync('webinar.open', view === 'internal_detail' && activeW ? activeW.id : null, (id) => {
+    if (id == null) { setView('internal'); return true; }
+    const w = webinars.find(x => x.id === id);
+    if (!w) return false;
+    setActiveW(w); setView('internal_detail');
+    return true;
   }, [webinars]);
 
   // ─── Deep-link: abrir el detalle de un webinar al venir desde Mi Semana ───

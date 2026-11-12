@@ -31,6 +31,7 @@ import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { usePlanExtras } from '@/hooks/usePlanExtras';
 import { planBrand, planPillarItems, taskStats } from '@/utils/planTasks';
 import { todayIso as getTodayIso } from '@/utils/date';
+import { useNavState } from '@/hooks/useNavState';
 import { Kpi, pctLabel } from './PlanBits';
 import PlanCard from './PlanCard';
 import PlanDetail from './PlanDetail';
@@ -41,7 +42,7 @@ export default function PlansApp({ planTasks, webinars, campaigns, events, teamN
   const { plans, loading: plansLoading, addPlan, rotatePublicToken } = useBillingPlans();
   const { tasks, loading: tasksLoading, error, createTask, updateTask, removeTask } = planTasks;
   const extras = usePlanExtras();
-  const [openId, setOpenId] = useState(null);
+  const [openId, setOpenId] = useNavState('plans.open', null); // sigue al «atrás» del navegador
   const [newPlan, setNewPlan] = useState(null); // { name, saving, error }
   const [flash, setFlash] = useState('');
   const todayIso = getTodayIso();

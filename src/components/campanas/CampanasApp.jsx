@@ -14,6 +14,7 @@ import { ArrowLeft, Video, Mail, Target, Database, BarChart3, Calendar } from 'l
 
 import WebinarApp from '@/components/webinar/WebinarApp';
 import CampaignsApp from '@/components/campaigns/CampaignsApp';
+import { useNavState } from '@/hooks/useNavState';
 import EventsApp from '@/components/events/EventsApp';
 import { PILLARS } from '@/constants/campaigns';
 import { isPillarHidden } from '@/constants/sections';
@@ -41,7 +42,7 @@ export default function CampanasApp({
   // deep-link
   focusProjectId, onFocusHandled,
 }) {
-  const [pilar, setPilar] = useState('webinars');
+  const [pilar, setPilar] = useNavState('pilares.tab', 'webinars'); // sigue al «atrás» del navegador
 
   // Deep-link: al venir desde Mi Semana con un focusProjectId, abrir el
   // pilar correcto (webinar o el tipo de la campaña) antes de pasar el foco.
@@ -49,13 +50,13 @@ export default function CampanasApp({
   useEffect(() => {
     if (!focusProjectId) return;
     const w = (webinars || []).find(x => String(x.id) === String(focusProjectId));
-    if (w) { setPilar('webinars'); setPendingFocus(focusProjectId); return; }
+    if (w) { setPilar('webinars', { replace: true }); setPendingFocus(focusProjectId); return; }
     const ev = (events || []).find(x => String(x.id) === String(focusProjectId));
-    if (ev) { setPilar('eventos'); setPendingFocus(focusProjectId); return; }
+    if (ev) { setPilar('eventos', { replace: true }); setPendingFocus(focusProjectId); return; }
     const c = (campaigns || []).find(x => String(x.id) === String(focusProjectId));
     if (c) {
       const t = c.variant === 'webinar' ? 'email' : (c.type || 'email');
-      setPilar(t);
+      setPilar(t, { replace: true });
       setPendingFocus(focusProjectId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -32,6 +32,7 @@ import { useWebinars } from '@/hooks/useWebinars';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { useEvents } from '@/hooks/useEvents';
 import { useAssignedTasks } from '@/hooks/useAssignedTasks';
+import { useNavState, startNavEntry, seedNav } from '@/hooks/useNavState';
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import { useTeam } from '@/hooks/useTeam';
 import { useSuccessCases } from '@/hooks/useSuccessCases';
@@ -149,11 +150,14 @@ export default function App() {
   const [contentAutoTab, setContentAutoTab] = useState(null);   // abre una tab de Social Media al entrar (ej. 'calendario')
   const [focusProjectId, setFocusProjectId] = useState(null);  // deep-link: card a abrir al navegar desde Mi Semana
 
-  const [currentSection, setCurrentSection] = useState('main');
+  // Sección, unidad y alcance del Portal siguen al «atrás» del navegador (useNavState)
+  const [currentSection, setCurrentSection] = useNavState('section', 'main', { reset: true });
   const [selectedCountry, setSelectedCountry] = useState(null);
   // Portal Cliente: unidad activa y alcance abierto (país / región / global)
-  const [portalUnit, setPortalUnit] = useState(PORTAL_UNITS[0].id);
-  const [portalScope, setPortalScope] = useState(null);
+  const [portalUnit, setPortalUnit] = useNavState('portal.unit', PORTAL_UNITS[0].id);
+  const [portalScope, setPortalScope] = useNavState('portal.scope', null);
+  // La primera entrada del historial queda con la sección (sin sumar un «atrás»)
+  useEffect(() => { seedNav('section', currentSection); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // Menú lateral compacto por defecto (más lugar para el contenido)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return window.localStorage.getItem('marcomms_hub_sidebar_v1') !== 'open'; } catch (_e) { return true; }
@@ -172,6 +176,7 @@ export default function App() {
   // de un webinar y cliquear "Pilares" en el menú).
   const [sectionEpoch, setSectionEpoch] = useState(0);
   const goToSection = (section) => {
+    startNavEntry({ section }); // entrada nueva del historial, sin lo de la sección anterior
     setSectionEpoch((n) => n + 1);
     setSelectedCountry(null);
     setPortalScope(null);
@@ -183,6 +188,7 @@ export default function App() {
 
   // Navega a una sección y opcionalmente enfoca un proyecto específico (abre su card/detalle)
   const navigateToProject = (section, projectId = null) => {
+    if (section !== currentSection) startNavEntry({ section });
     setSelectedCountry(null);
     setPortalScope(null);
     setFocusProjectId(projectId);

@@ -25,6 +25,7 @@ import { exportMonthXlsx } from '@/utils/invoicingExport';
 import { downloadMonthPdf } from '@/utils/invoicingPdf';
 import { monthLabel } from '@/utils/planTasks';
 import { todayIso } from '@/utils/date';
+import { useNavState } from '@/hooks/useNavState';
 import { CUENTAS_LIST_ID, CrmSheet, FijoSheet, MktSheet, OfficesSheet, VariablesSheet } from './InvoicingSheets';
 import InvoicingToolbar from './InvoicingToolbar';
 import TrendKpis from './TrendKpis';
@@ -47,8 +48,9 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
   const allMonths = api.allMonths || months; // + históricos (solo «Mes a mes»)
   const historicMonths = api.historicMonths || [];
   const confirm = useConfirm();
-  const [tab, setTab] = useState('fijo');
-  const [month, setMonth] = useState('');
+  // Hoja y mes siguen al «atrás» del navegador (los cambios automáticos, con replace)
+  const [tab, setTab] = useNavState('invoicing.tab', 'fijo');
+  const [month, setMonth] = useNavState('invoicing.month', '');
   const [filters, setFilters] = useState({ q: '', brand: '' });
   const [compact, setCompact] = useStoredPref('marcomms_hub_fact_compact', false);
   const [varView, setVarView] = useStoredPref('marcomms_hub_fact_variables', 'lista');
@@ -65,7 +67,7 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
   useEffect(() => {
     if (month && months.includes(month)) return;
     const current = todayIso().slice(0, 7);
-    setMonth(months.includes(current) ? current : months[months.length - 1] || '');
+    setMonth(months.includes(current) ? current : months[months.length - 1] || '', { replace: true });
   }, [months, month]);
 
   // Abrir el mes y la hoja de un aviso («te etiquetaron en …»). Espera a
@@ -74,8 +76,8 @@ export default function InvoicingApp({ onBack, currentUser, invoicing, people = 
   useEffect(() => {
     const m = /^(\d{4}-\d{2}):([a-z_]+)$/.exec(autoView || '');
     if (!m || loading) return;
-    if (months.includes(m[1])) setMonth(m[1]);
-    setTab(SHEET_TAB[m[2]] || m[2]);
+    if (months.includes(m[1])) setMonth(m[1], { replace: true });
+    setTab(SHEET_TAB[m[2]] || m[2], { replace: true });
     onAutoViewDone?.();
   }, [autoView, months, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 

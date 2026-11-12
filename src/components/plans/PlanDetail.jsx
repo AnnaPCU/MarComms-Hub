@@ -33,6 +33,7 @@ import { previousMonthKey } from '@/utils/planKpis';
 import { monthLabel } from '@/utils/planTasks';
 import { downloadPlanPdf, planPdfMonth, planPdfMonthOptions } from '@/utils/planPdf';
 import ProgramPillarsList from '@/components/programs/ProgramPillarsList';
+import { useNavState } from '@/hooks/useNavState';
 import { ProgressBar, SectionTitle, pctLabel } from './PlanBits';
 import PlanTasksBoard from './PlanTasksBoard';
 import PdfMonthsMenu from './PdfMonthsMenu';
@@ -65,7 +66,7 @@ function ExternalPreview({ url }) {
 
 export default function PlanDetail({ plan, tasks, pillarItems, todayIso, teamNames, currentUser, dark = false, createTask, updateTask, removeTask, extras, onOpenPillar, onRotateToken, onBack }) {
   const confirm = useConfirm();
-  const [view, setView] = useState('internal');
+  const [view, setView] = useNavState(`plans.view:${plan.id}`, 'internal'); // interna / externa, sigue al «atrás»
   const [copied, setCopied] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [linkError, setLinkError] = useState('');

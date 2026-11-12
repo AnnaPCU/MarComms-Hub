@@ -35,10 +35,19 @@ import MarcommsUtmBuilder from '@/components/shared/MarcommsUtmBuilder';
 import QuotationBadge from '@/components/shared/QuotationBadge';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useNavSync } from '@/hooks/useNavState';
 
 export default function EventsApp({ onBack, events, setEvents, campaigns, focusProjectId, onFocusHandled, embedded = false }) {
   const confirm = useConfirm();
   const [activeEvent, setActiveEvent] = useState(null);
+  // «Atrás» del navegador: el evento abierto queda en el historial
+  useNavSync('event.open', activeEvent ? activeEvent.id : null, (id) => {
+    if (id == null) { setActiveEvent(null); return true; }
+    const ev = events.find(x => x.id === id);
+    if (!ev) return false;
+    setActiveEvent(ev);
+    return true;
+  }, [events]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const EMPTY_NEW_EVENT = { name: "", date: "", country: "", businessUnit: "", extraCountries: [], fee: "", billing: "usd", planId: null };

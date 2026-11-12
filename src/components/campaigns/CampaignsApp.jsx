@@ -45,6 +45,7 @@ import { adsCampaignList } from '@/utils/googleAds';
 import { cleanExtraCountries, countriesLabel, clientLabel, normalizeUnit } from '@/utils/pillarClient';
 import { useBillingPlans } from '@/hooks/useBillingPlans';
 import { chargedAmount, planNameOf } from '@/utils/billing';
+import { useNavSync } from '@/hooks/useNavState';
 
 // UUID para IDs de campañas (compatible con Supabase uuid PK)
 const campaignId = () => {
@@ -72,6 +73,11 @@ export default function CampaignsApp({ onBack, campaigns, setCampaigns, onCampai
   const [activeView, setActiveView] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [expandedCampaigns, setExpandedCampaigns] = useState(new Set());
+  // «Atrás» del navegador: la campaña abierta queda en el historial
+  useNavSync('campaign.open', expandedCampaigns.size ? [...expandedCampaigns].at(-1) : null, (id) => {
+    setExpandedCampaigns(id == null ? new Set() : new Set([id]));
+    return true;
+  });
 
   // ─── Deep-link: expandir y scrollear a una campaña al venir desde Mi Semana ───
   useEffect(() => {

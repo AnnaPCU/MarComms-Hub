@@ -64,6 +64,7 @@ import PostsSheet from './PostsSheet';
 import PostsCountStrip from './PostsCountStrip';
 import { SHOW_SOCIAL_PEDIDOS } from '@/constants/sections';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useNavState } from '@/hooks/useNavState';
 
 export default function SocialMediaApp({
   onBack,
@@ -96,7 +97,7 @@ export default function SocialMediaApp({
 }) {
   const confirm = useConfirm();
   const [viewMode, setViewMode] = useState('responsable'); // responsable | estado | proyecto
-  const [mainTab, setMainTab] = useState(SHOW_SOCIAL_PEDIDOS ? 'pedidos' : 'posteos'); // posteos | calendario | herramientas | pedidos
+  const [mainTab, setMainTab] = useNavState('social.tab', SHOW_SOCIAL_PEDIDOS ? 'pedidos' : 'posteos'); // posteos | calendario | herramientas | pedidos
   const [activeTool, setActiveTool] = useState('utm'); // utm | mailchimp | newsletter
   const [filterDesigner, setFilterDesigner] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -119,7 +120,7 @@ export default function SocialMediaApp({
   // Abre el modal de "nuevo pedido" cuando se entra desde Acción Rápida
   useEffect(() => {
     if (autoNew) {
-      setMainTab('pedidos');
+      setMainTab('pedidos', { replace: true });
       setShowNewRequest(true);
       if (onAutoNewDone) onAutoNewDone();
     }
@@ -129,7 +130,7 @@ export default function SocialMediaApp({
   // Abre una tab puntual (ej. 'calendario' desde una notificación de día mundial)
   useEffect(() => {
     if (autoTab) {
-      setMainTab(autoTab);
+      setMainTab(autoTab, { replace: true });
       if (onAutoTabDone) onAutoTabDone();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
