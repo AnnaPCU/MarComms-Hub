@@ -59,6 +59,24 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 ---
 
+## 👥 Trabajo en paralelo (nov 2026)
+
+Hay **dos sesiones de Claude Code** trabajando a la vez sobre `main`:
+
+- **Sesión general** (Anna): todo el Hub salvo CRM HubSpot.
+- **Sesión CRM HubSpot**: solo la sección CRM HubSpot (Facturación HubSpot + Weekly check).
+
+Reglas para que no se pisen:
+
+1. **Zona de la sesión CRM HubSpot** (la general no los toca sin avisar): `src/components/hubspot/**`, `src/constants/hubspotBilling.js`, `src/constants/crmWeekly.js`, `src/utils/hubspotBilling*.js`, `src/utils/crmWeekly*.js`, `src/hooks/useHubspotBilling.js`, `src/hooks/useCrmWeekly.js`, `src/services/hubspotBillingService.js`, `src/services/crmWeeklyService.js`.
+2. **Archivos compartidos** (`src/App.jsx`, `src/utils/notifications.js` + su test, `src/constants/userNotifications.js`, `src/index.css`, `src/constants/sections.js`, `tailwind.config.js`, `package.json`, `CLAUDE.md`): cambios mínimos y puntuales; la sesión CRM HubSpot solo toca ahí lo de su sección (ej. la sección `crm_deadline` de notificaciones, las props de `HubspotBillingApp` en `App.jsx`). Nada de reformatear ni reordenar estos archivos.
+3. **Migraciones**: la sesión CRM HubSpot usa los números **0070–0079** (y seeds con el mismo número); la general sigue desde 0055. Así no chocan los nombres.
+4. **Antes de cada push**: `git pull --rebase origin main`, correr `npx vitest run` y `npm run build`, y recién ahí `git push origin main`. Si el rebase da conflicto en un archivo compartido, se resuelve conservando los cambios de las dos sesiones.
+5. **Commits** de la sesión CRM HubSpot empiezan con «CRM HubSpot: …».
+6. En `CLAUDE.md`, la sesión CRM HubSpot actualiza solo las filas de `src/constants/hubspotBilling.js` y `src/constants/crmWeekly.js` de la tabla de archivos clave (y la frase de sus migraciones en el punto 1 de TODOs).
+
+---
+
 ## 🔄 Sincronización entre módulos
 
 Hay **sync bidireccional Webinar ↔ Campaign**:
