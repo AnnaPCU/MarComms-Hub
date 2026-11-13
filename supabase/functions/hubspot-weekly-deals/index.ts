@@ -12,8 +12,11 @@
 // Así una entidad nueva tiene su historia y se corrigen cambios recientes.
 //
 // La llama: pg_cron todos los días (migration 0072) y el botón «Actualizar»
-// del Weekly check. Tiene un freno de 10 minutos entre corridas
-// (crm_weekly_deal_sync.last_run_at), así nadie la puede disparar en loop.
+// del Weekly check. Tiene un freno de 10 minutos entre corridas (1 minuto
+// si la anterior falló; crm_weekly_deal_sync.last_run_at), así nadie la
+// puede disparar en loop. Ante un 401 el error dice el motivo de HubSpot y
+// la forma de la clave (largo, si empieza con «pat-», si tenía espacios),
+// nunca la clave.
 //
 // Secrets (Supabase → Edge Functions → Secrets; NUNCA en el repo):
 //   HUBSPOT_TOKEN  — token de la app privada de HubSpot, scopes
@@ -28,7 +31,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   PCU_ENTITY_LABEL, SOURCE_IMPORT, SOURCE_PROPERTY, WEEKS_TO_LOAD,
-  cooldownLeft, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows,
+  cooldownFor, countWeek, lastWeeks, pcuEntityProperty, redactSecrets, tokenShape, weekRangeMs, weekRows,
 } from './logic.js';
 
 const HUBSPOT = 'https://api.hubapi.com';
@@ -42,6 +45,12 @@ const cors = {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Error de HubSpot con el estado y el motivo que dio (sin la clave)
+class HubspotError extends Error {
+  status: number;
+  constructor(status: number, detail: string) { super(detail); this.status = status; }
+}
+
 // Llamada a HubSpot con reintento ante 429 (rate limit) o 5xx
 async function hubspot(token: string, path: string, init: RequestInit = {}) {
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -51,11 +60,11 @@ async function hubspot(token: string, path: string, init: RequestInit = {}) {
     });
     if (res.ok) return res.json();
     if (res.status === 429 || res.status >= 500) { await sleep(1000 * (attempt + 1)); continue; }
-    // Sin el token en el mensaje: solo el estado y lo que diga HubSpot
-    const text = (await res.text()).slice(0, 300);
-    if (res.status === 401) throw new Error('HubSpot rechazó el token (401). Revisá el secret HUBSPOT_TOKEN.');
-    if (res.status === 403) throw new Error('El token de HubSpot no tiene permiso (403). Hacen falta crm.objects.deals.read y crm.schemas.deals.read.');
-    throw new Error(`HubSpot respondió ${res.status}: ${text}`);
+    // Sin el token en el mensaje: solo el estado y el motivo de HubSpot
+    const text = await res.text();
+    let detail = text;
+    try { const b = JSON.parse(text); detail = [b.category, b.message].filter(Boolean).join(' · ') || text; } catch (_e) { /* texto plano */ }
+    throw new HubspotError(res.status, redactSecrets(detail).slice(0, 220));
   }
   throw new Error('HubSpot no respondió después de varios intentos (rate limit o error del servidor).');
 }
@@ -90,14 +99,15 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ ok: false, error: 'Usá POST.' }, 405);
 
-  const token = Deno.env.get('HUBSPOT_TOKEN');
+  const shape = tokenShape(Deno.env.get('HUBSPOT_TOKEN'));
+  const token = shape.clean; // sin espacios ni saltos de línea al pegar
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   let trigger = 'manual';
   try { trigger = (await req.json())?.trigger === 'cron' ? 'cron' : 'manual'; } catch (_e) { /* sin body */ }
 
   // Freno: una corrida cada 10 minutos como mucho
   const { data: sync } = await db.from('crm_weekly_deal_sync').select('*').eq('id', 1).maybeSingle();
-  const wait = cooldownLeft(sync?.last_run_at);
+  const wait = cooldownFor(sync);
   if (wait > 0) return json({ ok: true, skipped: true, message: `Se actualizó hace poco. Probá de nuevo en ${wait} min.` });
 
   const startedAt = new Date().toISOString();
@@ -135,7 +145,13 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, weeks: weeks.length, rows: rows.length });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    let message = err instanceof Error ? err.message : String(err);
+    if (err instanceof HubspotError) {
+      const keyInfo = `Clave cargada: ${shape.length} caracteres, ${shape.pat ? 'empieza con «pat-»' : 'NO empieza con «pat-»'}${shape.hadSpaces ? ', tenía espacios o saltos de línea' : ''}.`;
+      if (err.status === 401) message = `HubSpot rechazó el token (401): ${err.message}. ${keyInfo} Revisá el secret HUBSPOT_TOKEN.`;
+      else if (err.status === 403) message = `El token de HubSpot no tiene permiso (403): ${err.message}. Hacen falta crm.objects.deals.read y crm.schemas.deals.read.`;
+      else message = `HubSpot respondió ${err.status}: ${err.message}`;
+    }
     await db.from('crm_weekly_deal_sync').upsert({ id: 1, last_run_at: startedAt, ok: false, error: message, trigger });
     return json({ ok: false, error: message }, 500);
   }

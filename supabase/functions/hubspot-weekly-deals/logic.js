@@ -20,6 +20,7 @@ export const SOURCE_PROPERTY = 'hs_object_source_label';
 export const SOURCE_UI = 'CRM_UI';        // «CRM UI»: lo cargó una persona a mano
 export const SOURCE_IMPORT = 'IMPORT';    // no se cuenta
 export const MANUAL_COOLDOWN_MINUTES = 10;
+export const FAILED_COOLDOWN_MINUTES = 1; // si la última corrida falló, se puede reintentar al minuto
 
 const DAY_MS = 86400000;
 const pad = (n) => String(n).padStart(2, '0');
@@ -109,3 +110,21 @@ export const cooldownLeft = (lastRunAt, now = new Date(), minutes = MANUAL_COOLD
   const left = new Date(lastRunAt).getTime() + minutes * 60000 - new Date(now).getTime();
   return left > 0 ? Math.ceil(left / 60000) : 0;
 };
+
+// Minutos de freno según cómo salió la última corrida
+export const cooldownFor = (sync, now = new Date()) => cooldownLeft(sync?.last_run_at, now, sync?.ok === false ? FAILED_COOLDOWN_MINUTES : MANUAL_COOLDOWN_MINUTES);
+
+// Forma de la clave, para diagnosticar un 401 sin mostrarla nunca:
+// largo (ya limpia), si empieza con «pat-» y si traía espacios o saltos
+// de línea (que se sacan).
+export const tokenShape = (raw) => {
+  const text = String(raw || '');
+  const clean = text.trim();
+  return { clean, length: clean.length, pat: /^pat-/i.test(clean), hadSpaces: clean !== text || /\s/.test(clean) };
+};
+
+// Borra de un texto cualquier cosa que parezca una clave (por si HubSpot
+// la repite en un mensaje de error)
+export const redactSecrets = (text) => String(text || '')
+  .replace(/pat-[a-z0-9-]+/gi, 'pat-***')
+  .replace(/[A-Za-z0-9_-]{32,}/g, '***');

@@ -11,9 +11,9 @@
 //   syncStatus(sync, now)           → texto y estado de la última corrida
 // ════════════════════════════════════════════════════════════════════
 
-import { lastWeeks, weekStartAr, cooldownLeft } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
+import { lastWeeks, weekStartAr, cooldownLeft, cooldownFor } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
 
-export { lastWeeks, weekStartAr, cooldownLeft };
+export { lastWeeks, weekStartAr, cooldownLeft, cooldownFor };
 export const DEAL_WEEKS = 8;
 
 // Colores de las dos series (validados con el skill dataviz: claro y oscuro)
@@ -51,7 +51,7 @@ export const entityDeals = (counts = [], code, now = new Date()) => {
 export const syncStatus = (sync, now = new Date()) => {
   if (!sync || !sync.lastRunAt) return { tone: 'idle', text: 'Todavía no se trajeron los deals de HubSpot.' };
   if (sync.ok === false) return { tone: 'error', text: sync.error || 'La última actualización falló.' };
-  const wait = cooldownLeft(sync.lastRunAt, now);
+  const wait = cooldownFor({ last_run_at: sync.lastRunAt, ok: sync.ok }, now);
   return { tone: 'ok', text: '', wait };
 };
 

@@ -3,7 +3,7 @@
 // Function (logic.js) y la lectura del Hub (crmWeeklyDeals.js)
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { addWeeks, codeFromLabel, cooldownLeft, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows, weekStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
+import { addWeeks, codeFromLabel, cooldownFor, cooldownLeft, redactSecrets, tokenShape, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows, weekStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
 import { dealSeries, entityDeals, syncStatus, unassignedOf } from './crmWeeklyDeals';
 
 describe('semana de lunes a domingo en hora de Argentina', () => {
@@ -66,6 +66,20 @@ describe('PCU Entity → código de la entidad', () => {
     expect(cooldownLeft(null, now)).toBe(0);
     expect(cooldownLeft('2026-11-13T11:55:30Z', now)).toBe(6);
     expect(cooldownLeft('2026-11-13T11:49:00Z', now)).toBe(0);
+    // si la última corrida falló, se reintenta al minuto
+    expect(cooldownFor({ last_run_at: '2026-11-13T11:59:30Z', ok: false }, now)).toBe(1);
+    expect(cooldownFor({ last_run_at: '2026-11-13T11:58:50Z', ok: false }, now)).toBe(0);
+    expect(cooldownFor({ last_run_at: '2026-11-13T11:59:30Z', ok: true }, now)).toBe(10);
+  });
+  it('diagnóstico de la clave sin mostrarla', () => {
+    const t = tokenShape('  pat-na1-aaaa-bbbb\n');
+    expect(t).toEqual({ clean: 'pat-na1-aaaa-bbbb', length: 17, pat: true, hadSpaces: true });
+    expect(tokenShape('abc').pat).toBe(false);
+    expect(tokenShape(undefined).length).toBe(0);
+    const msg = redactSecrets('INVALID_AUTHENTICATION · The token pat-na1-79ab40f9-4fa4 is invalid; 0123456789abcdef0123456789abcdef99');
+    expect(msg).not.toMatch(/79ab40f9/);
+    expect(msg).not.toMatch(/0123456789abcdef0123/);
+    expect(msg).toMatch(/INVALID_AUTHENTICATION/);
   });
 });
 
