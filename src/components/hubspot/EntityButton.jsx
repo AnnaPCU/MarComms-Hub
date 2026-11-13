@@ -5,13 +5,15 @@
 // 100 %, amarillo 50–99 %, rojo < 50 %), importancia, tags y alertas de
 // deadline (vencidos / vencen en 7 días).
 //
-// Props: entity, summary (entitySummary), active, onClick
+// Props: entity, summary (entitySummary), deals (entityDeals, opcional:
+//   deals de esta semana + mini tendencia de 8 semanas), dark, active, onClick
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { CRM_PRIORITIES } from '@/constants/crmWeekly';
 import { trafficLight } from '@/utils/crmWeekly';
+import { DealsBadge } from './DealsSpark';
 
 export function PriorityChip({ priority, className = '' }) {
   const p = CRM_PRIORITIES.find((x) => x.id === priority);
@@ -33,7 +35,7 @@ export function LightDot({ summary, className = 'w-2.5 h-2.5' }) {
   return <span className={`shrink-0 rounded-full ${light ? light.dot : 'bg-slate-300'} ${className}`} title={light ? `${light.label} (${light.range})` : 'Sin ítems en el checklist'} />;
 }
 
-export default function EntityButton({ entity, summary, active, onClick }) {
+export default function EntityButton({ entity, summary, deals, dark = false, active, onClick }) {
   const light = trafficLight(summary);
   const tags = entity.tags || [];
   return (
@@ -59,6 +61,7 @@ export default function EntityButton({ entity, summary, active, onClick }) {
         </div>
         <span className="font-mono text-[10px] font-black text-slate-500 shrink-0 whitespace-nowrap">{summary.pct} % · {summary.done}/{summary.total}</span>
       </div>
+      {deals && deals.mapped !== null && <div className="mt-1.5 pl-[18px]"><DealsBadge deals={deals} dark={dark} /></div>}
     </button>
   );
 }

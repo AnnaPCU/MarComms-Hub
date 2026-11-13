@@ -4,8 +4,9 @@
 // Seguimiento de la implementación de HubSpot en cada entidad. Dos vistas:
 //   · «Por entidad»: a la izquierda las entidades (semáforo del avance,
 //     importancia, tags y alertas de deadline), a la derecha la elegida
-//     con su checklist (tilde + deadline en dd/mm/aaaa que se pone más rojo
-//     cuanto más cerca está) y sus próximos steps.
+//     con sus deals nuevos de HubSpot (si está la 0071), su checklist
+//     (tilde + deadline en dd/mm/aaaa que se pone más rojo cuanto más cerca
+//     está) y sus próximos steps.
 //   · «Próximas actividades» (UpcomingActivities): solo lo que viene, por
 //     entidad o por país.
 // Arriba, filtros (marca, semáforo, importancia, tag) y orden (por color
@@ -33,6 +34,9 @@ import EntityFilters from './EntityFilters';
 import EntityFormModal from './EntityFormModal';
 import TagsInput from './TagsInput';
 import UpcomingActivities from './UpcomingActivities';
+import DealsSyncBar from './DealsSyncBar';
+import { DealsPanel } from './DealsSpark';
+import { entityDeals } from '@/utils/crmWeeklyDeals';
 
 // Colores de las tablas de steps (paleta del módulo: sky / azul)
 const LIGHT = { primary: '#0284c7', dark: '#0f172a', label: '#64748b', text: '#334155' };
@@ -47,6 +51,7 @@ const SUBVIEWS = [
 export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   const {
     entities, tracking, items, checks, steps, loading, error, missing,
+    dealCounts, dealSync, dealsReady, refreshDeals,
     saveCheck, createStep, updateStep, removeStep, updateStepOptimistic,
     createItem, updateItem, removeItem, createEntity, updateEntity, removeEntity,
   } = data;
@@ -70,6 +75,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   const map = useMemo(() => checksByEntity(checks), [checks]);
   const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, items)])), [entities, map, todayIso, items]);
   const tags = useMemo(() => entityTags(entities), [entities]);
+  const dealsByCode = useMemo(() => (dealsReady ? Object.fromEntries(entities.map((e) => [e.code, entityDeals(dealCounts, e.code)])) : {}), [dealsReady, entities, dealCounts]);
   const countries = useMemo(() => countryOptions(entities), [entities]);
   // Los colores del semáforo cuentan sin el filtro de color (para poder cambiar de color)
   const lightCounts = useMemo(() => filterEntities(entities, { ...filters, light: '' }, summaries).reduce((acc, e) => {
@@ -157,6 +163,8 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
         </button>
       </div>
 
+      {dealsReady && <DealsSyncBar sync={dealSync} onRefresh={refreshDeals} />}
+
       <EntityFilters filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} sort={sort} onSort={setSort} lightCounts={lightCounts} tags={tags} />
 
       {!tracking && !loading && <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-[11px] font-bold">Para sumar entidades, ponerles importancia y tags, y cargar fechas en los próximos steps, falta correr la migración 0070 en Supabase. Mientras tanto se ven las 16 entidades de siempre.</p>}
@@ -190,12 +198,18 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
           <nav className="space-y-1.5 lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1" aria-label="Entidades">
             {visible.map((e) => (
-              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} active={entity?.code === e.code} onClick={() => pick(e.code)} />
+              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} deals={dealsByCode[e.code]} dark={dark} active={entity?.code === e.code} onClick={() => pick(e.code)} />
             ))}
           </nav>
 
           {entity && (
             <div ref={detailRef} className="space-y-5 min-w-0 scroll-mt-24">
+              {dealsReady && (
+                <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
+                  <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: c.primary }}>Deals nuevos en HubSpot</p>
+                  <DealsPanel deals={dealsByCode[entity.code]} dark={dark} />
+                </section>
+              )}
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                   <div className="min-w-0">

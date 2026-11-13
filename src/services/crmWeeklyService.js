@@ -3,6 +3,9 @@
 // ════════════════════════════════════════════════════════════════════
 // Conectado a Supabase (migrations 0043, 0044 y 0070):
 //   crm_weekly_entities — entidades (países) del Weekly check (0070)
+//   crm_weekly_deal_counts / crm_weekly_deal_sync — deals nuevos por
+//     semana, de HubSpot (0071; los escribe la Edge Function
+//     hubspot-weekly-deals, el Hub solo lee)
 //   crm_check_items   — ítems del checklist (valen para todas las entidades)
 //   crm_weekly_checks — checklist: una fila por entidad e ítem
 //   crm_next_steps    — próximos steps de cada entidad
@@ -19,6 +22,8 @@
 import { supabase } from '@/lib/supabaseClient';
 
 const ENTITIES = 'crm_weekly_entities';
+const DEAL_COUNTS = 'crm_weekly_deal_counts';
+const DEAL_SYNC = 'crm_weekly_deal_sync';
 const ITEMS = 'crm_check_items';
 const CHECKS = 'crm_weekly_checks';
 const STEPS = 'crm_next_steps';
@@ -193,11 +198,45 @@ export const deleteStep = async (id) => {
   return true;
 };
 
-// ── Realtime (las cuatro tablas en un canal) ──
+// ── Deals nuevos por semana (0071) ──
+export const dealCountFromRow = (row) => ({
+  entityCode: row.entity_code,
+  weekStart:  row.week_start,
+  dealsUi:    row.deals_ui,
+  dealsOther: row.deals_other,
+  computedAt: row.computed_at,
+});
+export const listDealCounts = async (sinceWeek) => {
+  let q = supabase.from(DEAL_COUNTS).select('*');
+  if (sinceWeek) q = q.gte('week_start', sinceWeek);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map(dealCountFromRow);
+};
+export const getDealSync = async () => {
+  const { data, error } = await supabase.from(DEAL_SYNC).select('*').eq('id', 1).maybeSingle();
+  if (error) throw error;
+  return data ? { lastRunAt: data.last_run_at, lastOkAt: data.last_ok_at, ok: data.ok, error: data.error, unassigned: data.unassigned || {}, trigger: data.trigger } : null;
+};
+// Botón «Actualizar»: llama a la Edge Function (tiene un freno de 10 min)
+export const refreshDealCounts = async () => {
+  const { data, error } = await supabase.functions.invoke('hubspot-weekly-deals', { body: { trigger: 'manual' } });
+  if (error) {
+    // La función responde 500 con { ok: false, error } cuando falla HubSpot
+    let msg = error.message;
+    try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch (_e) { /* sin cuerpo */ }
+    throw new Error(msg);
+  }
+  return data;
+};
+
+// ── Realtime (las tablas del Weekly check en un canal) ──
 export const subscribeCrmWeekly = (onChange) => {
   const channel = supabase
     .channel('crm-weekly-realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: ENTITIES }, (p) => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_COUNTS }, (p) => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_SYNC }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: ITEMS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: CHECKS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: STEPS }, (p) => onChange(p))
