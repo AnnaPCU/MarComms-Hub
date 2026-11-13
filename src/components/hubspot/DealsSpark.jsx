@@ -8,7 +8,8 @@
 //     la fecha (lunes, dd/mm) abajo, más «+N otros» debajo (integraciones,
 //     workflows…: van aparte porque una tanda de 200 por integración
 //     aplastaría las barras). La semana en curso con borde y «Esta».
-//     Tooltip por barra con el detalle.
+//     Al pasar el mouse (o tocar) una semana, se resalta y aparece un
+//     cartel con el detalle: fechas, CRM UI, otros y total.
 //   <DealsPanel deals dark />  — CRM UI de esta semana como número
 //     principal (lo que cargó la gente a mano), otros y total al costado,
 //     la comparación con la semana anterior y el gráfico.
@@ -16,15 +17,37 @@
 // Colores validados con el skill dataviz (DEAL_COLORS), claro y oscuro.
 // ════════════════════════════════════════════════════════════════════
 
-import React from 'react';
-import { DEAL_COLORS, weekLabel } from '@/utils/crmWeeklyDeals';
+import React, { useState } from 'react';
+import { DEAL_COLORS } from '@/utils/crmWeeklyDeals';
 
 const PLOT_H = 120;     // alto del área de barras (px)
 
 const dm = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const tip = (s) => (s.missing ? `${weekLabel(s.week)}: sin datos` : `${weekLabel(s.week)}: ${s.total} deals · ${s.ui} CRM UI · ${s.other} otros`);
+// Domingo de la semana (lunes + 6 días)
+const sunday = (iso) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 6); return d.toISOString().slice(0, 10); };
+
+// Cartel con el detalle de una semana (arriba de la columna; en las de los
+// bordes se alinea para no salirse)
+function WeekTip({ s, align }) {
+  const pos = align === 'left' ? 'left-0' : align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
+  return (
+    <div role="tooltip" className={`hub-popover absolute bottom-full mb-2 ${pos} z-20 w-44 bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2 pointer-events-none`}>
+      <p className="text-[10px] font-black text-slate-700">Semana del {dm(s.week)} al {dm(sunday(s.week))}</p>
+      {s.missing ? (
+        <p className="text-[10px] font-bold text-slate-400 mt-1">Sin datos para esta semana.</p>
+      ) : (
+        <div className="mt-1 space-y-0.5 text-[10px] font-bold text-slate-500">
+          <p className="flex justify-between"><span>CRM UI (a mano)</span><span className="font-mono font-black text-slate-800">{s.ui}</span></p>
+          <p className="flex justify-between"><span>Otros</span><span className="font-mono font-black text-slate-800">{s.other}</span></p>
+          <p className="flex justify-between border-t border-slate-100 pt-0.5"><span>Total</span><span className="font-mono font-black text-slate-800">{s.total}</span></p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DealsWeekChart({ series = [], dark = false }) {
+  const [hover, setHover] = useState(null); // índice de la semana resaltada
   const max = Math.max(1, ...series.map((s) => s.ui));
   const ui = DEAL_COLORS.ui[dark ? 'dark' : 'light'];
   return (
@@ -34,7 +57,14 @@ export function DealsWeekChart({ series = [], dark = false }) {
           const last = i === series.length - 1;
           const h = s.ui ? Math.max(3, Math.round((s.ui / max) * PLOT_H)) : 0;
           return (
-            <div key={s.week} title={tip(s)} className="flex flex-col items-center min-w-0">
+            <div
+              key={s.week}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+              onClick={() => setHover(hover === i ? null : i)}
+              className={`relative flex flex-col items-center min-w-0 rounded-lg py-1 cursor-default transition-colors ${hover === i ? 'bg-slate-100' : ''}`}
+            >
+              {hover === i && <WeekTip s={s} align={i < 2 ? 'left' : i > series.length - 3 ? 'right' : 'center'} />}
               <div className={`w-full flex flex-col justify-end items-center ${last ? 'outline outline-1 outline-offset-2 outline-slate-300 rounded-[5px]' : ''}`} style={{ height: PLOT_H + 16, maxWidth: 44 }}>
                 <span className={`font-mono text-[11px] font-black leading-none mb-1 ${s.missing ? 'text-slate-300' : 'text-slate-700'}`}>{s.missing ? '–' : s.ui}</span>
                 {h > 0 ? <span className="block w-full rounded-t-[4px]" style={{ height: h, background: ui }} /> : <span className="block w-full h-px bg-slate-200" />}
@@ -47,7 +77,7 @@ export function DealsWeekChart({ series = [], dark = false }) {
         })}
       </div>
       <p className="mt-3 text-[10px] font-medium text-slate-400">
-        Barras: deals <b className="font-black text-slate-500">CRM UI</b> de cada semana (lunes a domingo). Debajo, los <b className="font-black text-slate-500">otros</b> (integraciones, workflows…), que no se grafican. Pasá el mouse para ver el detalle.
+        Barras: deals <b className="font-black text-slate-500">CRM UI</b> de cada semana (lunes a domingo). Debajo, los <b className="font-black text-slate-500">otros</b> (integraciones, workflows…), que no se grafican. Pasá el mouse (o tocá) una semana para ver el detalle.
       </p>
     </div>
   );
