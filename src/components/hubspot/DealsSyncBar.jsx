@@ -4,8 +4,9 @@
 // «Deals de HubSpot · actualizado el … a las …» + botón «Actualizar»
 // (llama a la Edge Function hubspot-weekly-deals, con freno de 10 min).
 // Si la última corrida falló, lo dice en rojo (así no queda un número
-// viejo sin que nadie se entere). Si hay deals de esta semana sin «PCU
-// Entity» (o con una entidad que no está en el Hub), lo avisa.
+// viejo sin que nadie se entere). Si hay deals de esta semana o la anterior
+// sin «PCU Entity» (hay que completarlo en HubSpot), lo avisa. Los de
+// entidades que no están en el Hub no se avisan: el portal es global.
 //
 // Props: sync (dealSync de useCrmWeekly), onRefresh (async)
 // ════════════════════════════════════════════════════════════════════
@@ -52,7 +53,7 @@ export default function DealsSyncBar({ sync, onRefresh }) {
       {msg && <p className="text-[11px] font-bold text-slate-500">{msg}</p>}
       {(un.current > 0 || un.previous > 0) && (
         <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2 text-[11px] font-bold">
-          Deals sin «PCU Entity» (o con una entidad que no está en el Hub): {un.current} esta semana · {un.previous} la semana anterior. No se cuentan en ninguna entidad.
+          Deals sin «PCU Entity» en HubSpot: {un.current} esta semana · {un.previous} la semana anterior. No se cuentan en ninguna entidad: hay que completar ese campo en HubSpot.
         </p>
       )}
     </div>

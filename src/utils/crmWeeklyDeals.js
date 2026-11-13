@@ -16,7 +16,8 @@ import { lastWeeks, weekStartAr, cooldownLeft, cooldownFor } from '../../supabas
 export { lastWeeks, weekStartAr, cooldownLeft, cooldownFor };
 export const DEAL_WEEKS = 8;
 
-// Colores de las dos series (validados con el skill dataviz: claro y oscuro)
+// Colores (validados con el skill dataviz: claro y oscuro). El gráfico de la
+// ficha hoy usa solo CRM UI; «otros» va como número debajo de cada semana.
 export const DEAL_COLORS = {
   ui: { light: '#2a78d6', dark: '#3987e5', label: 'CRM UI' },
   other: { light: '#eb6834', dark: '#d95926', label: 'Otros' },

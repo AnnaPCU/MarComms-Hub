@@ -50,14 +50,15 @@ describe('PCU Entity → código de la entidad', () => {
       { pcu: 'CU Inspections Argentina', source: 'CRM_UI' },
       { pcu: 'CU Inspections Argentina', source: 'AUTOMATION_PLATFORM' },
       { pcu: 'CU Cert. Argentina', source: 'IMPORT' },  // no cuenta
-      { pcu: 'PS China', source: 'CRM_UI' },            // sin código → sin entidad
+      { pcu: 'PS China', source: 'CRM_UI' },            // opción sin código → fuera del Hub
       { pcu: null, source: 'CRM_UI' },                  // sin PCU Entity
-      { pcu: 'CU Cert. Uruguay', source: 'FORM' },      // código que no está en el Hub
+      { pcu: 'CU Cert. Uruguay', source: 'FORM' },      // entidad que no está en el Hub
       { pcu: 'PS Mexico', source: 'CRM_UI' },
     ];
     const counted = countWeek(deals, pcu.valueToCode, ['538', '880', '864']);
     expect(counted.byCode).toEqual({ 538: { ui: 2, other: 1 }, 880: { ui: 1, other: 0 } });
-    expect(counted.unassigned).toBe(3);
+    expect(counted.unassigned).toBe(1); // solo los que no tienen PCU Entity
+    expect(counted.outside).toBe(2);
     const rows = weekRows([{ code: '538' }, { code: '880' }, { code: '864' }, { code: '592' }], new Set(['538', '880', '592']), counted, '2026-11-09', 'T');
     expect(rows.map((r) => [r.entity_code, r.deals_ui, r.deals_other])).toEqual([['538', 2, 1], ['880', 1, 0], ['864', null, null], ['592', 0, 0]]);
   });

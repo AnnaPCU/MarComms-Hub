@@ -73,20 +73,24 @@ export const pcuEntityProperty = (properties = []) => {
 // Cuenta los deals de una semana por código de entidad.
 // deals: [{ pcu: valor interno de PCU Entity, source: hs_object_source_label }]
 // entityCodes: códigos de crm_weekly_entities
-// → { byCode: { [code]: { ui, other } }, unassigned } — unassigned = deals sin
-//   PCU Entity o con una entidad que no está en el Hub
+// → { byCode: { [code]: { ui, other } }, unassigned, outside }
+//   unassigned = deals SIN «PCU Entity» (lo que hay que completar en HubSpot)
+//   outside    = deals de entidades que no están en el Hub (el portal de
+//                HubSpot es global: Malasia, Reino Unido…), no es un problema
 export const countWeek = (deals = [], valueToCode = {}, entityCodes = []) => {
   const known = new Set(entityCodes.map(normCode));
   const byCode = {};
   let unassigned = 0;
+  let outside = 0;
   deals.forEach((d) => {
     if (d.source === SOURCE_IMPORT) return;
-    const code = d.pcu ? valueToCode[d.pcu] : null;
-    if (!code || !known.has(code)) { unassigned += 1; return; }
+    if (!d.pcu) { unassigned += 1; return; }
+    const code = valueToCode[d.pcu];
+    if (!code || !known.has(code)) { outside += 1; return; }
     const c = (byCode[code] = byCode[code] || { ui: 0, other: 0 });
     if (d.source === SOURCE_UI) c.ui += 1; else c.other += 1;
   });
-  return { byCode, unassigned };
+  return { byCode, unassigned, outside };
 };
 
 // Filas para crm_weekly_deal_counts de una semana: una por entidad del Hub.

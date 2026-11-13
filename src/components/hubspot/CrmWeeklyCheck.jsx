@@ -198,7 +198,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
           <nav className="space-y-1.5 lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1" aria-label="Entidades">
             {visible.map((e) => (
-              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} deals={dealsByCode[e.code]} dark={dark} active={entity?.code === e.code} onClick={() => pick(e.code)} />
+              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} active={entity?.code === e.code} onClick={() => pick(e.code)} />
             ))}
           </nav>
 
