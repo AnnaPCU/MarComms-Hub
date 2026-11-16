@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import { AMERICA_COUNTRIES } from '@/constants/crmWeekly';
-import { activityGroups, countryOptions, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, trafficLight } from './crmWeekly';
+import { activityGroups, countryCards, countryOptions, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, sumSummaries, trafficLight } from './crmWeekly';
 
 const TODAY = '2026-11-12';
 const ITEMS = [{ id: 'a', label: 'A', position: 0 }, { id: 'b', label: 'B', position: 1 }, { id: 'c', label: 'C', position: 2 }, { id: 'd', label: 'D', position: 3 }];
@@ -132,5 +132,31 @@ describe('regiones (Global check)', () => {
   it('agrupa las actividades por región', () => {
     const ents = [{ code: '1', region: 'EMEA' }, { code: '2', region: 'APAC' }, { code: '3', region: 'EMEA' }, { code: '4' }];
     expect(activityGroups(ents, 'region').map((g) => [g.label, g.entities.length])).toEqual([['EMEA', 2], ['APAC', 1], ['Américas', 1]]);
+  });
+});
+
+describe('countryCards — entidades del mismo país en una tarjeta', () => {
+  const list = [
+    { code: '592', country: 'Argentina' },
+    { code: '583', country: 'Canada' },
+    { code: '538', country: ' argentina ' },
+    { code: '723', country: '' },
+    { code: '879', country: null },
+  ];
+  it('junta por país sin distinguir mayúsculas y respeta el orden de la primera', () => {
+    const cards = countryCards(list);
+    expect(cards.map((c) => c.entities.map((e) => e.code))).toEqual([['592', '538'], ['583'], ['723'], ['879']]);
+    expect(cards[0].country).toBe('Argentina');
+  });
+  it('las sin país van solas', () => {
+    expect(countryCards(list).filter((c) => !c.country)).toHaveLength(2);
+  });
+});
+
+describe('sumSummaries — avance de un país', () => {
+  it('suma tildados, total, vencidos y próximos', () => {
+    const s = sumSummaries([{ done: 9, total: 9, overdue: 0, soon: 0 }, { done: 3, total: 9, overdue: 1, soon: 2 }, null]);
+    expect(s).toEqual({ done: 12, total: 18, overdue: 1, soon: 2, pct: 67 });
+    expect(trafficLight(s).id).toBe('yellow');
   });
 });

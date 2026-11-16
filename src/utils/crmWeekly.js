@@ -213,6 +213,29 @@ export const activityGroups = (entities = [], by = 'entity') => {
   return [...groups.values()];
 };
 
+// Lista de «Por entidad» con las entidades del mismo país juntas en una
+// sola tarjeta (nov 2026). Respeta el orden y los filtros que ya traen
+// (cada país queda donde aparece su primera entidad). Las entidades sin
+// país van solas. → [{ key, country, entities: [...] }]
+export const countryCards = (entities = []) => {
+  const cards = [];
+  const byKey = new Map();
+  entities.forEach((e) => {
+    const country = String(e.country || '').trim();
+    if (!country) { cards.push({ key: `entity:${e.code}`, country: '', entities: [e] }); return; }
+    const key = `country:${norm(country)}`;
+    if (!byKey.has(key)) { const card = { key, country, entities: [] }; byKey.set(key, card); cards.push(card); }
+    byKey.get(key).entities.push(e);
+  });
+  return cards;
+};
+
+// Suma los resúmenes (entitySummary) de varias entidades: avance del país
+export const sumSummaries = (summaries = []) => {
+  const t = summaries.filter(Boolean).reduce((acc, s) => ({ done: acc.done + s.done, total: acc.total + s.total, overdue: acc.overdue + s.overdue, soon: acc.soon + s.soon }), { done: 0, total: 0, overdue: 0, soon: 0 });
+  return { ...t, pct: t.total ? Math.round((t.done / t.total) * 100) : 0 };
+};
+
 // Países para el campo País de una entidad: los 35 de América más los que
 // ya usan las entidades (ej. España, Alemania), sin repetir (sin distinguir
 // acentos ni mayúsculas) y en orden alfabético.

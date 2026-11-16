@@ -9,6 +9,8 @@
 //     está) y sus próximos steps.
 //   · «Próximas actividades» (UpcomingActivities): solo lo que viene, por
 //     entidad o por país.
+//   En «Por entidad», las entidades del mismo país van en una sola
+//   tarjeta (CountryCard) con un chip por entidad y flechas para pasar.
 // Arriba, filtros (marca, semáforo, importancia, tag) y orden (por color
 // del semáforo, importancia, país) que valen para las dos vistas.
 // Las entidades se suman, editan y borran desde acá (EntityFormModal,
@@ -28,12 +30,13 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { CalendarClock, LayoutList, Pencil, Plus } from 'lucide-react';
 import { todayIso as getTodayIso } from '@/utils/date';
-import { checksByEntity, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight } from '@/utils/crmWeekly';
+import { checksByEntity, countryCards, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight } from '@/utils/crmWeekly';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useStoredPref } from '@/hooks/useStoredPref';
 import WeeklyChecklist from './WeeklyChecklist';
 import CrmNextSteps from './CrmNextSteps';
 import EntityButton, { PriorityChip } from './EntityButton';
+import CountryCard from './CountryCard';
 import EntityFilters from './EntityFilters';
 import EntityFormModal from './EntityFormModal';
 import TagsInput from './TagsInput';
@@ -90,15 +93,17 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
     const l = trafficLight(summaries[e.code]); if (l) acc[l.id] = (acc[l.id] || 0) + 1; return acc;
   }, {}), [entities, filters, summaries]);
   const visible = useMemo(() => sortEntities(filterEntities(entities, filters, summaries), sort, summaries), [entities, filters, summaries, sortFirst, sortSecond]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Las entidades del mismo país van juntas en una tarjeta (CountryCard)
+  const cards = useMemo(() => countryCards(visible), [visible]);
   const entity = visible.find((e) => e.code === selected) || visible[0];
   const entitySteps = steps.filter((s) => s.entityCode === entity?.code);
   const summary = entity ? summaries[entity.code] : null;
   const light = trafficLight(summary);
 
   // En pantallas chicas la lista va arriba: al elegir, baja a la entidad
-  const pick = (code) => {
+  const pick = (code, { scroll = true } = {}) => {
     setSelected(code);
-    if (window.innerWidth < 1024) setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (scroll && window.innerWidth < 1024) setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
   const openEntity = (code) => { setSubview('entities'); pick(code); };
 
@@ -206,9 +211,11 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
           <nav className="space-y-1.5 lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1" aria-label="Entidades">
-            {visible.map((e) => (
-              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} showRegion={isGlobal} active={entity?.code === e.code} onClick={() => pick(e.code)} />
-            ))}
+            {cards.map((card) => (card.entities.length > 1 ? (
+              <CountryCard key={card.key} card={card} summaries={summaries} activeCode={entity?.code} showRegion={isGlobal} onPick={pick} />
+            ) : (
+              <EntityButton key={card.key} entity={card.entities[0]} summary={summaries[card.entities[0].code]} showRegion={isGlobal} active={entity?.code === card.entities[0].code} onClick={() => pick(card.entities[0].code)} />
+            )))}
           </nav>
 
           {entity && (
