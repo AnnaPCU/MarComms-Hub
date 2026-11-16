@@ -110,17 +110,23 @@ describe('cálculos', () => {
 describe('unitPricesFor — tarifa especial por entidad (PS Technology)', () => {
   const base = { salesPro: 145, core: 120 };
   const tech = { key: 'PS Technology', legalEntity: '752 - Peterson Technologies GmbH' };
+  it('septiembre: precio acordado, no se compara con licencias × tarifa', () => {
+    const up = unitPricesFor(tech, 'Septiembre', base);
+    const c = priceCheck({ price: 1748, detail: '1 Licencias Sales Pro\n16 Licencias Core' }, up);
+    expect(c.explained).toBe(true);
+    expect(c.agreed).toMatch(/acordado/);
+  });
   it('antes de septiembre usa la tarifa del Summary', () => {
     expect(unitPricesFor(tech, 'Agosto', base)).toEqual(base);
     expect(priceCheck({ price: 2090, detail: '2 Licencias Sales Pro\n15 Licencias Core' }, unitPricesFor(tech, 'Agosto', base)).diff).toBe(0);
   });
-  it('desde septiembre, Sales Pro 100 y Core 80', () => {
+  it('desde octubre, Sales Pro 100 y Core 80', () => {
     const up = unitPricesFor(tech, 'Octubre', base);
     expect(up).toMatchObject({ salesPro: 100, core: 80, special: true });
     expect(priceCheck({ price: 980, detail: '1 Licencias Sales Pro\n11 Licencias Core' }, up).diff).toBe(0);
   });
   it('se reconoce también por el código de la entidad legal', () => {
-    expect(unitPricesFor({ key: 'PS Tech', legalEntity: '752 - Peterson Technologies GmbH' }, 'Septiembre', base).core).toBe(80);
+    expect(unitPricesFor({ key: 'PS Tech', legalEntity: '752 - Peterson Technologies GmbH' }, 'Noviembre', base).core).toBe(80);
   });
   it('las demás entidades siguen con la tarifa del Summary', () => {
     expect(unitPricesFor({ key: 'CU Peru', legalEntity: '536 - Control Union Services Peru S.A.C.' }, 'Octubre', base)).toEqual(base);

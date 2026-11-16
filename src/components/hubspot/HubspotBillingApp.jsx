@@ -153,7 +153,7 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
                   {b || 'Todas las entidades'}
                 </button>
               ))}
-              <span className="text-[11px] font-bold text-slate-400 ml-auto">Tarifas: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}{SPECIAL_UNIT_PRICES.length > 0 && <span title={SPECIAL_UNIT_PRICES.map((s) => `${s.entityKey}: Sales Pro ${money(s.salesPro)} · Core ${money(s.core)} desde ${s.from.toLowerCase()}`).join('\n')}> · {SPECIAL_UNIT_PRICES.map((s) => s.entityKey).join(', ')} con tarifa especial</span>}</span>
+              <span className="text-[11px] font-bold text-slate-400 ml-auto">Tarifas: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}{SPECIAL_UNIT_PRICES.length > 0 && <span title={SPECIAL_UNIT_PRICES.map((s) => `${s.entityKey}: Sales Pro ${money(s.salesPro)} · Core ${money(s.core)} desde ${s.from.toLowerCase()}${s.agreed ? ` (${Object.keys(s.agreed).join(', ').toLowerCase()}: precio acordado)` : ''}`).join('\n')}> · {SPECIAL_UNIT_PRICES.map((s) => s.entityKey).join(', ')} con tarifa especial</span>}</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

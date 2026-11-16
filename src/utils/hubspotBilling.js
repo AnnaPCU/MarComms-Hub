@@ -137,10 +137,13 @@ export const previousMonth = (month) => { const i = monthIdx(month); return i > 
 
 export const licensesOf = (monthEntry) => parseLicenses(monthEntry?.detail);
 // Tarifas de una entidad en un mes: las del Summary, salvo que tenga una
-// tarifa especial desde ese mes (SPECIAL_UNIT_PRICES, ej. PS Technology)
+// tarifa especial desde ese mes (SPECIAL_UNIT_PRICES, ej. PS Technology).
+// Un mes con precio acordado devuelve `agreed` (el texto): priceCheck lo da
+// por explicado.
 const entityCode = (entity) => (String(entity?.legalEntity || '').match(/^\s*(\d+[A-Za-z]?)\s*-/) || [])[1] || '';
 export const unitPricesFor = (entity, month, base = DEFAULT_UNIT_PRICES, specials = SPECIAL_UNIT_PRICES) => {
   const sp = specials.find((s) => (s.entityKey && s.entityKey === entity?.key) || (s.code && s.code === entityCode(entity)));
+  if (sp?.agreed?.[MONTHS_ES[monthIdx(month)]]) return { ...(base || DEFAULT_UNIT_PRICES), agreed: sp.agreed[MONTHS_ES[monthIdx(month)]] };
   if (!sp || monthIdx(month) < monthIdx(sp.from)) return base || DEFAULT_UNIT_PRICES;
   return { salesPro: sp.salesPro, core: sp.core, special: true };
 };
@@ -157,7 +160,7 @@ export const priceCheck = (monthEntry, unitPrices = DEFAULT_UNIT_PRICES) => {
   const l = licensesOf(monthEntry);
   const expected = expectedPrice(monthEntry, unitPrices);
   const diff = monthEntry.price - expected;
-  return { expected, diff, extras: l.extras, explained: diff === 0 || l.extras.length > 0, hasLicenses: l.salesPro + l.core > 0 };
+  return { expected, diff, extras: l.extras, agreed: unitPrices?.agreed || '', explained: diff === 0 || l.extras.length > 0 || Boolean(unitPrices?.agreed), hasLicenses: l.salesPro + l.core > 0 };
 };
 
 export const totalCheck = (entities, meta, month) => {
