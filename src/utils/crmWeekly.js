@@ -105,6 +105,17 @@ export const redDeadlines = (checks = [], items = CRM_CHECK_ITEMS, todayIso, ent
     .sort((a, b) => a.days - b.days || a.entity.code.localeCompare(b.entity.code));
 };
 
+// Próximos steps con fecha en rojo (nov 2026): sin completar y con la fecha
+// en DEADLINE_RED_DAYS días o menos (o vencida), de las entidades que se
+// pasan (las del Weekly check). → [{ entity, step, days }]
+export const redSteps = (steps = [], todayIso, entities = CRM_ENTITIES) => {
+  const entityByCode = Object.fromEntries(entities.map((e) => [e.code, e]));
+  return steps
+    .map((step) => ({ step, entity: entityByCode[step.entityCode], days: daysUntil(step.dueDate, todayIso) }))
+    .filter(({ step, entity, days }) => entity && !step.done && days !== null && days <= DEADLINE_RED_DAYS)
+    .sort((a, b) => a.days - b.days || a.entity.code.localeCompare(b.entity.code));
+};
+
 // ── Semáforo del avance (nov 2026) ──
 // summary = entitySummary(...). 100 % → verde; TRAFFIC_YELLOW_PCT % o más →
 // amarillo; menos → rojo. Sin ítems en el checklist: null.

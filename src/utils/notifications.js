@@ -33,7 +33,9 @@
 //  16. crm_deadline               — un ítem del checklist de una entidad, sin tildar, con su
 //                                   deadline en rojo (3 días o menos, o vencido): aviso a
 //                                   CRM_WEEKLY_NOTIFY_USER (Valentino Redín). Uno por ítem y
-//                                   deadline; al tildarlo o mover la fecha deja de aparecer
+//                                   deadline; al tildarlo o mover la fecha deja de aparecer.
+//                                   También los próximos steps sin completar con la fecha
+//                                   en rojo (redSteps, nov 2026)
 //
 //   Facturación:
 //  17. invoicing_mention          — te etiquetaron con @ en las notas del mes de una hoja o
@@ -54,7 +56,7 @@ import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts'
 import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
 import { CRM_WEEKLY_NOTIFY_USER } from '@/constants/crmWeekly';
-import { redDeadlines } from './crmWeekly';
+import { redDeadlines, redSteps } from './crmWeekly';
 import { SHEET_LABELS as INVOICING_SHEET_LABELS } from '@/constants/invoicing';
 import { mentionsName, mentionSnippet, textHash } from './mentions';
 
@@ -103,6 +105,7 @@ export const buildNotifications = (currentUser, data, options = {}) => {
     crmChecks = [],
     crmItems,
     crmEntities,
+    crmSteps = [],
     invoicingRows = [],
   } = data || {};
 
@@ -491,6 +494,17 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         title: `${entity.code} · ${entity.name}: «${item.label}» ${when} (${formatDate(deadline)}) y todavía no está tildado`,
         shortTitle: `⏰ ${item.label} · ${entity.code}`,
         emoji: '⏰', project: entity.name, source: 'CRM HubSpot', date: deadline,
+        navTo: 'crm', navTab: 'weekly',
+      });
+    });
+    redSteps(crmSteps, todayIso, crmEntities || undefined).forEach(({ entity, step, days }) => {
+      const when = days < 0 ? (days === -1 ? 'venció ayer' : `venció hace ${-days} días`)
+        : days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
+      notifs.push({
+        id: `crm-step-${step.id}-${step.dueDate}`, type: 'crm_deadline', icon: AlertCircle, color: 'sky',
+        title: `${entity.code} · ${entity.name}: el step «${step.title}» ${when} (${formatDate(step.dueDate)}) y todavía no está completado`,
+        shortTitle: `⏰ Step · ${entity.code}`,
+        emoji: '⏰', project: entity.name, source: 'CRM HubSpot', date: step.dueDate,
         navTo: 'crm', navTab: 'weekly',
       });
     });

@@ -433,6 +433,27 @@ describe('16. crm_deadline — aviso a Valentino cuando un deadline se pone en r
     const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmChecks, crmItems: [{ id: 'deals', label: 'Deals' }] }, opts);
     expect(notifs.filter((n) => n.type === 'crm_deadline').map((n) => n.id)).toEqual(['crm-deadline-592-deals-2026-05-30']);
   });
+
+  it('también avisa los próximos steps sin completar con la fecha en rojo', () => {
+    const crmSteps = [
+      { id: 's1', entityCode: '538', title: 'Conectar Outlook del equipo', dueDate: '2026-06-01', done: false }, // vencido
+      { id: 's2', entityCode: '592', title: 'Training', dueDate: '2026-06-04', done: false },                     // 2 días → rojo
+      { id: 's3', entityCode: '583', title: 'Más adelante', dueDate: '2026-06-20', done: false },                // todavía no
+      { id: 's4', entityCode: '518', title: 'Hecho', dueDate: '2026-05-20', done: true },                        // completado
+      { id: 's5', entityCode: '537', title: 'Sin fecha', dueDate: '', done: false },
+    ];
+    const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmSteps }, opts).filter((n) => n.type === 'crm_deadline');
+    expect(notifs.map((n) => n.id)).toEqual(['crm-step-s1-2026-06-01', 'crm-step-s2-2026-06-04']);
+    expect(notifs[0].title).toMatch(/^538 · Control Union Argentina S\.A\.: el step «Conectar Outlook del equipo» venció ayer/);
+    expect(notifs[1]).toMatchObject({ navTo: 'crm', navTab: 'weekly' });
+    expect(buildNotifications(FELO, { ...EMPTY_DATA, crmSteps }, opts).some((n) => n.type === 'crm_deadline')).toBe(false);
+  });
+
+  it('los steps de entidades fuera del Weekly check (EMEA / APAC) no avisan', () => {
+    const crmSteps = [{ id: 's9', entityCode: '544', title: 'Malasia', dueDate: '2026-06-01', done: false }];
+    const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmSteps, crmEntities: [{ code: '538', name: 'CU Argentina' }] }, opts);
+    expect(notifs.some((n) => n.type === 'crm_deadline')).toBe(false);
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════
