@@ -59,7 +59,7 @@ describe('resumen por entidad', () => {
   const map = checksByEntity(rows);
   it('cumplidos, vencidos y próximos', () => {
     expect(Object.keys(map)).toEqual(['538', '592']);
-    expect(entitySummary(map['538'], TODAY)).toEqual({ done: 1, total: 8, pct: 13, overdue: 1, soon: 1 });
+    expect(entitySummary(map['538'], TODAY)).toEqual({ done: 1, total: 9, pct: 11, overdue: 1, soon: 1 }); // 9 ítems de respaldo (con la Commercial Tool)
     expect(entitySummary(undefined, TODAY)).toMatchObject({ done: 0, overdue: 0, soon: 0 });
   });
   it('con ítems de la base (uno agregado)', () => {
@@ -69,7 +69,7 @@ describe('resumen por entidad', () => {
     expect(weeklyTotals([{ code: '538' }], m, TODAY, items)).toMatchObject({ done: 2, total: 3 });
   });
   it('totales', () => {
-    expect(weeklyTotals([{ code: '538' }, { code: '592' }, { code: '583' }], map, TODAY)).toEqual({ done: 2, total: 24, overdue: 1, soon: 1, complete: 0 });
+    expect(weeklyTotals([{ code: '538' }, { code: '592' }, { code: '583' }], map, TODAY)).toEqual({ done: 2, total: 27, overdue: 1, soon: 1, complete: 0 });
   });
 });
 

@@ -5,7 +5,7 @@
 // 100 %, amarillo 50–99 %, rojo < 50 %), importancia, tags y alertas de
 // deadline (vencidos / vencen en 7 días).
 //
-// Props: entity, summary (entitySummary), active, onClick
+// Props: entity, summary (entitySummary), showRegion (Global check), active, onClick
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
@@ -33,7 +33,7 @@ export function LightDot({ summary, className = 'w-2.5 h-2.5' }) {
   return <span className={`shrink-0 rounded-full ${light ? light.dot : 'bg-slate-300'} ${className}`} title={light ? `${light.label} (${light.range})` : 'Sin ítems en el checklist'} />;
 }
 
-export default function EntityButton({ entity, summary, active, onClick }) {
+export default function EntityButton({ entity, summary, showRegion = false, active, onClick }) {
   const light = trafficLight(summary);
   const tags = entity.tags || [];
   return (
@@ -46,8 +46,9 @@ export default function EntityButton({ entity, summary, active, onClick }) {
         {summary.overdue > 0 && <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md bg-red-50 text-red-600 px-1.5 py-0.5 text-[9px] font-black" title="Ítems vencidos"><AlertTriangle className="w-2.5 h-2.5" />{summary.overdue}</span>}
         {summary.soon > 0 && <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md bg-amber-50 text-amber-700 px-1.5 py-0.5 text-[9px] font-black" title="Vencen en 7 días o menos"><Clock className="w-2.5 h-2.5" />{summary.soon}</span>}
       </div>
-      {(entity.country || tags.length > 0) && (
+      {(entity.country || tags.length > 0 || showRegion) && (
         <div className="mt-1 flex items-center gap-1 flex-wrap pl-[18px]">
+          {showRegion && <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 rounded px-1 py-px">{entity.region || 'Américas'}</span>}
           {entity.country && <span className="text-[10px] font-bold text-slate-400 mr-0.5">{entity.country}</span>}
           {tags.slice(0, 3).map((t) => <TagChip key={t} tag={t} />)}
           {tags.length > 3 && <span className="text-[10px] font-bold text-slate-400">+{tags.length - 3}</span>}

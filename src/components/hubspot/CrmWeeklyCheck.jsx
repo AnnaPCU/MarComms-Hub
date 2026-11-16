@@ -17,8 +17,12 @@
 // todas las entidades y se pueden agregar, renombrar y eliminar. Todo en
 // tiempo real.
 //
-// Props: data (de useCrmWeekly: lo carga App, que también arma los avisos
-//   de deadlines en rojo), currentUser, dark
+// Nov 2026: scope 'weekly' (pestaña «Weekly check»: solo las entidades de
+// Américas) o 'global' (pestaña «Global check»: Américas, EMEA y APAC, con
+// filtro por región). Son las mismas entidades, tildes y steps.
+//
+// Props: scope ('weekly' | 'global'), data (de useCrmWeekly: lo carga App,
+//   que también arma los avisos de deadlines en rojo), currentUser, dark
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useRef, useState } from 'react';
@@ -48,22 +52,27 @@ const SUBVIEWS = [
   { id: 'activities', label: 'Próximas actividades', icon: CalendarClock },
 ];
 
-export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
+const NO_FILTERS = { brand: '', light: '', priority: '', tag: '', region: '' };
+
+export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, dark = false }) {
+  const isGlobal = scope === 'global';
   const {
-    entities, tracking, items, checks, steps, loading, error, missing,
+    entities: allEntities, weeklyEntities, tracking, items, checks, steps, loading, error, missing,
     dealCounts, dealSync, dealsReady, refreshDeals,
     saveCheck, createStep, updateStep, removeStep, updateStepOptimistic,
     createItem, updateItem, removeItem, createEntity, updateEntity, removeEntity,
   } = data;
   const confirm = useConfirm();
-  const [filters, setFilters] = useState({ brand: '', light: '', priority: '', tag: '' });
+  // Weekly check: solo Américas; Global check: todas
+  const entities = isGlobal ? allEntities : weeklyEntities;
+  const [filters, setFilters] = useState(NO_FILTERS);
   const [sortFirst, setSortFirst] = useStoredPref('marcomms_hub_crm_weekly_sort', 'manual');
   const [sortSecond, setSortSecond] = useStoredPref('marcomms_hub_crm_weekly_sort2', 'manual');
   const sort = [sortFirst, sortSecond];
   const setSort = ([a, b]) => { setSortFirst(a); setSortSecond(b); };
   const [subview, setSubview] = useStoredPref('marcomms_hub_crm_weekly_view', 'entities');
   const [range, setRange] = useStoredPref('marcomms_hub_crm_weekly_range', '14');
-  const [groupBy, setGroupBy] = useStoredPref('marcomms_hub_crm_weekly_group', 'entity');
+  const [groupBy, setGroupBy] = useStoredPref(`marcomms_hub_crm_${scope}_group`, isGlobal ? 'region' : 'entity');
   const [selected, setSelected] = useState(null);
   const [entityModal, setEntityModal] = useState(null); // { entity } | { entity: null }
   const [saveError, setSaveError] = useState('');
@@ -76,7 +85,8 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
   const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, items)])), [entities, map, todayIso, items]);
   const tags = useMemo(() => entityTags(entities), [entities]);
   const dealsByCode = useMemo(() => (dealsReady ? Object.fromEntries(entities.map((e) => [e.code, entityDeals(dealCounts, e.code)])) : {}), [dealsReady, entities, dealCounts]);
-  const countries = useMemo(() => countryOptions(entities), [entities]);
+  const countries = useMemo(() => countryOptions(allEntities), [allEntities]);
+  const regionCounts = useMemo(() => entities.reduce((acc, e) => { const r = e.region || 'Américas'; acc[r] = (acc[r] || 0) + 1; return acc; }, {}), [entities]);
   // Los colores del semáforo cuentan sin el filtro de color (para poder cambiar de color)
   const lightCounts = useMemo(() => filterEntities(entities, { ...filters, light: '' }, summaries).reduce((acc, e) => {
     const l = trafficLight(summaries[e.code]); if (l) acc[l.id] = (acc[l.id] || 0) + 1; return acc;
@@ -125,7 +135,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
     if (entityModal.entity) await updateEntity(entityModal.entity.code, form);
     else {
       await createEntity({ ...form, position: entities.reduce((m, e) => Math.max(m, (e.position ?? 0) + 1), 0), createdBy: by });
-      setFilters({ brand: '', light: '', priority: '', tag: '' });
+      setFilters(NO_FILTERS);
       setSelected(form.code);
     }
     setEntityModal(null);
@@ -165,7 +175,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
 
       {dealsReady && <DealsSyncBar sync={dealSync} onRefresh={refreshDeals} />}
 
-      <EntityFilters filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} sort={sort} onSort={setSort} lightCounts={lightCounts} tags={tags} />
+      <EntityFilters showRegion={isGlobal} regionCounts={isGlobal ? regionCounts : null} filters={filters} onChange={(p) => setFilters((f) => ({ ...f, ...p }))} sort={sort} onSort={setSort} lightCounts={lightCounts} tags={tags} />
 
       {!tracking && !loading && <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-[11px] font-bold">Para sumar entidades, ponerles importancia y tags, y cargar fechas en los próximos steps, falta correr la migración 0070 en Supabase. Mientras tanto se ven las 16 entidades de siempre.</p>}
 
@@ -174,7 +184,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
       ) : visible.length === 0 ? (
         <div className="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center">
           <p className="text-sm font-black text-slate-600">Ninguna entidad coincide con los filtros.</p>
-          <button onClick={() => setFilters({ brand: '', light: '', priority: '', tag: '' })} className="mt-2 text-[11px] font-black uppercase tracking-wider text-sky-700 hover:text-sky-900">Limpiar filtros</button>
+          <button onClick={() => setFilters(NO_FILTERS)} className="mt-2 text-[11px] font-black uppercase tracking-wider text-sky-700 hover:text-sky-900">Limpiar filtros</button>
         </div>
       ) : subview === 'activities' ? (
         <UpcomingActivities
@@ -189,6 +199,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
           range={range}
           onRange={setRange}
           groupBy={groupBy}
+          groupOptions={isGlobal ? ['region', 'country', 'entity'] : ['entity', 'country']}
           onGroupBy={setGroupBy}
           onOpenEntity={openEntity}
           onToggleCheck={(e, itemId, done) => saveFor(e.code, itemId, { done })}
@@ -198,7 +209,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-5 items-start">
           <nav className="space-y-1.5 lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1" aria-label="Entidades">
             {visible.map((e) => (
-              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} active={entity?.code === e.code} onClick={() => pick(e.code)} />
+              <EntityButton key={e.code} entity={e} summary={summaries[e.code]} showRegion={isGlobal} active={entity?.code === e.code} onClick={() => pick(e.code)} />
             ))}
           </nav>
 
@@ -213,7 +224,7 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                   <div className="min-w-0">
-                    <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{entity.code} · {entity.brand}{entity.country ? ` · ${entity.country}` : ''}</p>
+                    <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{entity.code} · {entity.brand}{entity.country ? ` · ${entity.country}` : ''}{isGlobal ? ` · ${entity.region || 'Américas'}` : ''}</p>
                     <h2 className="text-lg font-black text-slate-900 leading-tight flex items-center gap-2 flex-wrap">
                       {entity.name}
                       <PriorityChip priority={entity.priority} />
@@ -275,9 +286,10 @@ export default function CrmWeeklyCheck({ data, currentUser, dark = false }) {
       {entityModal && (
         <EntityFormModal
           entity={entityModal.entity}
-          entities={entities}
+          entities={allEntities}
           tagOptions={tags}
           countryOptions={countries}
+          defaultRegion={isGlobal && filters.region ? filters.region : 'Américas'}
           onSave={saveEntity}
           onDelete={entityModal.entity ? deleteEntity : null}
           onClose={() => setEntityModal(null)}

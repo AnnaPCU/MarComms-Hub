@@ -6,7 +6,11 @@
 // entidad nueva arranca con el checklist sin tildar. Eliminar borra
 // también su checklist y sus próximos steps (con confirmación).
 //
+// Región (Américas / EMEA / APAC, migration 0073): las de Américas van
+// también en el Weekly check.
+//
 // Props: entity (o null = nueva), entities (para validar el código),
+//   defaultRegion (alta desde el Global check con una región filtrada),
 //   tagOptions, onSave(data) (async), onDelete() | null, onClose()
 // ════════════════════════════════════════════════════════════════════
 
@@ -14,14 +18,14 @@ import React, { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
-import { CRM_BRANDS, CRM_PRIORITIES } from '@/constants/crmWeekly';
+import { CRM_BRANDS, CRM_PRIORITIES, CRM_REGIONS } from '@/constants/crmWeekly';
 import { cleanTags, entityProblem } from '@/utils/crmWeekly';
 import TagsInput from './TagsInput';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-300';
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
 
-export default function EntityFormModal({ entity, entities = [], tagOptions = [], countryOptions = [], onSave, onDelete, onClose }) {
+export default function EntityFormModal({ entity, entities = [], tagOptions = [], countryOptions = [], defaultRegion = 'Américas', onSave, onDelete, onClose }) {
   const confirm = useConfirm();
   const isNew = !entity;
   const [form, setForm] = useState({
@@ -29,6 +33,7 @@ export default function EntityFormModal({ entity, entities = [], tagOptions = []
     name: entity?.name || '',
     country: entity?.country || '',
     brand: entity?.brand || 'Control Union',
+    region: entity?.region || defaultRegion,
     priority: entity?.priority || '',
     tags: entity?.tags || [],
   });
@@ -43,7 +48,7 @@ export default function EntityFormModal({ entity, entities = [], tagOptions = []
     try {
       await onSave({
         ...(isNew ? { code: form.code.trim() } : {}),
-        name: form.name.trim(), country: form.country.trim(), brand: form.brand,
+        name: form.name.trim(), country: form.country.trim(), brand: form.brand, region: form.region,
         priority: form.priority || null, tags: cleanTags(form.tags),
       });
     } catch (e) {
@@ -101,6 +106,15 @@ export default function EntityFormModal({ entity, entities = [], tagOptions = []
                   ))}
                 </div>
               </div>
+            </div>
+            <div className="space-y-1">
+              <span className={labelCls}>Región</span>
+              <div className="flex gap-1.5">
+                {CRM_REGIONS.map((r) => (
+                  <button key={r} type="button" onClick={() => set('region', r)} className={`flex-1 px-2 py-2 rounded-xl text-[11px] font-black border ${form.region === r ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{r}</button>
+                ))}
+              </div>
+              <p className="text-[10px] font-bold text-slate-400">Las de Américas aparecen en el Weekly check; todas, en el Global check.</p>
             </div>
             <div className="space-y-1">
               <span className={labelCls}>Importancia</span>

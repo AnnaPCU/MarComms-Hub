@@ -12,7 +12,9 @@
 // realtime de Supabase hace que todos lo vean al instante.
 // Desde oct 2026 el header tiene dos vistas: «Facturación HubSpot» (esta)
 // y «Weekly check» (CrmWeeklyCheck: checklist de implementación y
-// próximos steps de cada entidad).
+// próximos steps de cada entidad). Nov 2026: tercera vista «Global check»
+// (el mismo CrmWeeklyCheck con scope 'global': todas las entidades de
+// Américas, EMEA y APAC, con filtro por región; mismos tildes y steps).
 //
 // Props: data (de useHubspotBilling), weekly (de useCrmWeekly, lo carga App
 //   para los avisos), autoView ('weekly' al venir de un aviso) +
@@ -20,7 +22,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Database, FileSpreadsheet, Receipt, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Database, FileSpreadsheet, Globe2, Receipt, Upload } from 'lucide-react';
 
 import { useConfirm } from '@/hooks/useConfirm';
 import { brandOfEntity } from '@/constants/hubspotBilling';
@@ -35,7 +37,12 @@ import CrmWeeklyCheck from './CrmWeeklyCheck';
 const VIEWS = [
   { id: 'billing', label: 'Facturación HubSpot', icon: Receipt },
   { id: 'weekly', label: 'Weekly check', icon: ClipboardCheck },
+  { id: 'global', label: 'Global check', icon: Globe2 },
 ];
+const TITLES = {
+  weekly: ['Weekly check', 'Implementación de HubSpot por entidad · checklist y próximos steps'],
+  global: ['Global check', 'Américas, EMEA y APAC · mismo checklist y próximos steps que el Weekly check'],
+};
 
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -91,9 +98,9 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="bg-white text-blue-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> CRM</div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-black uppercase tracking-tight">{view === 'weekly' ? 'Weekly check' : 'Facturación HubSpot'}</h1>
+              <h1 className="text-2xl font-black uppercase tracking-tight">{TITLES[view]?.[0] || 'Facturación HubSpot'}</h1>
               <p className="text-[10px] text-sky-100 font-bold uppercase tracking-widest truncate">
-                {view === 'weekly' ? 'Implementación de HubSpot por entidad · checklist y próximos steps' : lastImport ? `Actualizado ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` por ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licencias por entidad · se actualiza importando el Excel'}
+                {TITLES[view] ? TITLES[view][1] : lastImport ? `Actualizado ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` por ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licencias por entidad · se actualiza importando el Excel'}
               </p>
             </div>
           </div>
@@ -112,9 +119,9 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
         </div>
       </header>
 
-      {view === 'weekly' ? (
+      {TITLES[view] ? (
         <main className="max-w-7xl mx-auto w-full p-6">
-          <CrmWeeklyCheck data={weekly} currentUser={currentUser} dark={dark} />
+          <CrmWeeklyCheck key={view} scope={view} data={weekly} currentUser={currentUser} dark={dark} />
         </main>
       ) : (
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">

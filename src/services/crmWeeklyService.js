@@ -10,7 +10,7 @@
 //   crm_weekly_checks — checklist: una fila por entidad e ítem
 //   crm_next_steps    — próximos steps de cada entidad
 //
-// Entidad (UI): { code, name, brand, country, priority, tags, position, createdBy }
+// Entidad (UI): { code, name, brand, country, region, priority, tags, position, createdBy }
 // Ítem (UI):  { id, label, hint, position, createdBy }
 // Check (UI): { id, entityCode, itemId, done, deadline ('YYYY-MM-DD' | ''),
 //               doneAt, updatedBy, updatedAt }
@@ -34,6 +34,7 @@ export const entityFromRow = (row) => (row ? {
   name:      row.name || '',
   brand:     row.brand || 'Control Union',
   country:   row.country || '',
+  region:    row.region || 'Américas',            // 0073
   priority:  row.priority || null,
   tags:      Array.isArray(row.tags) ? row.tags : [],
   position:  row.position ?? 0,
@@ -46,6 +47,7 @@ const entityToRow = (obj) => {
   if (obj.name      !== undefined) row.name = String(obj.name || '').trim();
   if (obj.brand     !== undefined) row.brand = obj.brand || 'Control Union';
   if (obj.country   !== undefined) row.country = String(obj.country || '').trim() || null;
+  if (obj.region    !== undefined) row.region = obj.region || 'Américas';
   if (obj.priority  !== undefined) row.priority = obj.priority || null;
   if (obj.tags      !== undefined) row.tags = obj.tags || [];
   if (obj.position  !== undefined) row.position = obj.position ?? 0;

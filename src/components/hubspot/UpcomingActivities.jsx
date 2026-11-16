@@ -11,7 +11,8 @@
 //
 // Props: entities (filtradas y ordenadas), map (checksByEntity), steps,
 //   items, summaries ({ [code]: entitySummary }), todayIso, dark,
-//   tracking, range, onRange, groupBy, onGroupBy, onOpenEntity(code),
+//   tracking, range, onRange, groupBy, onGroupBy, groupOptions (por defecto
+//   entidad / país; el Global check suma región), onOpenEntity(code),
 //   onToggleCheck(entity, itemId, done), onToggleStep(step)
 // ════════════════════════════════════════════════════════════════════
 
@@ -56,7 +57,7 @@ function ActivityRow({ a, entity, showEntity, todayIso, dark, onOpen, onToggle }
   );
 }
 
-export default function UpcomingActivities({ entities, map, steps, items, summaries, todayIso, dark = false, tracking = false, range, onRange, groupBy, onGroupBy, onOpenEntity, onToggleCheck, onToggleStep }) {
+export default function UpcomingActivities({ entities, map, steps, items, summaries, todayIso, dark = false, tracking = false, range, onRange, groupBy, onGroupBy, groupOptions = ['entity', 'country'], onOpenEntity, onToggleCheck, onToggleStep }) {
   const maxDays = ACTIVITY_RANGES.find((r) => r.id === range)?.days ?? null;
 
   const groups = useMemo(() => activityGroups(entities, groupBy).map((g) => {
@@ -81,8 +82,9 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
           {ACTIVITY_RANGES.map((r) => <button key={r.id} role="tab" aria-selected={range === r.id} onClick={() => onRange(r.id)} className={tab(range === r.id)}>{r.days ? `Próximos ${r.label}` : r.label}</button>)}
         </div>
         <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Agrupar">
-          <button role="tab" aria-selected={groupBy === 'entity'} onClick={() => onGroupBy('entity')} className={tab(groupBy === 'entity')}>Por entidad</button>
-          <button role="tab" aria-selected={groupBy === 'country'} onClick={() => onGroupBy('country')} className={tab(groupBy === 'country')}>Por país</button>
+          {groupOptions.map((g) => (
+            <button key={g} role="tab" aria-selected={groupBy === g} onClick={() => onGroupBy(g)} className={tab(groupBy === g)}>{{ entity: 'Por entidad', country: 'Por país', region: 'Por región' }[g]}</button>
+          ))}
         </div>
         <p className="text-[11px] font-bold text-slate-500 ml-auto">
           <span className="font-mono font-black text-slate-800">{total}</span> actividades{overdue ? <> · <span className="text-red-600 font-black">{overdue} vencidas</span></> : ''}

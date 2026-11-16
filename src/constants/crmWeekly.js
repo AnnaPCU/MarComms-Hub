@@ -36,7 +36,13 @@ export const CRM_ENTITIES = [
   { code: '880', name: 'Peterson Projects & Solution México S.A. de C.V.', brand: 'Peterson', country: 'México' },
 ];
 
-export const CRM_BRANDS = ['Control Union', 'Peterson'];
+export const CRM_BRANDS = ['Control Union', 'Peterson', 'Otra'];
+
+// Regiones (nov 2026, migration 0073): el «Global check» muestra las tres
+// con filtro por región; el Weekly check muestra solo las de Américas
+// (España y Portugal van en Américas).
+export const CRM_REGIONS = ['Américas', 'EMEA', 'APAC'];
+export const WEEKLY_REGION = 'Américas';
 
 // Países de América (los 35), para sugerir al sumar o editar una entidad.
 // Se escriben como en el resto del Hub («Canada», «Estados Unidos»). El
@@ -58,6 +64,7 @@ export const CRM_CHECK_ITEMS = [
   { id: 'claude', label: 'Conexión con Claude' },
   { id: 'trainingSales', label: 'Entrenamientos comerciales' },
   { id: 'trainingAdmin', label: 'Entrenamientos SuperAdmin' },
+  { id: 'commercialTool', label: 'Deals de la Commercial Tool importados' },
 ];
 
 // Deadline: con DEADLINE_CALM_DAYS días (o más) por delante se ve en

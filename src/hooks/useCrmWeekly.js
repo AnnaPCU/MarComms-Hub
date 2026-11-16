@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════════
 // Devuelve:
 //   entities (de crm_weekly_entities; CRM_ENTITIES si falta la migración
-//   0070), tracking (true si la 0070 está: se pueden sumar entidades,
+//   0070), weeklyEntities (las del Weekly check = región Américas), tracking (true si la 0070 está: se pueden sumar entidades,
 //   importancia, tags y fecha / estado de los steps),
 //   dealCounts / dealSync / dealsReady (deals nuevos por semana de HubSpot,
 //   migration 0071; dealsReady = false si falta la tabla) +
@@ -25,7 +25,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CRM_CHECK_ITEMS, CRM_ENTITIES } from '@/constants/crmWeekly';
+import { CRM_CHECK_ITEMS, CRM_ENTITIES, WEEKLY_REGION } from '@/constants/crmWeekly';
 import { DEAL_WEEKS, lastWeeks } from '@/utils/crmWeeklyDeals';
 import {
   listEntities, createEntity, updateEntity, deleteEntity,
@@ -35,7 +35,7 @@ import {
 } from '@/services/crmWeeklyService';
 
 const isMissingTable = (e) => e?.code === '42P01' || e?.code === 'PGRST205' || /does not exist|schema cache/i.test(e?.message || '');
-const FALLBACK_ENTITIES = CRM_ENTITIES.map((e, i) => ({ ...e, priority: null, tags: [], position: i }));
+const FALLBACK_ENTITIES = CRM_ENTITIES.map((e, i) => ({ ...e, region: e.region || 'Américas', priority: null, tags: [], position: i }));
 
 export const useCrmWeekly = (options = {}) => {
   const { realtime = true } = options;
@@ -131,5 +131,9 @@ export const useCrmWeekly = (options = {}) => {
     };
   }, [refetch]);
 
-  return { entities, tracking, dealCounts, dealSync, dealsReady, items, checks, steps, loading, error, missing, refetch, ...api };
+  // Las del Weekly check = las de Américas (también para los avisos de
+  // deadlines en rojo a Valentino)
+  const weeklyEntities = useMemo(() => entities.filter((e) => (e.region || WEEKLY_REGION) === WEEKLY_REGION), [entities]);
+
+  return { entities, weeklyEntities, tracking, dealCounts, dealSync, dealsReady, items, checks, steps, loading, error, missing, refetch, ...api };
 };

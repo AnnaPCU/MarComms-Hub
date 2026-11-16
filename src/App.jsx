@@ -767,13 +767,13 @@ export default function App() {
       socialPosts:    social.posts,
       crmChecks:      crmWeekly.checks,
       crmItems:       crmWeekly.items,
-      crmEntities:    crmWeekly.entities,
+      crmEntities:    crmWeekly.weeklyEntities,
       invoicingRows:  invoicing.rows,
     }, {
       peopleList:    validNames,
       serviceOwners: liveServiceOwners,
     }).filter(n => !n.navTo || !isSectionHidden(n.navTo)); // sin avisos hacia secciones ocultas
-  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks, social.accounts, social.posts, crmWeekly.checks, crmWeekly.items, crmWeekly.entities, invoicing.rows]);
+  }, [currentUser, livePeople, liveServiceOwners, globalWebinars, globalEvents, globalCampaigns, globalStandaloneRequests, globalAssignedTasks, social.accounts, social.posts, crmWeekly.checks, crmWeekly.items, crmWeekly.weeklyEntities, invoicing.rows]);
 
   const unreadCount = notifications.filter(n => !readNotifications.has(n.id)).length;
   const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));

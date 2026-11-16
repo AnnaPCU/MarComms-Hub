@@ -144,9 +144,10 @@ export const sortEntities = (entities = [], sort = 'manual', summaries = {}) => 
   });
 };
 
-// Filtros: marca, color del semáforo, importancia y tag (vacío = todos)
-export const filterEntities = (entities = [], { brand = '', light = '', priority = '', tag = '' } = {}, summaries = {}) => entities.filter((e) => (
+// Filtros: región, marca, color del semáforo, importancia y tag (vacío = todos)
+export const filterEntities = (entities = [], { brand = '', light = '', priority = '', tag = '', region = '' } = {}, summaries = {}) => entities.filter((e) => (
   (!brand || e.brand === brand)
+  && (!region || (e.region || 'Américas') === region)
   && (!light || trafficLight(summaries[e.code])?.id === light)
   && (!priority || (priority === 'none' ? !e.priority : e.priority === priority))
   && (!tag || (e.tags || []).some((t) => norm(t) === norm(tag)))
@@ -197,14 +198,14 @@ export const entityActivities = (entity, { checks = {}, steps = [], items = CRM_
 };
 
 // Agrupa las entidades para la vista de actividades: por entidad (una por
-// grupo) o por país (las entidades del mismo país juntas). Mantiene el
+// grupo), por país (las entidades del mismo país juntas) o por región. Mantiene el
 // orden de `entities` (el primero de cada país marca su lugar).
 // → [{ key, label, entities: [...] }]
 export const activityGroups = (entities = [], by = 'entity') => {
-  if (by !== 'country') return entities.map((e) => ({ key: e.code, label: e.name, entities: [e] }));
+  if (by !== 'country' && by !== 'region') return entities.map((e) => ({ key: e.code, label: e.name, entities: [e] }));
   const groups = new Map();
   entities.forEach((e) => {
-    const label = String(e.country || '').trim() || 'Sin país';
+    const label = by === 'region' ? (e.region || 'Américas') : String(e.country || '').trim() || 'Sin país';
     const key = norm(label);
     if (!groups.has(key)) groups.set(key, { key, label, entities: [] });
     groups.get(key).entities.push(e);

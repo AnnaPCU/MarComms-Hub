@@ -121,3 +121,16 @@ describe('países para el alta', () => {
     expect(list[0]).toBe('Alemania');
   });
 });
+
+describe('regiones (Global check)', () => {
+  it('filtra por región; sin región cuenta como Américas', () => {
+    const ents = [{ code: '1', region: 'EMEA' }, { code: '2', region: 'APAC' }, { code: '3' }];
+    expect(filterEntities(ents, { region: 'EMEA' }).map((e) => e.code)).toEqual(['1']);
+    expect(filterEntities(ents, { region: 'Américas' }).map((e) => e.code)).toEqual(['3']);
+    expect(filterEntities(ents, {})).toHaveLength(3);
+  });
+  it('agrupa las actividades por región', () => {
+    const ents = [{ code: '1', region: 'EMEA' }, { code: '2', region: 'APAC' }, { code: '3', region: 'EMEA' }, { code: '4' }];
+    expect(activityGroups(ents, 'region').map((g) => [g.label, g.entities.length])).toEqual([['EMEA', 2], ['APAC', 1], ['Américas', 1]]);
+  });
+});

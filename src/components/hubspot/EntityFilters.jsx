@@ -6,20 +6,24 @@
 // darlos vuelta). Valen para la lista de entidades y para «Próximas
 // actividades».
 //
-// Props: filters ({ brand, light, priority, tag }), onChange(patch),
+// En el Global check (showRegion) suma, primero, el filtro por región
+// (Américas / EMEA / APAC, con cuántas entidades hay en cada una).
+//
+// Props: filters ({ region, brand, light, priority, tag }), onChange(patch),
+//   showRegion, regionCounts ({ Américas: n, … }),
 //   sort ([primero, segundo]), onSort([primero, segundo]),
 //   lightCounts ({ green, yellow, red }), tags (los usados)
 // ════════════════════════════════════════════════════════════════════
 
 import React from 'react';
 import { ArrowLeftRight, ArrowUpDown, Tag } from 'lucide-react';
-import { CRM_BRANDS, CRM_PRIORITIES, CRM_SORTS, TRAFFIC_LIGHTS } from '@/constants/crmWeekly';
+import { CRM_BRANDS, CRM_PRIORITIES, CRM_REGIONS, CRM_SORTS, TRAFFIC_LIGHTS } from '@/constants/crmWeekly';
 
 const pill = (on) => `px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${on ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`;
 const selectCls = 'bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-[11px] font-black text-slate-600 outline-none focus:ring-2 focus:ring-sky-200';
 
-export default function EntityFilters({ filters, onChange, sort = ['manual', 'manual'], onSort, lightCounts = {}, tags = [] }) {
-  const { brand, light, priority, tag } = filters;
+export default function EntityFilters({ filters, onChange, showRegion = false, regionCounts = null, sort = ['manual', 'manual'], onSort, lightCounts = {}, tags = [] }) {
+  const { brand, light, priority, tag, region = '' } = filters;
   const [first, second] = sort;
   // El segundo criterio no puede repetir al primero (ni el semáforo al revés)
   const family = (id) => (id === 'redFirst' || id === 'greenFirst' ? 'light' : id);
@@ -27,6 +31,15 @@ export default function EntityFilters({ filters, onChange, sort = ['manual', 'ma
   const setFirst = (id) => onSort([id, id === 'manual' || family(second) === family(id) ? 'manual' : second]);
   return (
     <div className="space-y-2">
+      {showRegion && (
+        <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Región">
+          {['', ...CRM_REGIONS].map((r) => (
+            <button key={r || 'all'} onClick={() => onChange({ region: r })} aria-pressed={region === r} className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${region === r ? 'bg-sky-600 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+              {r || 'Todas las regiones'}{r && regionCounts ? <span className="font-mono ml-1.5 opacity-70">{regionCounts[r] || 0}</span> : null}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         {['', ...CRM_BRANDS].map((b) => (
           <button key={b || 'all'} onClick={() => onChange({ brand: b })} className={pill(brand === b)}>{b || 'Todas las entidades'}</button>
@@ -86,8 +99,8 @@ export default function EntityFilters({ filters, onChange, sort = ['manual', 'ma
             ))}
           </div>
         )}
-        {(brand || light || priority || tag) && (
-          <button onClick={() => onChange({ brand: '', light: '', priority: '', tag: '' })} className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 px-2 py-1">Limpiar filtros</button>
+        {(brand || light || priority || tag || region) && (
+          <button onClick={() => onChange({ brand: '', light: '', priority: '', tag: '', region: '' })} className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-slate-700 px-2 py-1">Limpiar filtros</button>
         )}
       </div>
     </div>
