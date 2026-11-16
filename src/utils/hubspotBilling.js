@@ -6,13 +6,14 @@
 //   parseLicenses(detalle) · parseUsers(texto)
 //   monthTotals(entities) · latestBilledMonth(entities) · monthOf(entity, mes)
 //   expectedPrice(mes, tarifas) · priceCheck(mes, tarifas)
+//   unitPricesFor(entidad, mes, tarifas) — tarifa especial de la entidad si tiene
 //   totalCheck(entities, meta, mes) · diffImport(actual, nuevo)
 // El Excel es una matriz: cada columna es una entidad y cada mes tiene dos
 // filas ("<Mes> - Precio" y "<Mes> - Detalle"). Se lee por etiquetas, no
 // por posiciones fijas.
 // ════════════════════════════════════════════════════════════════════
 
-import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES } from '@/constants/hubspotBilling';
+import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES, SPECIAL_UNIT_PRICES } from '@/constants/hubspotBilling';
 
 const norm = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -135,6 +136,15 @@ export const latestBilledMonth = (entities) => {
 export const previousMonth = (month) => { const i = monthIdx(month); return i > 0 ? MONTHS_ES[i - 1] : null; };
 
 export const licensesOf = (monthEntry) => parseLicenses(monthEntry?.detail);
+// Tarifas de una entidad en un mes: las del Summary, salvo que tenga una
+// tarifa especial desde ese mes (SPECIAL_UNIT_PRICES, ej. PS Technology)
+const entityCode = (entity) => (String(entity?.legalEntity || '').match(/^\s*(\d+[A-Za-z]?)\s*-/) || [])[1] || '';
+export const unitPricesFor = (entity, month, base = DEFAULT_UNIT_PRICES, specials = SPECIAL_UNIT_PRICES) => {
+  const sp = specials.find((s) => (s.entityKey && s.entityKey === entity?.key) || (s.code && s.code === entityCode(entity)));
+  if (!sp || monthIdx(month) < monthIdx(sp.from)) return base || DEFAULT_UNIT_PRICES;
+  return { salesPro: sp.salesPro, core: sp.core, special: true };
+};
+
 export const expectedPrice = (monthEntry, unitPrices = DEFAULT_UNIT_PRICES) => {
   const l = licensesOf(monthEntry);
   return l.salesPro * unitPrices.salesPro + l.core * unitPrices.core;

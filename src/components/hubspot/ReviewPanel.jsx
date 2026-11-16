@@ -13,7 +13,7 @@ import React from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 
 import { MONTHS_ES } from '@/constants/hubspotBilling';
-import { totalCheck, priceCheck, userLicenseCheck, monthOf } from '@/utils/hubspotBilling';
+import { totalCheck, priceCheck, userLicenseCheck, monthOf, unitPricesFor } from '@/utils/hubspotBilling';
 import { money } from './BillingBits';
 
 export const totalWarningId = (month) => `total:${month}`;
@@ -25,7 +25,7 @@ export const reviewItems = (entities, meta, month) => {
     if (t && t.diff !== 0) items.push({ id: totalWarningId(m), kind: 'total', month: m, text: `${m}: el TOTAL del Excel dice ${money(t.excel)} y las entidades suman ${money(t.computed)}${t.missing.length ? ` (falta ${t.missing.join(', ')})` : ''}.` });
   });
   entities.forEach((e) => e.months.forEach((m) => {
-    const c = priceCheck(m, meta.unitPrices);
+    const c = priceCheck(m, unitPricesFor(e, m.month, meta.unitPrices));
     if (c && c.hasLicenses && !c.explained) {
       items.push({ id: `price:${e.key}:${m.month}`, kind: 'price', month: m.month, text: `${e.key} · ${m.month}: se cobra ${money(m.price)} y las licencias del detalle suman ${money(c.expected)} (${c.diff > 0 ? '+' : '−'}${money(Math.abs(c.diff))} sin detalle).` });
     }

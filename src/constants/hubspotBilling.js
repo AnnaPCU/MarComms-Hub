@@ -10,6 +10,16 @@ export const SUMMARY_SHEET = 'Summary';
 // Tarifas por licencia si el Excel no trae la hoja Summary
 export const DEFAULT_UNIT_PRICES = { salesPro: 145, core: 120 };
 
+// Tarifas especiales por entidad (nov 2026): a PS Technology (752) se le
+// cobran las licencias más baratas desde septiembre 2026. Se reconoce por
+// la columna del Excel (entityKey) o por el código al principio de la
+// entidad legal («752 - Peterson Technologies GmbH»). from = primer mes
+// con esa tarifa (los anteriores van con la del Summary). Los chequeos de
+// «licencias × tarifa» usan estas tarifas; el Summary del Excel no las trae.
+export const SPECIAL_UNIT_PRICES = [
+  { entityKey: 'PS Technology', code: '752', from: 'Septiembre', salesPro: 100, core: 80 },
+];
+
 export const LICENSE_TYPES = {
   salesPro: { label: 'Sales Pro', short: 'SP', chip: 'bg-blue-50 text-blue-700 border-blue-200', prefix: '°' },
   core:     { label: 'Core',      short: 'Core', chip: 'bg-sky-50 text-sky-700 border-sky-200',  prefix: '-' },

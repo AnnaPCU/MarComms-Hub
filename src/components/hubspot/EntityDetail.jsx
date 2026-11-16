@@ -8,7 +8,7 @@ import React from 'react';
 import { AlertTriangle, Users } from 'lucide-react';
 
 import { LICENSE_TYPES } from '@/constants/hubspotBilling';
-import { priceCheck, userLicenseCheck, monthOf } from '@/utils/hubspotBilling';
+import { priceCheck, userLicenseCheck, monthOf, unitPricesFor } from '@/utils/hubspotBilling';
 import { money } from './BillingBits';
 
 export default function EntityDetail({ entity, month, meta }) {
@@ -66,7 +66,8 @@ export default function EntityDetail({ entity, month, meta }) {
             </thead>
             <tbody>
               {history.map((m) => {
-                const c = priceCheck(m, meta.unitPrices);
+                const up = unitPricesFor(entity, m.month, meta.unitPrices);
+                const c = priceCheck(m, up);
                 const warn = c && c.hasLicenses && !c.explained;
                 return (
                   <tr key={m.month} className={`border-b border-slate-100 align-top ${m.month === month ? 'bg-sky-50/40' : ''}`}>
@@ -76,6 +77,7 @@ export default function EntityDetail({ entity, month, meta }) {
                     <td className={`py-1.5 pl-2 text-right font-mono ${warn ? 'text-amber-600 font-black' : 'text-slate-400'}`}>
                       {c && c.hasLicenses ? money(c.expected) : '—'}
                       {c && c.diff !== 0 && c.extras.length > 0 && <span className="block text-[10px] text-slate-400 font-sans">+{money(c.diff)} {c.extras.join(', ')}</span>}
+                      {up.special && c?.hasLicenses && <span className="block text-[10px] text-sky-600 font-sans" title="Tarifa especial de esta entidad">tarifa especial: SP {money(up.salesPro)} · Core {money(up.core)}</span>}
                       {warn && <span className="block text-[10px] font-sans">diferencia {c.diff > 0 ? '+' : '−'}{money(Math.abs(c.diff))}</span>}
                     </td>
                   </tr>

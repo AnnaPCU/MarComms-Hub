@@ -25,8 +25,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Database, FileSpreadsheet, Globe2, Receipt, Upload } from 'lucide-react';
 
 import { useConfirm } from '@/hooks/useConfirm';
-import { brandOfEntity } from '@/constants/hubspotBilling';
-import { monthTotals, latestBilledMonth, previousMonth, monthOf, licensesOf, totalCheck } from '@/utils/hubspotBilling';
+import { brandOfEntity, SPECIAL_UNIT_PRICES } from '@/constants/hubspotBilling';
+import { monthTotals, latestBilledMonth, previousMonth, monthOf, licensesOf, totalCheck, unitPricesFor } from '@/utils/hubspotBilling';
 import { Delta, Kpi, money } from './BillingBits';
 import MonthlyChart from './MonthlyChart';
 import EntitiesTable from './EntitiesTable';
@@ -66,7 +66,14 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
   const now = totals.find((t) => t.month === current) || { total: 0, billed: 0 };
   const prev = previousMonth(current);
   const before = prev ? totals.find((t) => t.month === prev) : null;
-  const lic = visible.reduce((acc, e) => { const l = licensesOf(monthOf(e, current)); acc.sp += l.salesPro; acc.core += l.core; return acc; }, { sp: 0, core: 0 });
+  // Licencias del mes y su valor (con la tarifa especial de cada entidad, ej. PS Technology)
+  const lic = visible.reduce((acc, e) => {
+    const l = licensesOf(monthOf(e, current));
+    const up = unitPricesFor(e, current, meta.unitPrices);
+    acc.sp += l.salesPro; acc.core += l.core;
+    acc.spMoney += l.salesPro * (up.salesPro || 0); acc.coreMoney += l.core * (up.core || 0);
+    return acc;
+  }, { sp: 0, core: 0, spMoney: 0, coreMoney: 0 });
   const tCheck = !brand ? totalCheck(entities, meta, current) : null;
   const lastImport = imports[0];
   const showTotalWarning = tCheck && tCheck.diff !== 0 && !dismissed.has(totalWarningId(current));
@@ -146,14 +153,14 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
                   {b || 'Todas las entidades'}
                 </button>
               ))}
-              <span className="text-[11px] font-bold text-slate-400 ml-auto">Tarifas: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}</span>
+              <span className="text-[11px] font-bold text-slate-400 ml-auto">Tarifas: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}{SPECIAL_UNIT_PRICES.length > 0 && <span title={SPECIAL_UNIT_PRICES.map((s) => `${s.entityKey}: Sales Pro ${money(s.salesPro)} · Core ${money(s.core)} desde ${s.from.toLowerCase()}`).join('\n')}> · {SPECIAL_UNIT_PRICES.map((s) => s.entityKey).join(', ')} con tarifa especial</span>}</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <Kpi label={`Facturado ${current}`} value={money(now.total)} accent="text-blue-600" hint={<span className="flex items-center gap-1">vs {prev || '—'}: <Delta now={now.total} before={before ? before.total : null} /></span>} />
               <Kpi label="Entidades facturadas" value={now.billed} hint={`de ${visible.length}`} />
-              <Kpi label="Licencias Sales Pro" value={lic.sp} hint={money(lic.sp * (meta.unitPrices?.salesPro || 0))} />
-              <Kpi label="Licencias Core" value={lic.core} hint={money(lic.core * (meta.unitPrices?.core || 0))} />
+              <Kpi label="Licencias Sales Pro" value={lic.sp} hint={money(lic.spMoney)} />
+              <Kpi label="Licencias Core" value={lic.core} hint={money(lic.coreMoney)} />
               <Kpi label="Acumulado del año" value={money(totals.reduce((a, t) => a + t.total, 0))} hint={`${totals.filter((t) => t.total > 0).length} meses facturados`} />
             </div>
 

@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, ChevronDown, Info } from 'lucide-react';
 
-import { monthOf, previousMonth, priceCheck, licensesOf, userLicenseCheck } from '@/utils/hubspotBilling';
+import { monthOf, previousMonth, priceCheck, licensesOf, userLicenseCheck, unitPricesFor } from '@/utils/hubspotBilling';
 import { BrandChip, Delta, money } from './BillingBits';
 import EntityDetail from './EntityDetail';
 
@@ -34,7 +34,7 @@ export default function EntitiesTable({ entities, month, meta }) {
               const m = monthOf(e, month) || {};
               const before = prev ? (monthOf(e, prev)?.price ?? null) : null;
               const lic = licensesOf(m);
-              const check = priceCheck(m, meta.unitPrices);
+              const check = priceCheck(m, unitPricesFor(e, month, meta.unitPrices));
               const warn = check && check.hasLicenses && !check.explained;
               const userWarn = m.price > 0 && !userLicenseCheck(e, m).ok;
               const isOpen = open === e.key;
