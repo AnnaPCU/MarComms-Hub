@@ -133,9 +133,9 @@ Deno.serve(async (req) => {
     const unassigned: Record<string, number> = {};
     for (const week of weeks) {
       const deals = await dealsOfWeek(token, pcu.name, week);
-      const counted = countWeek(deals, pcu.valueToCode, codes);
+      const counted = countWeek(deals, pcu.valueToCode, codes, pcu.valueToLabel);
       unassigned[week] = counted.unassigned;
-      rows.push(...weekRows(entities || [], pcu.codes, counted, week, startedAt));
+      rows.push(...weekRows(entities || [], pcu.codes, counted, week, startedAt, pcu.optionsByCode));
     }
 
     // 4) Guardar

@@ -10,15 +10,19 @@
 //     aplastaría las barras). La semana en curso con borde y «Esta».
 //     Al pasar el mouse (o tocar) una semana, se resalta y aparece un
 //     cartel con el detalle: fechas, CRM UI, otros y total.
-//   <DealsPanel deals dark />  — CRM UI de esta semana como número
+//   <DealsPanel counts code dark />  — CRM UI de esta semana como número
 //     principal (lo que cargó la gente a mano), otros y total al costado,
-//     la comparación con la semana anterior y el gráfico.
+//     la comparación con la semana anterior y el gráfico. Si la entidad
+//     tiene varias opciones en «PCU Entity» (ej. 538 Certifications /
+//     Inspections / Warrants, o 381 Inspections / Solutions), arriba hay
+//     chips para ver «Todas» sumadas o una sola, y debajo del número el
+//     detalle de esta semana por opción (migration 0074, by_option).
 //
 // Colores validados con el skill dataviz (DEAL_COLORS), claro y oscuro.
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
-import { DEAL_COLORS } from '@/utils/crmWeeklyDeals';
+import { DEAL_COLORS, entityDeals, optionShortLabel } from '@/utils/crmWeeklyDeals';
 
 const PLOT_H = 120;     // alto del área de barras (px)
 
@@ -28,10 +32,10 @@ const sunday = (iso) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d
 
 // Cartel con el detalle de una semana (arriba de la columna; en las de los
 // bordes se alinea para no salirse)
-function WeekTip({ s, align }) {
+function WeekTip({ s, align, options = [] }) {
   const pos = align === 'left' ? 'left-0' : align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
   return (
-    <div role="tooltip" className={`hub-popover absolute bottom-full mb-2 ${pos} z-20 w-44 bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2 pointer-events-none`}>
+    <div role="tooltip" className={`hub-popover absolute bottom-full mb-2 ${pos} z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2 pointer-events-none`}>
       <p className="text-[10px] font-black text-slate-700">Semana del {dm(s.week)} al {dm(sunday(s.week))}</p>
       {s.missing ? (
         <p className="text-[10px] font-bold text-slate-400 mt-1">Sin datos para esta semana.</p>
@@ -40,13 +44,21 @@ function WeekTip({ s, align }) {
           <p className="flex justify-between"><span>CRM UI (a mano)</span><span className="font-mono font-black text-slate-800">{s.ui}</span></p>
           <p className="flex justify-between"><span>Otros</span><span className="font-mono font-black text-slate-800">{s.other}</span></p>
           <p className="flex justify-between border-t border-slate-100 pt-0.5"><span>Total</span><span className="font-mono font-black text-slate-800">{s.total}</span></p>
+          {options.length > 1 && (
+            <div className="border-t border-slate-100 pt-1 mt-1 space-y-0.5">
+              {options.map((o) => {
+                const v = s.byOption?.[o] || { ui: 0, other: 0 };
+                return <p key={o} className="flex justify-between gap-2"><span className="truncate">{optionShortLabel(o)}</span><span className="font-mono text-slate-700 whitespace-nowrap">{v.ui} · +{v.other}</span></p>;
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-export function DealsWeekChart({ series = [], dark = false }) {
+export function DealsWeekChart({ series = [], dark = false, options = [] }) {
   const [hover, setHover] = useState(null); // índice de la semana resaltada
   const max = Math.max(1, ...series.map((s) => s.ui));
   const ui = DEAL_COLORS.ui[dark ? 'dark' : 'light'];
@@ -64,7 +76,7 @@ export function DealsWeekChart({ series = [], dark = false }) {
               onClick={() => setHover(hover === i ? null : i)}
               className={`relative flex flex-col items-center min-w-0 rounded-lg py-1 cursor-default transition-colors ${hover === i ? 'bg-slate-100' : ''}`}
             >
-              {hover === i && <WeekTip s={s} align={i < 2 ? 'left' : i > series.length - 3 ? 'right' : 'center'} />}
+              {hover === i && <WeekTip s={s} options={options} align={i < 2 ? 'left' : i > series.length - 3 ? 'right' : 'center'} />}
               <div className={`w-full flex flex-col justify-end items-center ${last ? 'outline outline-1 outline-offset-2 outline-slate-300 rounded-[5px]' : ''}`} style={{ height: PLOT_H + 16, maxWidth: 44 }}>
                 <span className={`font-mono text-[11px] font-black leading-none mb-1 ${s.missing ? 'text-slate-300' : 'text-slate-700'}`}>{s.missing ? '–' : s.ui}</span>
                 {h > 0 ? <span className="block w-full rounded-t-[4px]" style={{ height: h, background: ui }} /> : <span className="block w-full h-px bg-slate-200" />}
@@ -84,32 +96,60 @@ export function DealsWeekChart({ series = [], dark = false }) {
 }
 
 // En la ficha: CRM UI de esta semana grande, otros y total, contra la
-// semana anterior y el gráfico de 8 semanas
-export function DealsPanel({ deals, dark = false }) {
-  if (!deals || deals.mapped === null) {
+// semana anterior, el detalle por opción de PCU Entity y el gráfico de 8
+// semanas (de todas las opciones sumadas o de una sola)
+export function DealsPanel({ counts = [], code, dark = false }) {
+  const [option, setOption] = useState(''); // '' = todas las opciones sumadas
+  const all = entityDeals(counts, code);
+  const deals = option ? entityDeals(counts, code, new Date(), option) : all;
+  if (deals.mapped === null) {
     return <p className="text-[11px] font-bold text-slate-400">Todavía no hay datos de deals de esta entidad. Se cargan con la próxima actualización.</p>;
   }
   if (deals.mapped === false) {
     return <p className="text-[11px] font-bold text-slate-500">Esta entidad no tiene opción en «PCU Entity» de HubSpot, así que sus deals no se pueden contar. Cuando la agreguen en HubSpot, aparece sola.</p>;
   }
   const { current, previous, series } = deals;
+  const options = all.options || [];
+  const many = options.length > 1;
   const diff = current.ui - (previous?.ui || 0);
+  const chip = (on) => `px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors ${on ? 'bg-sky-600 border-sky-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-sky-300'}`;
   return (
-    <div className="flex items-start gap-6 flex-wrap lg:flex-nowrap">
-      <div className="shrink-0 w-[170px]">
-        <p className="font-mono text-4xl font-black text-slate-900 leading-none">{current.ui}</p>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5 flex items-center gap-1">
-          CRM UI esta semana
-        </p>
-        <p className="text-[10px] font-bold text-slate-400 mt-0.5">Cargados a mano en HubSpot</p>
-        <p className="text-[11px] font-bold text-slate-500 mt-2">+ {current.other} otros <span className="font-medium text-slate-400">(integraciones, workflows…)</span></p>
-        <p className="text-[11px] font-bold text-slate-500">= {current.total} en total</p>
-        <p className="text-[10px] font-bold text-slate-400 mt-2">
-          {diff === 0 ? 'Igual que' : diff > 0 ? `+${diff} vs` : `${diff} vs`} la semana anterior en CRM UI ({previous?.ui || 0})
-        </p>
-      </div>
-      <div className="flex-1 min-w-[260px]">
-        <DealsWeekChart series={series} dark={dark} />
+    <div className="space-y-3">
+      {many && (
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Opción de PCU Entity">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">PCU Entity</span>
+          <button onClick={() => setOption('')} aria-pressed={!option} className={chip(!option)}>Todas</button>
+          {options.map((o) => <button key={o} onClick={() => setOption(o)} aria-pressed={option === o} title={o} className={chip(option === o)}>{optionShortLabel(o)}</button>)}
+        </div>
+      )}
+      <div className="flex items-start gap-6 flex-wrap lg:flex-nowrap">
+        <div className="shrink-0 w-[180px]">
+          <p className="font-mono text-4xl font-black text-slate-900 leading-none">{current.ui}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">CRM UI esta semana{option ? ` · ${optionShortLabel(option)}` : ''}</p>
+          <p className="text-[10px] font-bold text-slate-400 mt-0.5">Cargados a mano en HubSpot</p>
+          <p className="text-[11px] font-bold text-slate-500 mt-2">+ {current.other} otros <span className="font-medium text-slate-400">(integraciones, workflows…)</span></p>
+          <p className="text-[11px] font-bold text-slate-500">= {current.total} en total</p>
+          <p className="text-[10px] font-bold text-slate-400 mt-2">
+            {diff === 0 ? 'Igual que' : diff > 0 ? `+${diff} vs` : `${diff} vs`} la semana anterior en CRM UI ({previous?.ui || 0})
+          </p>
+          {many && !option && (
+            <div className="mt-3 pt-2 border-t border-slate-100 space-y-0.5">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Esta semana por opción</p>
+              {options.map((o) => {
+                const v = all.current.byOption?.[o] || { ui: 0, other: 0 };
+                return (
+                  <button key={o} onClick={() => setOption(o)} title={o} className="w-full flex justify-between gap-2 text-[11px] font-bold text-slate-500 hover:text-sky-700">
+                    <span className="truncate">{optionShortLabel(o)}</span>
+                    <span className="font-mono whitespace-nowrap"><b className="text-slate-800">{v.ui}</b> · +{v.other}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-[260px]">
+          <DealsWeekChart series={series} dark={dark} options={option ? [] : options} />
+        </div>
       </div>
     </div>
   );

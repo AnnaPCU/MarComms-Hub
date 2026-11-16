@@ -40,7 +40,6 @@ import TagsInput from './TagsInput';
 import UpcomingActivities from './UpcomingActivities';
 import DealsSyncBar from './DealsSyncBar';
 import { DealsPanel } from './DealsSpark';
-import { entityDeals } from '@/utils/crmWeeklyDeals';
 
 // Colores de las tablas de steps (paleta del módulo: sky / azul)
 const LIGHT = { primary: '#0284c7', dark: '#0f172a', label: '#64748b', text: '#334155' };
@@ -84,7 +83,6 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const map = useMemo(() => checksByEntity(checks), [checks]);
   const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, items)])), [entities, map, todayIso, items]);
   const tags = useMemo(() => entityTags(entities), [entities]);
-  const dealsByCode = useMemo(() => (dealsReady ? Object.fromEntries(entities.map((e) => [e.code, entityDeals(dealCounts, e.code)])) : {}), [dealsReady, entities, dealCounts]);
   const countries = useMemo(() => countryOptions(allEntities), [allEntities]);
   const regionCounts = useMemo(() => entities.reduce((acc, e) => { const r = e.region || 'Américas'; acc[r] = (acc[r] || 0) + 1; return acc; }, {}), [entities]);
   // Los colores del semáforo cuentan sin el filtro de color (para poder cambiar de color)
@@ -218,7 +216,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
               {dealsReady && (
                 <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                   <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: c.primary }}>Deals nuevos en HubSpot</p>
-                  <DealsPanel deals={dealsByCode[entity.code]} dark={dark} />
+                  <DealsPanel key={entity.code} counts={dealCounts} code={entity.code} dark={dark} />
                 </section>
               )}
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">

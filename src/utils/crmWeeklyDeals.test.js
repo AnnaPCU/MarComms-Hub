@@ -3,8 +3,8 @@
 // Function (logic.js) y la lectura del Hub (crmWeeklyDeals.js)
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { addWeeks, codeFromLabel, cooldownFor, cooldownLeft, redactSecrets, tokenShape, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows, weekStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
-import { dealSeries, entityDeals, syncStatus, unassignedOf } from './crmWeeklyDeals';
+import { addWeeks, codeFromLabel, optionShortLabel, cooldownFor, cooldownLeft, redactSecrets, tokenShape, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows, weekStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
+import { dealSeries, entityDeals, entityOptions, syncStatus, unassignedOf } from './crmWeeklyDeals';
 
 describe('semana de lunes a domingo en hora de Argentina', () => {
   it('el domingo 22 h de Argentina (lunes 01 h UTC) sigue en la semana anterior', () => {
@@ -62,6 +62,24 @@ describe('PCU Entity → código de la entidad', () => {
     const rows = weekRows([{ code: '538' }, { code: '880' }, { code: '864' }, { code: '592' }], new Set(['538', '880', '592']), counted, '2026-11-09', 'T');
     expect(rows.map((r) => [r.entity_code, r.deals_ui, r.deals_other])).toEqual([['538', 2, 1], ['880', 1, 0], ['864', null, null], ['592', 0, 0]]);
   });
+  it('separa por opción de PCU Entity (con todas las opciones del código)', () => {
+    const pcu = pcuEntityProperty(props);
+    const deals = [
+      { pcu: 'CU Cert. Argentina', source: 'CRM_UI' },
+      { pcu: 'CU Inspections Argentina', source: 'CRM_UI' },
+      { pcu: 'CU Inspections Argentina', source: 'AUTOMATION_PLATFORM' },
+    ];
+    const counted = countWeek(deals, pcu.valueToCode, ['538'], pcu.valueToLabel);
+    const [row] = weekRows([{ code: '538' }], pcu.codes, counted, '2026-11-09', 'T', pcu.optionsByCode);
+    expect(row.by_option).toEqual({
+      '538 - Control Union Argentina SA (Certifications)': { ui: 1, other: 0 },
+      '538 - Control Union Argentina SA (Inspections)': { ui: 1, other: 1 },
+    });
+    expect(optionShortLabel('538 - Control Union Argentina SA (Warrants)')).toBe('Warrants');
+    expect(optionShortLabel('593 - Control Union Certification (Shanghai) - Inspections')).toBe('Inspections');
+    expect(optionShortLabel('589 - Control Union Philippines Inc - Certifications')).toBe('Certifications');
+    expect(optionShortLabel('383 - Control Union Germany GmbH')).toBe('Control Union Germany GmbH');
+  });
   it('freno de 10 minutos para el botón Actualizar', () => {
     const now = new Date('2026-11-13T12:00:00Z');
     expect(cooldownLeft(null, now)).toBe(0);
@@ -108,5 +126,21 @@ describe('lectura en el Hub', () => {
     expect(syncStatus({ lastRunAt: 'x', ok: false, error: 'Falta el token' }).text).toBe('Falta el token');
     expect(syncStatus({ lastRunAt: '2026-11-13T14:58:00Z', ok: true }, NOW).wait).toBe(8);
     expect(unassignedOf({ unassigned: { '2026-11-09': 4, '2026-11-02': 1 } }, NOW)).toEqual({ current: 4, previous: 1 });
+  });
+});
+
+describe('deals por opción de PCU Entity en el Hub', () => {
+  const NOW = new Date('2026-11-13T15:00:00Z');
+  const A = '381 - Peterson Polska Sp Zoo (Inspections)';
+  const B = '381 - Peterson Polska Sp Zoo (Solutions)';
+  const counts = [
+    { entityCode: '381', weekStart: '2026-11-09', dealsUi: 3, dealsOther: 1, byOption: { [A]: { ui: 1, other: 1 }, [B]: { ui: 2, other: 0 } } },
+    { entityCode: '381', weekStart: '2026-11-02', dealsUi: 1, dealsOther: 0, byOption: { [A]: { ui: 0, other: 0 }, [B]: { ui: 1, other: 0 } } },
+  ];
+  it('lista las opciones y filtra la serie por una', () => {
+    expect(entityOptions(counts, '381')).toEqual([A, B]);
+    expect(entityDeals(counts, '381', NOW).current).toMatchObject({ ui: 3, other: 1, total: 4 });
+    expect(entityDeals(counts, '381', NOW, B).current).toMatchObject({ ui: 2, other: 0, total: 2 });
+    expect(entityDeals(counts, '381', NOW, A).previous).toMatchObject({ ui: 0, total: 0 });
   });
 });

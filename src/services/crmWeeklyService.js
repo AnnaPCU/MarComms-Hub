@@ -206,6 +206,7 @@ export const dealCountFromRow = (row) => ({
   weekStart:  row.week_start,
   dealsUi:    row.deals_ui,
   dealsOther: row.deals_other,
+  byOption:   row.by_option || {},              // 0074: { [label de PCU Entity]: { ui, other } }
   computedAt: row.computed_at,
 });
 export const listDealCounts = async (sinceWeek) => {

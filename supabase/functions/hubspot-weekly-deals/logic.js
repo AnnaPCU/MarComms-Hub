@@ -57,29 +57,39 @@ export const codeFromLabel = (label) => {
 export const normCode = (code) => String(code || '').trim().toUpperCase();
 
 // Propiedad «PCU Entity» de la lista de propiedades de deals de HubSpot:
-// → { name, valueToCode: { [valor interno]: código }, codes: Set de códigos }
+// → { name, valueToCode: { [valor interno]: código }, valueToLabel,
+//     codes: Set de códigos, optionsByCode: { [código]: [labels] } }
 export const pcuEntityProperty = (properties = []) => {
   const prop = properties.find((p) => String(p?.label || '').trim().toLowerCase() === PCU_ENTITY_LABEL.toLowerCase());
   if (!prop) return null;
   const valueToCode = {};
+  const valueToLabel = {};
   const codes = new Set();
+  const optionsByCode = {};
   (prop.options || []).forEach((o) => {
     const code = codeFromLabel(o.label);
-    if (code) { valueToCode[o.value] = code; codes.add(code); }
+    if (!code) return;
+    valueToCode[o.value] = code;
+    valueToLabel[o.value] = String(o.label).trim();
+    codes.add(code);
+    (optionsByCode[code] = optionsByCode[code] || []).push(String(o.label).trim());
   });
-  return { name: prop.name, valueToCode, codes };
+  return { name: prop.name, valueToCode, valueToLabel, codes, optionsByCode };
 };
 
 // Cuenta los deals de una semana por código de entidad.
 // deals: [{ pcu: valor interno de PCU Entity, source: hs_object_source_label }]
 // entityCodes: códigos de crm_weekly_entities
-// → { byCode: { [code]: { ui, other } }, unassigned, outside }
+// valueToLabel (opcional): para separar por opción de PCU Entity
+// → { byCode: { [code]: { ui, other } }, byOption: { [code]: { [label]: { ui, other } } },
+//     unassigned, outside }
 //   unassigned = deals SIN «PCU Entity» (lo que hay que completar en HubSpot)
 //   outside    = deals de entidades que no están en el Hub (el portal de
 //                HubSpot es global: Malasia, Reino Unido…), no es un problema
-export const countWeek = (deals = [], valueToCode = {}, entityCodes = []) => {
+export const countWeek = (deals = [], valueToCode = {}, entityCodes = [], valueToLabel = {}) => {
   const known = new Set(entityCodes.map(normCode));
   const byCode = {};
+  const byOption = {};
   let unassigned = 0;
   let outside = 0;
   deals.forEach((d) => {
@@ -88,25 +98,46 @@ export const countWeek = (deals = [], valueToCode = {}, entityCodes = []) => {
     const code = valueToCode[d.pcu];
     if (!code || !known.has(code)) { outside += 1; return; }
     const c = (byCode[code] = byCode[code] || { ui: 0, other: 0 });
-    if (d.source === SOURCE_UI) c.ui += 1; else c.other += 1;
+    const label = valueToLabel[d.pcu] || d.pcu;
+    const o = ((byOption[code] = byOption[code] || {})[label] = byOption[code][label] || { ui: 0, other: 0 });
+    if (d.source === SOURCE_UI) { c.ui += 1; o.ui += 1; } else { c.other += 1; o.other += 1; }
   });
-  return { byCode, unassigned, outside };
+  return { byCode, byOption, unassigned, outside };
 };
 
 // Filas para crm_weekly_deal_counts de una semana: una por entidad del Hub.
 // Las entidades sin opción en PCU Entity van con null (no con 0).
-export const weekRows = (entities = [], pcuCodes = new Set(), counted = { byCode: {} }, weekStart, computedAt) => entities.map((e) => {
+// by_option (0074): el detalle por opción de PCU Entity, con todas las
+// opciones del código (las que no tuvieron deals, en 0).
+export const weekRows = (entities = [], pcuCodes = new Set(), counted = { byCode: {} }, weekStart, computedAt, optionsByCode = {}) => entities.map((e) => {
   const code = normCode(e.code);
   const mapped = pcuCodes.has(code);
   const c = counted.byCode[code] || { ui: 0, other: 0 };
+  const byOption = {};
+  if (mapped) {
+    (optionsByCode[code] || []).forEach((label) => { byOption[label] = { ui: 0, other: 0 }; });
+    Object.entries((counted.byOption || {})[code] || {}).forEach(([label, v]) => { byOption[label] = { ...v }; });
+  }
   return {
     entity_code: e.code,
     week_start: weekStart,
     deals_ui: mapped ? c.ui : null,
     deals_other: mapped ? c.other : null,
+    by_option: byOption,
     computed_at: computedAt,
   };
 });
+
+// «538 - Control Union Argentina SA (Certifications)» → «Certifications»;
+// sin paréntesis, el label sin el código
+export const optionShortLabel = (label) => {
+  const text = String(label || '').trim();
+  const paren = text.match(/\(([^()]+)\)\s*$/);
+  if (paren) return paren[1].trim();
+  const dash = text.match(/-\s*(Certifications?|Inspections?|Academy|Laboratory|Solutions)\s*$/i);
+  if (dash) return dash[1];
+  return text.replace(/^\s*\d+[A-Za-z]?\s*-\s*/, '');
+};
 
 // ¿Se puede correr a mano? (freno para el botón «Actualizar»)
 export const cooldownLeft = (lastRunAt, now = new Date(), minutes = MANUAL_COOLDOWN_MINUTES) => {
