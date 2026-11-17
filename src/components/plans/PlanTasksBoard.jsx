@@ -28,7 +28,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 
 import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE, CANCELLED_TASK_STATUS } from '@/constants/planTasks';
-import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthLabel, monthOptions, pendingFromPreviousMonths, taskStats } from '@/utils/planTasks';
+import { filterTasks, groupTasksByMonth, isTaskOverdue, monthFilterOptions, monthLabel, monthOptions, pendingFromPreviousMonths, taskCloneDefaults, taskStats } from '@/utils/planTasks';
 import { formatDate } from '@/utils/date';
 import { StatusBadge, TaskLinks } from './PlanBits';
 import TaskEditor from './TaskEditor';
@@ -253,11 +253,12 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
       </div>
 
       <p className="px-1 text-[10px] font-bold text-slate-400">
-        Clic en cualquier parte de una tarea para editarla (estado, responsable, textos, link). «Agregar tarea» carga directo en el mes.
+        Clic en cualquier parte de una tarea para editarla (estado, responsable, textos, link) o duplicarla. «Agregar tarea» carga directo en el mes.
       </p>
 
       {editor && (
         <TaskEditor
+          key={editor.task ? `edit-${editor.task.id}` : editor.defaults?.cloneOf ? 'duplicate' : 'new'}
           task={editor.task || null}
           plan={plan}
           defaults={editor.defaults}
@@ -269,6 +270,7 @@ export default function PlanTasksBoard({ plan, tasks, todayIso, teamNames = [], 
             try { await removeTask(editor.task.id); setEditor(null); }
             catch (_e) { showError('No se pudo eliminar la tarea. Probá de nuevo.'); }
           } : null}
+          onDuplicate={editor.task ? () => setEditor({ defaults: { ...taskCloneDefaults(editor.task), cloneOf: editor.task.title } }) : null}
           onClose={() => setEditor(null)}
         />
       )}

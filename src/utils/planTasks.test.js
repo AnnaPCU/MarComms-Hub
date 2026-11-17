@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   monthLabel, monthOptions, monthFilterOptions, taskStats, isTaskOverdue, filterTasks, groupTasksByMonth, splitLinks,
-  pendingFromPreviousMonths, monthHistory,
+  pendingFromPreviousMonths, monthHistory, taskCloneDefaults,
   planBrand, planPillarItems,
 } from './planTasks';
 
@@ -106,5 +106,15 @@ describe('planes y pilares', () => {
       events: [{ id: 'e1', name: 'Evento', billing: 'plan', planId: 'us', tasks: {} }],
     });
     expect(items.map((i) => [i.id, i.pillar])).toEqual([['w1', 'webinars'], ['c1', 'email']]);
+  });
+});
+
+describe('taskCloneDefaults', () => {
+  it('copia lo que describe la tarea y deja en cero lo que registra cómo salió', () => {
+    const t = { id: 'x', planId: 1, position: 4, title: ' Reporte mensual ', monthKey: '2026-10', owner: 'Victoria Colombo', status: 'Completado', objective: 'Medir', result: '12 leads', detail: 'Ver tablero', link: 'https://a.com', deadline: '2026-10-30' };
+    expect(taskCloneDefaults(t)).toEqual({ title: 'Reporte mensual', monthKey: '2026-10', owner: 'Victoria Colombo', objective: 'Medir', detail: 'Ver tablero', status: 'Pendiente', result: '', link: '', deadline: '' });
+  });
+  it('sin mes o con datos vacíos no rompe', () => {
+    expect(taskCloneDefaults({ title: 'A', monthKey: null })).toMatchObject({ title: 'A', monthKey: '', owner: '', objective: '', detail: '' });
   });
 });

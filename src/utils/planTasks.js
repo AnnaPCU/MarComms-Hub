@@ -3,7 +3,8 @@
 // ════════════════════════════════════════════════════════════════════
 //   Meses:     monthLabel, monthOptions, monthFilterOptions, monthHistory
 //   Tareas:    taskStats, isTaskOpen, isTaskOverdue, filterTasks,
-//              groupTasksByMonth, pendingFromPreviousMonths, splitLinks
+//              groupTasksByMonth, pendingFromPreviousMonths, splitLinks,
+//              taskCloneDefaults (duplicar una tarea)
 //   Planes:    planBrand, planPillarItems (pilares que cubre cada plan —
 //              lo que antes era la pestaña "Por plan" del Portal Cliente)
 //
@@ -11,7 +12,7 @@
 // inicial del Excel se hizo una vez por SQL y no hay importación).
 // ════════════════════════════════════════════════════════════════════
 
-import { MONTHS_ES, DONE_TASK_STATUS, CANCELLED_TASK_STATUS, PLAN_TASK_STATUS_BY_ID } from '@/constants/planTasks';
+import { MONTHS_ES, DEFAULT_TASK_STATUS, DONE_TASK_STATUS, CANCELLED_TASK_STATUS, PLAN_TASK_STATUS_BY_ID } from '@/constants/planTasks';
 import { pillarOfCampaign } from '@/constants/campaigns';
 import { calcProgress, calcEventProgress, calcCampaignProgress } from '@/utils/progress';
 
@@ -50,6 +51,22 @@ export const needsCompletionMonthCheck = (task, next, todayIso) => !!task
   && next.status === DONE_TASK_STATUS && task.status !== DONE_TASK_STATUS
   && MONTH_KEY_RE.test(next.monthKey || '') && next.monthKey === task.monthKey
   && next.monthKey < todayIso.slice(0, 7);
+
+// Duplicar una tarea: lo que la describe se copia (título, mes, responsable,
+// objetivo, detalle); lo que registra cómo salió arranca de cero (estado
+// Pendiente, resultado, link y deadline vacíos). Son los valores iniciales
+// del editor: no se guarda nada hasta que la persona cliquea Guardar.
+export const taskCloneDefaults = (task = {}) => ({
+  title:     text(task.title),
+  monthKey:  MONTH_KEY_RE.test(task.monthKey || '') ? task.monthKey : '',
+  owner:     text(task.owner),
+  objective: text(task.objective),
+  detail:    text(task.detail),
+  status:    DEFAULT_TASK_STATUS,
+  result:    '',
+  link:      '',
+  deadline:  '',
+});
 
 // Mismas reglas que el Excel: % avance = completadas / (completadas + abiertas); las canceladas no cuentan
 export const taskStats = (tasks = []) => {

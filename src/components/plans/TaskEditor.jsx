@@ -12,20 +12,25 @@
 // cambiarle el mes), pregunta si se completó en ese mes o si pasa al mes
 // actual: así cuenta en los KPIs del mes en que se terminó.
 //
+// «Duplicar» (en una tarea existente) abre el editor de una tarea nueva con
+// la copia (taskCloneDefaults en utils/planTasks): no se guarda nada hasta
+// cliquear Guardar, así se puede cambiar el mes o el título antes.
+//
 // Props:
 //   task          — tarea existente o null (nueva)
 //   plan          — plan al que pertenece
-//   defaults      — valores iniciales para una tarea nueva ({ monthKey })
+//   defaults      — valores iniciales para una tarea nueva ({ monthKey } o
+//                   la copia completa al duplicar, con cloneOf = título original)
 //   monthKeys     — opciones del selector de mes ('YYYY-MM')
 //   todayIso      — hoy ('YYYY-MM-DD'), para la pregunta del mes
 //   teamNames     — el equipo: opciones de Responsable
 //   onSave(data) — tarea nueva: todos los campos; existente: solo los que
 //                  cambiaron (puede venir vacío)
-//   onDelete() | null, onClose()
+//   onDelete() | null, onDuplicate() | null, onClose()
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
-import { CalendarClock, Trash2, X } from 'lucide-react';
+import { CalendarClock, Copy, Trash2, X } from 'lucide-react';
 import ModalPortal from '@/components/shared/ModalPortal';
 import { useConfirm } from '@/hooks/useConfirm';
 import { PLAN_TASK_STATUSES, DEFAULT_TASK_STATUS, SHOW_TASK_DEADLINE } from '@/constants/planTasks';
@@ -35,18 +40,18 @@ const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl te
 const areaCls = `${inputCls} resize-y font-medium leading-snug`;
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
 
-export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], todayIso = '', onSave, onDelete, onClose, teamNames = [] }) {
+export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], todayIso = '', onSave, onDelete, onDuplicate = null, onClose, teamNames = [] }) {
   const confirm = useConfirm();
   const [form, setForm] = useState({
-    title:     task?.title || '',
-    monthKey:  task ? task.monthKey || '' : defaults.monthKey || '',
-    status:    task?.status || DEFAULT_TASK_STATUS,
-    owner:     task?.owner || '',
-    deadline:  task?.deadline || '',
-    objective: task?.objective || '',
-    result:    task?.result || '',
-    detail:    task?.detail || '',
-    link:      task?.link || '',
+    title:     (task ? task.title : defaults.title) || '',
+    monthKey:  (task ? task.monthKey : defaults.monthKey) || '',
+    status:    (task ? task.status : defaults.status) || DEFAULT_TASK_STATUS,
+    owner:     (task ? task.owner : defaults.owner) || '',
+    deadline:  (task ? task.deadline : defaults.deadline) || '',
+    objective: (task ? task.objective : defaults.objective) || '',
+    result:    (task ? task.result : defaults.result) || '',
+    detail:    (task ? task.detail : defaults.detail) || '',
+    link:      (task ? task.link : defaults.link) || '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +61,7 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
   const canSave = form.title.trim().length > 0 && !saving;
   const months = form.monthKey && !monthKeys.includes(form.monthKey) ? [...monthKeys, form.monthKey].sort() : monthKeys;
   // Todo el equipo; si la tarea ya tenía a alguien de afuera (del Excel), también
-  const ownerOptions = [...new Set([...teamNames, task?.owner].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+  const ownerOptions = [...new Set([...teamNames, task?.owner, defaults.owner].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
 
   // monthKey: para guardar con otro mes (respuesta a la pregunta del mes)
   const submit = async ({ monthKey, checked = false } = {}) => {
@@ -92,12 +97,18 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
           <div className="px-5 py-4 border-b border-slate-100 bg-emerald-50 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 truncate">{plan?.name}</p>
-              <h2 className="text-base font-black text-slate-900">{task ? 'Editar tarea' : 'Nueva tarea'}</h2>
+              <h2 className="text-base font-black text-slate-900">{task ? 'Editar tarea' : defaults.cloneOf ? 'Duplicar tarea' : 'Nueva tarea'}</h2>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center shrink-0" title="Cerrar"><X className="w-4 h-4 text-slate-600" /></button>
           </div>
 
           <div className="p-5 space-y-4 overflow-y-auto">
+            {!task && defaults.cloneOf && (
+              <p className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex items-start gap-2">
+                <Copy className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>Copia de «{defaults.cloneOf}». Se copiaron título, mes, responsable, objetivo y detalle; estado, resultado y link arrancan de cero. Elegí el mes y ajustá lo que cambie: se crea al cliquear Guardar.</span>
+              </p>
+            )}
             <div className="space-y-1">
               <label className={labelCls}>Acción / Tarea</label>
               <input
@@ -200,6 +211,11 @@ export default function TaskEditor({ task, plan, defaults = {}, monthKeys = [], 
             {onDelete && (
               <button onClick={remove} disabled={saving} className="text-[10px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 flex items-center gap-1 px-2 py-2 disabled:opacity-40">
                 <Trash2 className="w-3.5 h-3.5" /> Eliminar
+              </button>
+            )}
+            {onDuplicate && (
+              <button onClick={onDuplicate} disabled={saving} title="Crear una tarea nueva igual a esta (por ejemplo, para otro mes)" className="text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-emerald-700 flex items-center gap-1 px-2 py-2 disabled:opacity-40">
+                <Copy className="w-3.5 h-3.5" /> Duplicar
               </button>
             )}
             <div className="flex-1" />
