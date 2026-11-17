@@ -14,7 +14,8 @@
 //   saveCheck({ entityCode, itemId, patch: { done?, deadline? }, updatedBy })
 //     → se ve al instante (optimista) y se guarda; si falla, vuelve atrás
 //   createStep(obj) / updateStep(id, patch) / removeStep(id)
-//   createItem(obj) / updateItem(id, patch) / removeItem(id)
+//   createItem(obj) / updateItem(id, patch) / removeItem(id) /
+//   excludeItem(id, entityCode) (quitarlo de una sola entidad, 0075)
 //   createEntity(obj) / updateEntity(code, patch) / removeEntity(code)
 //   (updateEntity se ve al instante: tags, importancia)
 //   updateStepOptimistic(id, patch): igual que updateStep, pero se ve al
@@ -30,7 +31,7 @@ import { DEAL_WEEKS, lastWeeks } from '@/utils/crmWeeklyDeals';
 import {
   listEntities, createEntity, updateEntity, deleteEntity,
   listDealCounts, getDealSync, refreshDealCounts,
-  listItems, createItem, updateItem, deleteItem,
+  listItems, createItem, updateItem, deleteItem, excludeItemFor,
   listChecks, saveCheck, listSteps, createStep, updateStep, deleteStep, subscribeCrmWeekly,
 } from '@/services/crmWeeklyService';
 
@@ -117,6 +118,7 @@ export const useCrmWeekly = (options = {}) => {
       createItem: wrap(createItem),
       updateItem: wrap(updateItem),
       removeItem: wrap(deleteItem),
+      excludeItem: wrap(excludeItemFor),
       createEntity: wrap(createEntity),
       updateEntity: wrap(async (code, patch) => {
         setEntities((prev) => prev.map((e) => (e.code === code ? { ...e, ...patch, code } : e)));

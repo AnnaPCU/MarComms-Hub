@@ -30,13 +30,13 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { CalendarClock, LayoutList, Pencil, Plus } from 'lucide-react';
 import { todayIso as getTodayIso } from '@/utils/date';
-import { checksByEntity, countryCards, countryOptions, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight } from '@/utils/crmWeekly';
-import { useConfirm } from '@/hooks/useConfirm';
+import { checksByEntity, countryCards, countryOptions, itemAppliesTo, itemsFor, onlyInEntity, entitySummary, entityTags, filterEntities, newCheckItemId, sortEntities, trafficLight } from '@/utils/crmWeekly';
 import { useStoredPref } from '@/hooks/useStoredPref';
 import WeeklyChecklist from './WeeklyChecklist';
 import CrmNextSteps from './CrmNextSteps';
 import EntityButton, { PriorityChip } from './EntityButton';
 import CountryCard from './CountryCard';
+import DeleteItemModal from './DeleteItemModal';
 import EntityFilters from './EntityFilters';
 import EntityFormModal from './EntityFormModal';
 import TagsInput from './TagsInput';
@@ -62,9 +62,8 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
     entities: allEntities, weeklyEntities, tracking, items, checks, steps, loading, error, missing,
     dealCounts, dealSync, dealsReady, refreshDeals,
     saveCheck, createStep, updateStep, removeStep, updateStepOptimistic,
-    createItem, updateItem, removeItem, createEntity, updateEntity, removeEntity,
+    createItem, updateItem, removeItem, excludeItem, createEntity, updateEntity, removeEntity,
   } = data;
-  const confirm = useConfirm();
   // Weekly check: solo Américas; Global check: todas
   const entities = isGlobal ? allEntities : weeklyEntities;
   const [filters, setFilters] = useState(NO_FILTERS);
@@ -76,6 +75,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const [range, setRange] = useStoredPref('marcomms_hub_crm_weekly_range', '14');
   const [groupBy, setGroupBy] = useStoredPref(`marcomms_hub_crm_${scope}_group`, isGlobal ? 'region' : 'entity');
   const [selected, setSelected] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
   const [entityModal, setEntityModal] = useState(null); // { entity } | { entity: null }
   const [saveError, setSaveError] = useState('');
   const detailRef = useRef(null);
@@ -84,7 +84,8 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const by = currentUser?.name || '';
 
   const map = useMemo(() => checksByEntity(checks), [checks]);
-  const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, items)])), [entities, map, todayIso, items]);
+  // Cada entidad con sus ítems (alcance de cada ítem, migration 0075)
+  const summaries = useMemo(() => Object.fromEntries(entities.map((e) => [e.code, entitySummary(map[e.code], todayIso, itemsFor(e, items))])), [entities, map, todayIso, items]);
   const tags = useMemo(() => entityTags(entities), [entities]);
   const countries = useMemo(() => countryOptions(allEntities), [allEntities]);
   const regionCounts = useMemo(() => entities.reduce((acc, e) => { const r = e.region || 'Américas'; acc[r] = (acc[r] || 0) + 1; return acc; }, {}), [entities]);
@@ -119,19 +120,15 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
     setSaveError('');
     try { await fn(); } catch (e) { setSaveError(msg); throw e; }
   };
-  const addItem = (label) => run(
-    () => createItem({ id: newCheckItemId(), label, position: items.reduce((m, it) => Math.max(m, (it.position ?? 0) + 1), 0), createdBy: by }),
+  // Alta con alcance: esta entidad y/o regiones (AddItemForm)
+  const addItem = ({ label, targetCodes, targetRegions }) => run(
+    () => createItem({ id: newCheckItemId(), label, targetCodes, targetRegions, position: items.reduce((m, it) => Math.max(m, (it.position ?? 0) + 1), 0), createdBy: by }),
     'No se pudo agregar el ítem. Probá de nuevo.',
   );
+  const countFor = (targets) => allEntities.filter((e) => itemAppliesTo({ ...targets, excludedCodes: [] }, e)).length;
   const renameItem = (it, label) => (label === it.label ? Promise.resolve() : run(() => updateItem(it.id, { label }), 'No se pudo renombrar el ítem. Probá de nuevo.'));
-  const deleteItem = async (it) => {
-    const ok = await confirm({
-      title: '¿Eliminar el ítem del checklist?',
-      message: `"${it.label}" se va a eliminar del checklist de las ${entities.length} entidades, junto con lo que tenía cargado cada una (tilde y deadline). Esta acción no se puede deshacer.`,
-      confirmText: 'Eliminar', tone: 'danger',
-    });
-    if (ok) await run(() => removeItem(it.id), 'No se pudo eliminar el ítem. Probá de nuevo.').catch(() => {});
-  };
+  // Eliminar: solo de esta entidad o de todas (DeleteItemModal)
+  const deleteItem = (it) => setItemToDelete(it);
 
   // Entidades
   const saveEntity = async (form) => {
@@ -254,8 +251,9 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
                   </div>
                 )}
                 <WeeklyChecklist
-                  entityCode={entity.code}
-                  items={items}
+                  entity={entity}
+                  items={itemsFor(entity, items)}
+                  countFor={countFor}
                   checks={map[entity.code]}
                   todayIso={todayIso}
                   dark={dark}
@@ -264,7 +262,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
                   onRenameItem={renameItem}
                   onDeleteItem={deleteItem}
                 />
-                <p className="mt-2 text-[10px] font-bold text-slate-400">El deadline (dd/mm/aaaa) se pone más rojo a medida que se acerca; al tildar el ítem deja de resaltarse. Los ítems del checklist valen para todas las entidades.</p>
+                <p className="mt-2 text-[10px] font-bold text-slate-400">El deadline (dd/mm/aaaa) se pone más rojo a medida que se acerca; al tildar el ítem deja de resaltarse. Al agregar un ítem elegís si va en esta entidad o en toda una región; al eliminarlo, si es solo de esta entidad o de todas.</p>
               </section>
 
               <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
@@ -286,6 +284,18 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
             </div>
           )}
         </div>
+      )}
+
+      {itemToDelete && entity && (
+        <DeleteItemModal
+          item={itemToDelete}
+          entity={entity}
+          total={allEntities.filter((e) => itemAppliesTo(itemToDelete, e)).length}
+          onlyHere={onlyInEntity(itemToDelete, entity)}
+          onOnlyHere={() => excludeItem(itemToDelete.id, entity.code)}
+          onAll={() => removeItem(itemToDelete.id)}
+          onClose={() => setItemToDelete(null)}
+        />
       )}
 
       {entityModal && (

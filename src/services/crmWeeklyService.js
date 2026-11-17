@@ -6,7 +6,8 @@
 //   crm_weekly_deal_counts / crm_weekly_deal_sync — deals nuevos por
 //     semana, de HubSpot (0071; los escribe la Edge Function
 //     hubspot-weekly-deals, el Hub solo lee)
-//   crm_check_items   — ítems del checklist (valen para todas las entidades)
+//   crm_check_items   — ítems del checklist (todas las entidades o las de su
+//                       alcance: target_codes / target_regions / excluded_codes, 0075)
 //   crm_weekly_checks — checklist: una fila por entidad e ítem
 //   crm_next_steps    — próximos steps de cada entidad
 //
@@ -90,6 +91,10 @@ export const itemFromRow = (row) => (row ? {
   hint:      row.hint || '',
   position:  row.position ?? 0,
   createdBy: row.created_by || '',
+  // Alcance (0075): vacíos = todas las entidades
+  targetCodes:   row.target_codes || [],
+  targetRegions: row.target_regions || [],
+  excludedCodes: row.excluded_codes || [],
 } : null);
 
 export const listItems = async () => {
@@ -97,10 +102,12 @@ export const listItems = async () => {
   if (error) throw error;
   return (data || []).map(itemFromRow);
 };
-export const createItem = async ({ id, label, hint, position, createdBy }) => {
-  const { data, error } = await supabase.from(ITEMS)
-    .insert({ id, label: String(label || '').trim(), hint: String(hint || '').trim() || null, position: position ?? 0, created_by: createdBy || null })
-    .select('*').single();
+export const createItem = async ({ id, label, hint, position, createdBy, targetCodes, targetRegions }) => {
+  const row = { id, label: String(label || '').trim(), hint: String(hint || '').trim() || null, position: position ?? 0, created_by: createdBy || null };
+  // Solo se mandan si el ítem no es para todas (así anda también sin la 0075)
+  if (targetCodes?.length) row.target_codes = targetCodes;
+  if (targetRegions?.length) row.target_regions = targetRegions;
+  const { data, error } = await supabase.from(ITEMS).insert(row).select('*').single();
   if (error) throw error;
   return itemFromRow(data);
 };
@@ -119,6 +126,19 @@ export const deleteItem = async (id) => {
   const { error: e2 } = await supabase.from(CHECKS).delete().eq('item_id', id);
   if (e2) throw e2;
   return true;
+};
+
+// Quita el ítem de una sola entidad (0075): la suma a excluded_codes y
+// borra lo que esa entidad tenía cargado (tilde y deadline)
+export const excludeItemFor = async (id, entityCode) => {
+  const { data: cur, error: e0 } = await supabase.from(ITEMS).select('excluded_codes').eq('id', id).single();
+  if (e0) throw e0;
+  const excluded = [...new Set([...(cur?.excluded_codes || []), entityCode])];
+  const { data, error } = await supabase.from(ITEMS).update({ excluded_codes: excluded }).eq('id', id).select('*').single();
+  if (error) throw error;
+  const { error: e2 } = await supabase.from(CHECKS).delete().eq('item_id', id).eq('entity_code', entityCode);
+  if (e2) throw e2;
+  return itemFromRow(data);
 };
 
 // ── Checklist ──

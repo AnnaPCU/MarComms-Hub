@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import { AMERICA_COUNTRIES } from '@/constants/crmWeekly';
-import { activityGroups, countryCards, countryOptions, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, sumSummaries, trafficLight } from './crmWeekly';
+import { activityGroups, countryCards, countryOptions, itemAppliesTo, itemsFor, itemScopeLabel, itemTargets, onlyInEntity, redDeadlines, checksByEntity, cleanTags, entityActivities, entityProblem, entitySummary, entityTags, filterEntities, sortEntities, sumSummaries, trafficLight } from './crmWeekly';
 
 const TODAY = '2026-11-12';
 const ITEMS = [{ id: 'a', label: 'A', position: 0 }, { id: 'b', label: 'B', position: 1 }, { id: 'c', label: 'C', position: 2 }, { id: 'd', label: 'D', position: 3 }];
@@ -158,5 +158,48 @@ describe('sumSummaries — avance de un país', () => {
     const s = sumSummaries([{ done: 9, total: 9, overdue: 0, soon: 0 }, { done: 3, total: 9, overdue: 1, soon: 2 }, null]);
     expect(s).toEqual({ done: 12, total: 18, overdue: 1, soon: 2, pct: 67 });
     expect(trafficLight(s).id).toBe('yellow');
+  });
+});
+
+describe('alcance de los ítems del checklist (0075)', () => {
+  const arg = { code: '538', region: 'Américas' };
+  const mx = { code: '598', region: 'Américas' };
+  const de = { code: '383', region: 'EMEA' };
+  const my = { code: '544', region: 'APAC' };
+  const all = { id: 'a', label: 'Para todas' };
+  const onlyArg = { id: 'b', label: 'Solo 538', targetCodes: ['538'] };
+  const emea = { id: 'c', label: 'EMEA', targetRegions: ['EMEA'] };
+  const argEmea = { id: 'd', label: '538 + EMEA', targetCodes: ['538'], targetRegions: ['EMEA'] };
+  const allButMx = { id: 'e', label: 'Sin México', excludedCodes: ['598'] };
+  const items = [all, onlyArg, emea, argEmea, allButMx];
+
+  it('sin alcance = todas; con códigos o regiones = la unión; excluidas afuera', () => {
+    expect(itemsFor(arg, items).map((i) => i.id)).toEqual(['a', 'b', 'd', 'e']);
+    expect(itemsFor(mx, items).map((i) => i.id)).toEqual(['a']);
+    expect(itemsFor(de, items).map((i) => i.id)).toEqual(['a', 'c', 'd', 'e']);
+    expect(itemsFor(my, items).map((i) => i.id)).toEqual(['a', 'e']);
+    expect(itemAppliesTo(emea, { code: '999' })).toBe(false); // sin región = Américas
+  });
+
+  it('alta: lo tildado → códigos y regiones; las tres regiones = todas', () => {
+    expect(itemTargets({ entityCode: '538', thisEntity: true })).toEqual({ targetCodes: ['538'], targetRegions: null });
+    expect(itemTargets({ entityCode: '538', thisEntity: false, regions: ['APAC', 'EMEA'] })).toEqual({ targetCodes: null, targetRegions: ['EMEA', 'APAC'] });
+    expect(itemTargets({ entityCode: '538', thisEntity: true, regions: ['Américas', 'EMEA', 'APAC'] })).toEqual({ targetCodes: null, targetRegions: null });
+  });
+
+  it('etiqueta del alcance y si solo está en esta entidad', () => {
+    expect(itemScopeLabel(all, arg)).toBe('');
+    expect(itemScopeLabel(onlyArg, arg)).toBe('Solo esta entidad');
+    expect(itemScopeLabel(argEmea, arg)).toBe('Solo esta entidad + EMEA');
+    expect(itemScopeLabel(allButMx, arg)).toBe('sin 1 entidad');
+    expect(onlyInEntity(onlyArg, arg)).toBe(true);
+    expect(onlyInEntity(argEmea, arg)).toBe(false);
+  });
+
+  it('el semáforo y los avisos cuentan solo los ítems de cada entidad', () => {
+    const checks = { a: { done: true } };
+    expect(entitySummary(checks, TODAY, itemsFor(mx, items))).toMatchObject({ done: 1, total: 1, pct: 100 });
+    const red = redDeadlines([{ entityCode: '598', itemId: 'b', done: false, deadline: TODAY }], items, TODAY, [mx]);
+    expect(red).toEqual([]); // el ítem «Solo 538» no es de México
   });
 });

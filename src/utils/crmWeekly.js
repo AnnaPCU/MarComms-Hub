@@ -8,6 +8,10 @@
 //
 // Los ítems del checklist vienen de la base (crm_check_items, migration
 // 0044); CRM_CHECK_ITEMS es el respaldo si la tabla no está.
+// Alcance de cada ítem (migration 0075, nov 2026): targetCodes /
+// targetRegions (vacíos = todas las entidades; si no, las de esos códigos
+// O de esas regiones) y excludedCodes (entidades donde se quitó). Ver
+// itemAppliesTo / itemsFor / itemScopeLabel / itemTargets.
 //
 // Deadline de cada ítem del checklist: cuanto más cerca está, más rojo
 // (verde con DEADLINE_CALM_DAYS o más por delante → amarillo → naranja →
@@ -16,7 +20,7 @@
 // CRM_WEEKLY_NOTIFY_USER (redDeadlines → utils/notifications).
 // ════════════════════════════════════════════════════════════════════
 
-import { AMERICA_COUNTRIES, CRM_CHECK_ITEMS, CRM_ENTITIES, CRM_PRIORITIES, DEADLINE_CALM_DAYS, DEADLINE_RED_DAYS, TRAFFIC_LIGHTS, TRAFFIC_YELLOW_PCT } from '@/constants/crmWeekly';
+import { AMERICA_COUNTRIES, CRM_CHECK_ITEMS, CRM_REGIONS, CRM_ENTITIES, CRM_PRIORITIES, DEADLINE_CALM_DAYS, DEADLINE_RED_DAYS, TRAFFIC_LIGHTS, TRAFFIC_YELLOW_PCT } from '@/constants/crmWeekly';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const utcDay = (iso) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
@@ -25,6 +29,45 @@ const utcDay = (iso) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)
 export const daysUntil = (deadline, todayIso) => {
   if (!DATE_RE.test(deadline || '') || !DATE_RE.test((todayIso || '').slice(0, 10))) return null;
   return Math.round((utcDay(deadline) - utcDay(todayIso.slice(0, 10))) / 86400000);
+};
+
+// ── Alcance de los ítems del checklist (migration 0075) ──
+const regionOf = (entity) => entity?.region || 'Américas';
+export const itemAppliesTo = (item, entity) => {
+  if (!item || !entity) return false;
+  if ((item.excludedCodes || []).includes(entity.code)) return false;
+  const codes = item.targetCodes || [];
+  const regions = item.targetRegions || [];
+  if (!codes.length && !regions.length) return true;
+  return codes.includes(entity.code) || regions.includes(regionOf(entity));
+};
+// Los ítems del checklist de una entidad
+export const itemsFor = (entity, items = CRM_CHECK_ITEMS) => items.filter((it) => itemAppliesTo(it, entity));
+
+// Alta: lo tildado en «Agregar en» → { targetCodes, targetRegions }.
+// Las tres regiones = todas las entidades (sin restricción, como antes).
+export const itemTargets = ({ entityCode = '', thisEntity = false, regions = [] } = {}) => {
+  const regs = CRM_REGIONS.filter((r) => regions.includes(r));
+  if (regs.length === CRM_REGIONS.length) return { targetCodes: null, targetRegions: null };
+  return { targetCodes: thisEntity && entityCode ? [entityCode] : null, targetRegions: regs.length ? regs : null };
+};
+
+// Texto corto del alcance (para la etiqueta del ítem). '' = todas.
+export const itemScopeLabel = (item, entity) => {
+  const codes = item?.targetCodes || [];
+  const regions = item?.targetRegions || [];
+  const parts = [];
+  if (codes.length) parts.push(codes.length === 1 && entity && codes[0] === entity.code ? 'Solo esta entidad' : `${codes.length === 1 ? 'Entidad' : 'Entidades'} ${codes.join(', ')}`);
+  if (regions.length) parts.push(regions.join(' + '));
+  const base = parts.join(' + ');
+  const excluded = (item?.excludedCodes || []).length;
+  return [base, excluded ? `sin ${excluded} ${excluded === 1 ? 'entidad' : 'entidades'}` : ''].filter(Boolean).join(' · ');
+};
+
+// ¿Quitar el ítem de esta entidad lo deja sin ninguna? (solo estaba en ella)
+export const onlyInEntity = (item, entity) => {
+  const codes = item?.targetCodes || [];
+  return !(item?.targetRegions || []).length && codes.length === 1 && codes[0] === entity?.code;
 };
 
 // '2026-11-05' → '05/11/2026' (las fechas en español viven en utils/date)
@@ -100,7 +143,7 @@ export const redDeadlines = (checks = [], items = CRM_CHECK_ITEMS, todayIso, ent
   const entityByCode = Object.fromEntries(entities.map((e) => [e.code, e]));
   return checks
     .map((c) => ({ c, entity: entityByCode[c.entityCode], item: itemById[c.itemId], days: daysUntil(c.deadline, todayIso) }))
-    .filter(({ c, entity, item, days }) => entity && item && !c.done && days !== null && days <= DEADLINE_RED_DAYS)
+    .filter(({ c, entity, item, days }) => entity && item && itemAppliesTo(item, entity) && !c.done && days !== null && days <= DEADLINE_RED_DAYS)
     .map(({ c, entity, item, days }) => ({ entity, item, deadline: c.deadline, days }))
     .sort((a, b) => a.days - b.days || a.entity.code.localeCompare(b.entity.code));
 };
@@ -194,7 +237,7 @@ export const entityProblem = ({ code, name }, entities = [], isNew = true) => {
 //   ordenadas: vencidas y más cercanas primero, sin fecha al final.
 export const entityActivities = (entity, { checks = {}, steps = [], items = CRM_CHECK_ITEMS, todayIso, maxDays = null } = {}) => {
   const out = [];
-  items.forEach((it) => {
+  itemsFor(entity, items).forEach((it) => {
     const c = checks?.[it.id];
     if (!c || c.done || !c.deadline) return;
     out.push({ kind: 'check', id: `check:${it.id}`, title: it.label, detail: it.hint || '', category: 'Checklist', date: c.deadline, days: daysUntil(c.deadline, todayIso), source: it, pos: it.position ?? 0 });

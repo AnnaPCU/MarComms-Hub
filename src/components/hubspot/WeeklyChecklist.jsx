@@ -6,19 +6,24 @@
 // cambia de color a medida que se acerca (verde → amarillo → naranja →
 // rojo, ver deadlineTone); tildado, queda gris. Cada cambio se guarda al
 // instante.
-// Los ítems valen para todas las entidades: «Agregar ítem» al pie suma uno
-// nuevo a todas; el lápiz lo renombra y el tacho lo elimina (con
-// confirmación, para todas).
+// «Agregar ítem» al pie (AddItemForm) elige dónde: esta entidad y/o
+// Américas / EMEA / APAC (migration 0075). El lápiz lo renombra (en todas
+// las entidades donde está) y el tacho lo elimina: solo de esta entidad o
+// de todas (DeleteItemModal, en CrmWeeklyCheck). Los ítems que no son para
+// todas llevan una etiqueta con su alcance.
 //
-// Props: entityCode, items, checks ({ [itemId]: check }), todayIso, dark,
+// Props: entity, items (los de esta entidad, itemsFor), checks
+//   ({ [itemId]: check }), todayIso, dark,
 //   onSave(itemId, patch) (async; patch: { done } | { deadline }),
-//   onAddItem(label) / onRenameItem(item, label) / onDeleteItem(item) (async)
+//   onAddItem({ label, targetCodes, targetRegions }) / onRenameItem(item, label)
+//   / onDeleteItem(item) (async), countFor(targets) (para el alta)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import DateFieldEs from '@/components/shared/DateFieldEs';
-import { deadlineTone, formatShortDate } from '@/utils/crmWeekly';
+import { deadlineTone, formatShortDate, itemScopeLabel } from '@/utils/crmWeekly';
+import AddItemForm from './AddItemForm';
 
 const smallInput = 'flex-1 min-w-0 text-sm font-bold text-slate-800 bg-white border border-sky-300 rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-sky-200';
 
@@ -40,7 +45,8 @@ function InlineInput({ initial = '', placeholder, onSave, onCancel }) {
   );
 }
 
-export default function WeeklyChecklist({ entityCode, items = [], checks = {}, todayIso, dark = false, onSave, onAddItem, onRenameItem, onDeleteItem }) {
+export default function WeeklyChecklist({ entity, items = [], checks = {}, todayIso, dark = false, onSave, onAddItem, onRenameItem, onDeleteItem, countFor = () => 0 }) {
+  const entityCode = entity.code;
   const [renaming, setRenaming] = useState(null); // id del ítem
   const [adding, setAdding] = useState(false);
 
@@ -73,10 +79,11 @@ export default function WeeklyChecklist({ entityCode, items = [], checks = {}, t
                   <div className="min-w-0">
                     <p className={`text-sm font-bold leading-tight ${done ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'}`}>{it.label}</p>
                     {it.hint && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{it.hint}</p>}
+                    {itemScopeLabel(it, entity) && <span className="inline-block mt-0.5 rounded bg-slate-100 text-slate-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wider" title="Este ítem no está en todas las entidades">{itemScopeLabel(it, entity)}</span>}
                   </div>
                   <span className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity shrink-0">
-                    <button onClick={() => setRenaming(it.id)} className="w-6 h-6 rounded-md text-slate-300 hover:text-sky-700 hover:bg-sky-50 flex items-center justify-center" title="Renombrar (para todas las entidades)" aria-label={`Renombrar ${it.label}`}><Pencil className="w-3 h-3" /></button>
-                    <button onClick={() => onDeleteItem(it)} className="w-6 h-6 rounded-md text-slate-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center" title="Eliminar del checklist (para todas las entidades)" aria-label={`Eliminar ${it.label}`}><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => setRenaming(it.id)} className="w-6 h-6 rounded-md text-slate-300 hover:text-sky-700 hover:bg-sky-50 flex items-center justify-center" title="Renombrar (en todas las entidades donde está)" aria-label={`Renombrar ${it.label}`}><Pencil className="w-3 h-3" /></button>
+                    <button onClick={() => onDeleteItem(it)} className="w-6 h-6 rounded-md text-slate-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center" title="Eliminar: solo de esta entidad o de todas" aria-label={`Eliminar ${it.label}`}><Trash2 className="w-3 h-3" /></button>
                   </span>
                 </div>
               )}
@@ -95,9 +102,7 @@ export default function WeeklyChecklist({ entityCode, items = [], checks = {}, t
       </ul>
       <div className="border-t border-slate-100 pt-2.5 mt-0.5">
         {adding ? (
-          <div className="max-w-xl flex">
-            <InlineInput placeholder="Nuevo ítem del checklist (para todas las entidades)…" onSave={onAddItem} onCancel={() => setAdding(false)} />
-          </div>
+          <AddItemForm entity={entity} countFor={countFor} onSave={async (data) => { await onAddItem(data); setAdding(false); }} onCancel={() => setAdding(false)} />
         ) : (
           <button onClick={() => setAdding(true)} className="text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-sky-700 flex items-center gap-1">
             <Plus className="w-3 h-3" /> Agregar ítem al checklist
