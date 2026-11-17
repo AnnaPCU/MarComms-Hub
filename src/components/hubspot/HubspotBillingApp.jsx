@@ -70,10 +70,10 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
   const lic = visible.reduce((acc, e) => {
     const l = licensesOf(monthOf(e, current));
     const up = unitPricesFor(e, current, meta.unitPrices);
-    acc.sp += l.salesPro; acc.core += l.core;
+    acc.sp += l.salesPro; acc.core += l.core; acc.variable = acc.variable || Boolean(up.variable);
     acc.spMoney += l.salesPro * (up.salesPro || 0); acc.coreMoney += l.core * (up.core || 0);
     return acc;
-  }, { sp: 0, core: 0, spMoney: 0, coreMoney: 0 });
+  }, { sp: 0, core: 0, spMoney: 0, coreMoney: 0, variable: false });
   const tCheck = !brand ? totalCheck(entities, meta, current) : null;
   const lastImport = imports[0];
   const showTotalWarning = tCheck && tCheck.diff !== 0 && !dismissed.has(totalWarningId(current));
@@ -159,8 +159,8 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <Kpi label={`Facturado ${current}`} value={money(now.total)} accent="text-blue-600" hint={<span className="flex items-center gap-1">vs {prev || '—'}: <Delta now={now.total} before={before ? before.total : null} /></span>} />
               <Kpi label="Entidades facturadas" value={now.billed} hint={`de ${visible.length}`} />
-              <Kpi label="Licencias Sales Pro" value={lic.sp} hint={money(lic.spMoney)} />
-              <Kpi label="Licencias Core" value={lic.core} hint={money(lic.coreMoney)} />
+              <Kpi label="Licencias Sales Pro" value={lic.sp} hint={lic.variable ? 'precio variable' : money(lic.spMoney)} />
+              <Kpi label="Licencias Core" value={lic.core} hint={lic.variable ? 'precio variable' : money(lic.coreMoney)} />
               <Kpi label="Acumulado del año" value={money(totals.reduce((a, t) => a + t.total, 0))} hint={`${totals.filter((t) => t.total > 0).length} meses facturados`} />
             </div>
 

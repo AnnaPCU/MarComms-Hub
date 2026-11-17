@@ -13,7 +13,7 @@
 // por posiciones fijas.
 // ════════════════════════════════════════════════════════════════════
 
-import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES, SPECIAL_UNIT_PRICES } from '@/constants/hubspotBilling';
+import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES, SPECIAL_UNIT_PRICES, FIXED_PRICES_FROM, VARIABLE_PRICE_NOTE } from '@/constants/hubspotBilling';
 
 const norm = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -139,9 +139,12 @@ export const licensesOf = (monthEntry) => parseLicenses(monthEntry?.detail);
 // Tarifas de una entidad en un mes: las del Summary, salvo que tenga una
 // tarifa especial desde ese mes (SPECIAL_UNIT_PRICES, ej. PS Technology).
 // Un mes con precio acordado devuelve `agreed` (el texto): priceCheck lo da
-// por explicado.
+// por explicado. Los meses antes de FIXED_PRICES_FROM (junio 2026) también
+// (`variable: true`): ahí las licencias no tenían precio fijo.
 const entityCode = (entity) => (String(entity?.legalEntity || '').match(/^\s*(\d+[A-Za-z]?)\s*-/) || [])[1] || '';
 export const unitPricesFor = (entity, month, base = DEFAULT_UNIT_PRICES, specials = SPECIAL_UNIT_PRICES) => {
+  // Antes de FIXED_PRICES_FROM no había tarifa fija: se da por explicado
+  if (monthIdx(month) >= 0 && monthIdx(month) < monthIdx(FIXED_PRICES_FROM)) return { ...(base || DEFAULT_UNIT_PRICES), agreed: VARIABLE_PRICE_NOTE, variable: true };
   const sp = specials.find((s) => (s.entityKey && s.entityKey === entity?.key) || (s.code && s.code === entityCode(entity)));
   if (sp?.agreed?.[MONTHS_ES[monthIdx(month)]]) return { ...(base || DEFAULT_UNIT_PRICES), agreed: sp.agreed[MONTHS_ES[monthIdx(month)]] };
   if (!sp || monthIdx(month) < monthIdx(sp.from)) return base || DEFAULT_UNIT_PRICES;

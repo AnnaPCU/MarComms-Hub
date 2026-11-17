@@ -132,3 +132,20 @@ describe('unitPricesFor — tarifa especial por entidad (PS Technology)', () => 
     expect(unitPricesFor({ key: 'CU Peru', legalEntity: '536 - Control Union Services Peru S.A.C.' }, 'Octubre', base)).toEqual(base);
   });
 });
+
+describe('meses antes de junio: precio variable', () => {
+  const base = { salesPro: 145, core: 120 };
+  const peru = { key: 'CU Peru', legalEntity: '536 - Control Union Services Peru S.A.C.' };
+  it('enero–mayo no se comparan con licencias × tarifa', () => {
+    const up = unitPricesFor(peru, 'Marzo', base);
+    expect(up.variable).toBe(true);
+    const c = priceCheck({ price: 630, detail: '10 Licencias Core' }, up);
+    expect(c.explained).toBe(true);
+    expect(c.agreed).toMatch(/variable/);
+  });
+  it('desde junio sí (tarifa fija)', () => {
+    const up = unitPricesFor(peru, 'Junio', base);
+    expect(up).toEqual(base);
+    expect(priceCheck({ price: 1100, detail: '10 Licencias Core' }, up).explained).toBe(false);
+  });
+});

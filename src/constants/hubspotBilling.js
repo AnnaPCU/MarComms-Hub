@@ -10,6 +10,12 @@ export const SUMMARY_SHEET = 'Summary';
 // Tarifas por licencia si el Excel no trae la hoja Summary
 export const DEFAULT_UNIT_PRICES = { salesPro: 145, core: 120 };
 
+// Desde qué mes las licencias tienen precio fijo (tarifa del Summary). Antes
+// de junio 2026 cada licencia se cobraba a un precio distinto: esos meses no
+// se comparan con licencias × tarifa ni avisan en «Para revisar».
+export const FIXED_PRICES_FROM = 'Junio';
+export const VARIABLE_PRICE_NOTE = 'Precio variable (antes de junio no había tarifa fija)';
+
 // Tarifas especiales por entidad (nov 2026): a PS Technology (752) se le
 // cobran las licencias más baratas desde octubre 2026; septiembre fue un
 // precio especial acordado sin tarifa por licencia (agreed: ese mes no se
