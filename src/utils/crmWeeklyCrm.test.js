@@ -134,3 +134,17 @@ describe('licencias de una entidad', () => {
     expect(l.summary).toMatchObject({ total: 5, paid: 4, viewOnly: 0, bySeat: { salesPro: 1, core: 3 }, salesPro: 1, core: 3, noType: 1, active: 2, inactive: 1 });
   });
 });
+
+describe('licencias por unidad de negocio', () => {
+  it('filtra por el nombre corto del main team y lista las unidades', () => {
+    const users = [
+      { entityCode: '538', name: 'A', pcuOption: '538 - CU Argentina SA (Certifications)', license: 'core', matched: true, active: true },
+      { entityCode: '538', name: 'B', pcuOption: '538 - CU Argentina SA (Warrants)', license: 'view-only', matched: true, active: false },
+      { entityCode: '538', name: 'C', pcuOption: '538 - CU Argentina SA (Certifications)', license: 'sales-enterprise', matched: true, active: false },
+    ];
+    expect(entityLicenses(users, '538').units).toEqual(['Certifications', 'Warrants']);
+    const l = entityLicenses(users, '538', 'Certifications');
+    expect(l.users.map((u) => u.name)).toEqual(['A', 'C']);
+    expect(l.summary).toMatchObject({ total: 2, paid: 2, viewOnly: 0, active: 1, inactive: 1 });
+  });
+});

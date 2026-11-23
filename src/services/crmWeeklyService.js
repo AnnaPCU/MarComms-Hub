@@ -284,7 +284,8 @@ export const hubspotUserFromRow = (row) => ({
   name: row.name,
   hubspotName: row.hubspot_name,
   email: row.email,
-  license: row.license,          // 'salesPro' | 'core' | null
+  license: row.license,          // seat de HubSpot (core, sales-enterprise, view-only…) o del Excel
+  pcuOption: row.pcu_option,     // main team (unidad de negocio)
   matched: row.matched,
   shared: row.shared,
   archived: row.archived,

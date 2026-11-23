@@ -155,14 +155,25 @@ function OptionBreakdown({ title, options, values, onPick, total = false }) {
 // mensual). Las dos siguen a la opción de PCU Entity elegida.
 // noun: 'deals' (con opciones de PCU Entity e importados) o 'contacts' /
 // 'companies' (counts / months con la forma de deals, objectsAsDeals)
-export function DealsPanel({ counts = [], months = [], code, dark = false, noun = 'deals' }) {
+// unit / onUnit (opcional, nov 2026): la unidad de negocio elegida se
+// comparte entre Deals, Contacts, Companies y Licenses de la ficha; se
+// compara por el nombre corto («Certifications»), que coincide entre la
+// opción de PCU Entity y el main team.
+export function DealsPanel({ counts = [], months = [], code, dark = false, noun = 'deals', unit = '', onUnit }) {
   const isDeals = noun === 'deals';
   const N = NOUNS[noun];
-  const [option, setOption] = useState(''); // '' = todas las opciones sumadas
+  const [ownOption, setOwnOption] = useState(''); // '' = todas las opciones sumadas
   const [view, setView] = useState('weeks');
   const all = entityDeals(counts, code);
-  const deals = option ? entityDeals(counts, code, new Date(), option) : all;
   const yearAll = entityMonths(months, code);
+  const options = all.options?.length ? all.options : Object.keys(yearAll.byOption || {});
+  const controlled = typeof onUnit === 'function';
+  const match = controlled && unit ? options.find((o) => optionShortLabel(o) === unit) : null;
+  // Unidad elegida en otra pestaña que acá no existe: se muestra en 0
+  const option = controlled ? (unit ? match || unit : '') : ownOption;
+  const setOption = controlled ? (o) => onUnit(o ? optionShortLabel(o) : '') : setOwnOption;
+  const chipOptions = controlled && unit && !match ? [...options, unit] : options;
+  const deals = option ? entityDeals(counts, code, new Date(), option) : all;
   const year = option ? entityMonths(months, code, new Date(), option) : yearAll;
   const hasMonths = yearAll.mapped !== null;
   if (deals.mapped === null && !hasMonths) {
@@ -171,10 +182,9 @@ export function DealsPanel({ counts = [], months = [], code, dark = false, noun 
   if (deals.mapped === false || (deals.mapped === null && yearAll.mapped === false)) {
     return isDeals
       ? <p className="text-[11px] font-bold text-slate-500">This entity has no option in HubSpot's «PCU Entity», so its deals cannot be counted. Once it is added in HubSpot, it shows up automatically.</p>
-      : <p className="text-[11px] font-bold text-slate-500">No HubSpot user is linked to this entity (not in the Facturación HubSpot user list and no deals as owner), so its {N} cannot be counted.</p>;
+      : <p className="text-[11px] font-bold text-slate-500">No HubSpot user has this entity as main team, so its {N} cannot be counted.</p>;
   }
-  const options = all.options?.length ? all.options : Object.keys(yearAll.byOption || {});
-  const many = options.length > 1;
+  const many = chipOptions.length > 1;
   const showMonths = view === 'months';
   return (
     <div className="space-y-3">
@@ -185,9 +195,9 @@ export function DealsPanel({ counts = [], months = [], code, dark = false, noun 
         </div>
         {many && (
           <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="PCU Entity option">
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">PCU Entity</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">{isDeals ? 'PCU Entity' : 'Business unit'}</span>
             <button onClick={() => setOption('')} aria-pressed={!option} className={chipCls(!option)}>All</button>
-            {options.map((o) => <button key={o} onClick={() => setOption(o)} aria-pressed={option === o} title={o} className={chipCls(option === o)}>{optionShortLabel(o)}</button>)}
+            {chipOptions.map((o) => <button key={o} onClick={() => setOption(o)} aria-pressed={option === o} title={o} className={chipCls(option === o)}>{optionShortLabel(o)}</button>)}
           </div>
         )}
       </div>

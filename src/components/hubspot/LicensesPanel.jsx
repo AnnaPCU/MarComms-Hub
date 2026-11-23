@@ -11,7 +11,8 @@
 // últimos 30 días.
 // Botón «Update»: usuarios y después contactos / empresas (refreshCrm).
 //
-// Props: users (hubspotUsers), code, sync (crmSync), onRefresh, color
+// Props: users (hubspotUsers), code, sync (crmSync), onRefresh, color,
+//   unit / onUnit (unidad de negocio elegida, compartida con New in HubSpot)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
@@ -57,10 +58,13 @@ function UserRow({ u }) {
   );
 }
 
-export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, color }) {
+const chipCls = (on) => `px-2.5 py-1 rounded-lg text-[10px] font-black border transition-colors ${on ? 'bg-sky-600 border-sky-600 text-white' : 'bg-white border-slate-200 text-slate-500 hover:border-sky-300'}`;
+
+export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, color, unit = '', onUnit }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const { users: list, summary } = entityLicenses(users, code);
+  const { users: list, units, summary } = entityLicenses(users, code, unit);
+  const chips = unit && !units.includes(unit) ? [...units, unit] : units;
   const usersSync = sync.users || {};
   const failed = [sync.users, sync.objects].find((x) => x && x.ok === false);
 
@@ -92,6 +96,13 @@ export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, 
         </p>
       )}
       {msg && <p className="text-[11px] font-bold text-slate-500">{msg}</p>}
+      {onUnit && chips.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Business unit">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">Business unit</span>
+          <button onClick={() => onUnit('')} aria-pressed={!unit} className={chipCls(!unit)}>All</button>
+          {chips.map((u) => <button key={u} onClick={() => onUnit(u)} aria-pressed={unit === u} className={chipCls(unit === u)}>{u}</button>)}
+        </div>
+      )}
 
       {list.length > 0 ? (
         <>
@@ -112,7 +123,7 @@ export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, 
           <ul>{list.map((u) => <UserRow key={u.id} u={u} />)}</ul>
         </>
       ) : (
-        <p className="text-[11px] font-bold text-slate-400">No HubSpot user has this entity as main team.</p>
+        <p className="text-[11px] font-bold text-slate-400">{unit ? `No HubSpot user has «${unit}» as main team in this entity.` : 'No HubSpot user has this entity as main team.'}</p>
       )}
     </section>
   );

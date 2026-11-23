@@ -81,6 +81,9 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const [itemToDelete, setItemToDelete] = useState(null);
   const [entityModal, setEntityModal] = useState(null); // { entity } | { entity: null }
   const [saveError, setSaveError] = useState('');
+  // Unidad de negocio elegida en la ficha de cada entidad (compartida entre
+  // Deals / Contacts / Companies y Licenses; nombre corto, '' = todas)
+  const [units, setUnits] = useState({});
   const detailRef = useRef(null);
   const todayIso = getTodayIso();
   const c = dark ? DARK : LIGHT;
@@ -222,9 +225,9 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
           {entity && (
             <div ref={detailRef} className="space-y-5 min-w-0 scroll-mt-24">
               {dealsReady && (
-                <NewInHubspot key={entity.code} dealCounts={dealCounts} dealMonths={dealMonths} objectCounts={objectCounts} crmReady={crmReady} code={entity.code} dark={dark} color={c.primary} />
+                <NewInHubspot key={entity.code} dealCounts={dealCounts} dealMonths={dealMonths} objectCounts={objectCounts} crmReady={crmReady} code={entity.code} dark={dark} color={c.primary} unit={units[entity.code] || ''} onUnit={(u) => setUnits((prev) => ({ ...prev, [entity.code]: u }))} />
               )}
-              {crmReady && <LicensesPanel users={hubspotUsers} code={entity.code} sync={crmSync} onRefresh={refreshCrm} color={c.primary} />}
+              {crmReady && <LicensesPanel users={hubspotUsers} code={entity.code} sync={crmSync} onRefresh={refreshCrm} color={c.primary} unit={units[entity.code] || ''} onUnit={(u) => setUnits((prev) => ({ ...prev, [entity.code]: u }))} />}
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                   <div className="min-w-0">

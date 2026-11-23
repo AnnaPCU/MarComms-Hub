@@ -11,6 +11,7 @@
 //                                        'notFound' | 'shared'
 // ════════════════════════════════════════════════════════════════════
 
+import { optionShortLabel } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
 import { ACTIVE_DAYS, matchOwner, nameTokens, isSharedUser, buildUserRows, countObjects, personCodes, ownerCodesFromDeals, withActivity, mergeLatest } from '../../supabase/functions/hubspot-weekly-deals/crm.js';
 
 export { ACTIVE_DAYS, matchOwner, nameTokens, isSharedUser, buildUserRows, countObjects, personCodes, ownerCodesFromDeals, withActivity, mergeLatest };
@@ -47,8 +48,13 @@ export const daysSince = (iso, now = new Date()) => (iso ? Math.max(0, Math.floo
 // Usuarios de HubSpot de una entidad (del CRM: por sus deals, nov 2026),
 // activos primero y por última actividad. summary: total, activos,
 // inactivos y tipo de licencia cuando se conoce (Facturación HubSpot).
-export const entityLicenses = (users = [], code) => {
-  const mine = users.filter((u) => u.entityCode === code);
+// unit (opcional): solo los de esa unidad de negocio (nombre corto del main
+// team, «Certifications»); units = las unidades de la entidad.
+export const unitOf = (u) => (u.pcuOption ? optionShortLabel(u.pcuOption) : '');
+export const entityLicenses = (users = [], code, unit = '') => {
+  const ofEntity = users.filter((u) => u.entityCode === code);
+  const units = [...new Set(ofEntity.map(unitOf).filter(Boolean))].sort();
+  const mine = unit ? ofEntity.filter((u) => unitOf(u) === unit) : ofEntity;
   const order = { active: 0, inactive: 1, archived: 2, notFound: 3, shared: 4 };
   const sort = (a, b) => order[userStatus(a)] - order[userStatus(b)]
     || String(b.lastActivityAt || '').localeCompare(String(a.lastActivityAt || ''))
@@ -57,6 +63,7 @@ export const entityLicenses = (users = [], code) => {
   const count = (fn) => list.filter(fn).length;
   return {
     users: list,
+    units,
     summary: {
       total: list.length,
       paid: count((u) => isPaidSeat(u.license)),

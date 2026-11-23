@@ -8,7 +8,8 @@
 // de crm_weekly_object_counts (objectsAsDeals les da la forma de los
 // deals). Sin la 0079 (crmReady = false) queda solo Deals.
 //
-// Props: dealCounts, dealMonths, objectCounts, crmReady, code, dark, color
+// Props: dealCounts, dealMonths, objectCounts, crmReady, code, dark, color,
+//   unit / onUnit (unidad de negocio elegida, compartida con Licenses)
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -23,7 +24,7 @@ const TABS = [
 
 const tabCls = (on) => `px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors ${on ? 'bg-sky-600 text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'}`;
 
-export default function NewInHubspot({ dealCounts = [], dealMonths = [], objectCounts = [], crmReady = false, code, dark = false, color }) {
+export default function NewInHubspot({ dealCounts = [], dealMonths = [], objectCounts = [], crmReady = false, code, dark = false, color, unit = '', onUnit }) {
   const [tab, setTab] = useState('deals');
   const tabs = crmReady ? TABS : TABS.slice(0, 1);
   const active = tabs.some((t) => t.id === tab) ? tab : 'deals';
@@ -43,12 +44,12 @@ export default function NewInHubspot({ dealCounts = [], dealMonths = [], objectC
         )}
       </div>
       {active === 'deals' ? (
-        <DealsPanel key={`deals-${code}`} counts={dealCounts} months={dealMonths} code={code} dark={dark} />
+        <DealsPanel key={`deals-${code}`} counts={dealCounts} months={dealMonths} code={code} dark={dark} unit={unit} onUnit={onUnit} />
       ) : (
         <>
-          <DealsPanel key={`${active}-${code}`} counts={objects.counts} months={objects.months} code={code} dark={dark} noun={active} />
+          <DealsPanel key={`${active}-${code}`} counts={objects.counts} months={objects.months} code={code} dark={dark} noun={active} unit={unit} onUnit={onUnit} />
           <p className="mt-2 text-[10px] font-medium text-slate-400">
-            {active === 'contacts' ? 'Contacts' : 'Companies'} have no «PCU Entity»: each one counts for the entity of its owner (or, without owner, of who created it), using the users of Facturación HubSpot and, for the rest, the entity of most of their deals.
+            {active === 'contacts' ? 'Contacts' : 'Companies'} have no «PCU Entity»: each one counts for the entity and business unit of the main team of who created it (or, if unknown, of its owner). Imports are excluded.
           </p>
         </>
       )}
