@@ -32,18 +32,18 @@ describe('deadline', () => {
   });
   it('color: verde lejos, rojo cerca y vencido; sin color si está tildado', () => {
     expect(deadlineTone('', false, TODAY)).toBeNull();
-    expect(deadlineTone('2026-12-31', false, TODAY)).toMatchObject({ tone: 'open', hue: 140, label: 'Vence en 65 días' });
+    expect(deadlineTone('2026-12-31', false, TODAY)).toMatchObject({ tone: 'open', hue: 140, label: 'Due in 65 days' });
     const week = deadlineTone('2026-11-03', false, TODAY);
     const two = deadlineTone('2026-10-29', false, TODAY);
     expect(week.hue).toBeGreaterThan(two.hue); // más cerca → más rojo
-    expect(two.label).toBe('Vence en 2 días');
+    expect(two.label).toBe('Due in 2 days');
     expect(two.hue).toBe(0); // con 3 días o menos ya es rojo
     expect(deadlineTone('2026-10-30', false, TODAY).hue).toBe(0); // 3 días
     expect(deadlineTone('2026-10-31', false, TODAY).hue).toBeGreaterThan(0); // 4 días: naranja
-    expect(deadlineTone('2026-10-28', false, TODAY).label).toBe('Vence mañana');
-    expect(deadlineTone(TODAY, false, TODAY)).toMatchObject({ hue: 0, label: 'Vence hoy' });
-    expect(deadlineTone('2026-10-20', false, TODAY)).toMatchObject({ hue: 0, label: 'Venció hace 7 días' });
-    expect(deadlineTone('2026-10-26', false, TODAY).label).toBe('Venció ayer');
+    expect(deadlineTone('2026-10-28', false, TODAY).label).toBe('Due tomorrow');
+    expect(deadlineTone(TODAY, false, TODAY)).toMatchObject({ hue: 0, label: 'Due today' });
+    expect(deadlineTone('2026-10-20', false, TODAY)).toMatchObject({ hue: 0, label: 'Overdue by 7 days' });
+    expect(deadlineTone('2026-10-26', false, TODAY).label).toBe('Due yesterday');
     expect(deadlineTone('2026-10-20', true, TODAY)).toMatchObject({ tone: 'done', text: null, bg: null });
   });
 });

@@ -66,7 +66,7 @@ async function hubspot(token: string, path: string, init: RequestInit = {}) {
     try { const b = JSON.parse(text); detail = [b.category, b.message].filter(Boolean).join(' · ') || text; } catch (_e) { /* texto plano */ }
     throw new HubspotError(res.status, redactSecrets(detail).slice(0, 220));
   }
-  throw new Error('HubSpot no respondió después de varios intentos (rate limit o error del servidor).');
+  throw new Error('HubSpot did not respond after several attempts (rate limit or server error).');
 }
 
 // Todos los deals no importados de una semana (paginado de a 200)
@@ -97,7 +97,7 @@ async function dealsOfWeek(token: string, pcuName: string, weekStart: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  if (req.method !== 'POST') return json({ ok: false, error: 'Usá POST.' }, 405);
+  if (req.method !== 'POST') return json({ ok: false, error: 'Use POST.' }, 405);
 
   const shape = tokenShape(Deno.env.get('HUBSPOT_TOKEN'));
   const token = shape.clean; // sin espacios ni saltos de línea al pegar
@@ -108,23 +108,23 @@ Deno.serve(async (req) => {
   // Freno: una corrida cada 10 minutos como mucho
   const { data: sync } = await db.from('crm_weekly_deal_sync').select('*').eq('id', 1).maybeSingle();
   const wait = cooldownFor(sync);
-  if (wait > 0) return json({ ok: true, skipped: true, message: `Se actualizó hace poco. Probá de nuevo en ${wait} min.` });
+  if (wait > 0) return json({ ok: true, skipped: true, message: `Updated recently. Try again in ${wait} min.` });
 
   const startedAt = new Date().toISOString();
   await db.from('crm_weekly_deal_sync').upsert({ id: 1, last_run_at: startedAt, trigger });
 
   try {
-    if (!token) throw new Error('Falta el secret HUBSPOT_TOKEN en Supabase.');
+    if (!token) throw new Error('The HUBSPOT_TOKEN secret is missing in Supabase.');
 
     // 1) Propiedad «PCU Entity» y sus opciones (código ← label)
     const props = await hubspot(token, '/crm/v3/properties/deals');
     const pcu = pcuEntityProperty(props.results || []);
-    if (!pcu) throw new Error(`No encontré la propiedad de deals «${PCU_ENTITY_LABEL}» en HubSpot.`);
+    if (!pcu) throw new Error(`Could not find the deal property «${PCU_ENTITY_LABEL}» in HubSpot.`);
     await sleep(PAUSE_MS);
 
     // 2) Entidades del Hub
     const { data: entities, error: eErr } = await db.from('crm_weekly_entities').select('code');
-    if (eErr) throw new Error(`No se pudieron leer las entidades: ${eErr.message}`);
+    if (eErr) throw new Error(`Could not read the entities: ${eErr.message}`);
     const codes = (entities || []).map((e) => e.code);
 
     // 3) Una búsqueda por semana; se cuenta acá
@@ -140,17 +140,17 @@ Deno.serve(async (req) => {
 
     // 4) Guardar
     const { error: uErr } = await db.from('crm_weekly_deal_counts').upsert(rows, { onConflict: 'entity_code,week_start' });
-    if (uErr) throw new Error(`No se pudieron guardar los conteos: ${uErr.message}`);
+    if (uErr) throw new Error(`Could not save the counts: ${uErr.message}`);
     await db.from('crm_weekly_deal_sync').upsert({ id: 1, last_run_at: startedAt, last_ok_at: new Date().toISOString(), ok: true, error: null, unassigned, trigger });
 
     return json({ ok: true, weeks: weeks.length, rows: rows.length });
   } catch (err) {
     let message = err instanceof Error ? err.message : String(err);
     if (err instanceof HubspotError) {
-      const keyInfo = `Clave cargada: ${shape.length} caracteres, ${shape.pat ? 'empieza con «pat-»' : 'NO empieza con «pat-»'}${shape.hadSpaces ? ', tenía espacios o saltos de línea' : ''}.`;
-      if (err.status === 401) message = `HubSpot rechazó el token (401): ${err.message}. ${keyInfo} Revisá el secret HUBSPOT_TOKEN.`;
-      else if (err.status === 403) message = `El token de HubSpot no tiene permiso (403): ${err.message}. Hacen falta crm.objects.deals.read y crm.schemas.deals.read.`;
-      else message = `HubSpot respondió ${err.status}: ${err.message}`;
+      const keyInfo = `Stored key: ${shape.length} characters, ${shape.pat ? 'starts with «pat-»' : 'does NOT start with «pat-»'}${shape.hadSpaces ? ', had spaces or line breaks' : ''}.`;
+      if (err.status === 401) message = `HubSpot rejected the token (401): ${err.message}. ${keyInfo} Check the HUBSPOT_TOKEN secret.`;
+      else if (err.status === 403) message = `The HubSpot token lacks permission (403): ${err.message}. It needs crm.objects.deals.read and crm.schemas.deals.read.`;
+      else message = `HubSpot responded ${err.status}: ${err.message}`;
     }
     await db.from('crm_weekly_deal_sync').upsert({ id: 1, last_run_at: startedAt, ok: false, error: message, trigger });
     return json({ ok: false, error: message }, 500);

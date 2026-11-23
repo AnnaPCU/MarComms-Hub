@@ -14,7 +14,7 @@ export const DEFAULT_UNIT_PRICES = { salesPro: 145, core: 120 };
 // de junio 2026 cada licencia se cobraba a un precio distinto: esos meses no
 // se comparan con licencias × tarifa ni avisan en «Para revisar».
 export const FIXED_PRICES_FROM = 'Junio';
-export const VARIABLE_PRICE_NOTE = 'Precio variable (antes de junio no había tarifa fija)';
+export const VARIABLE_PRICE_NOTE = 'Variable price (no fixed rate before June)';
 
 // Tarifas especiales por entidad (nov 2026): a PS Technology (752) se le
 // cobran las licencias más baratas desde octubre 2026; septiembre fue un
@@ -25,7 +25,7 @@ export const VARIABLE_PRICE_NOTE = 'Precio variable (antes de junio no había ta
 // con esa tarifa (los anteriores van con la del Summary). Los chequeos de
 // «licencias × tarifa» usan estas tarifas; el Summary del Excel no las trae.
 export const SPECIAL_UNIT_PRICES = [
-  { entityKey: 'PS Technology', code: '752', from: 'Octubre', salesPro: 100, core: 80, agreed: { Septiembre: 'Precio especial acordado (sin tarifa por licencia)' } },
+  { entityKey: 'PS Technology', code: '752', from: 'Octubre', salesPro: 100, core: 80, agreed: { Septiembre: 'Special agreed price (no per-license rate)' } },
 ];
 
 export const LICENSE_TYPES = {
@@ -36,7 +36,13 @@ export const LICENSE_TYPES = {
 // Etiquetas de la columna "Detalle" del Excel
 export const ROW_LABELS = { entidad: 'legalEntity', manager: 'manager', usuarios: 'users' };
 
+// Los meses vienen del Excel en español (son las claves de los datos); en
+// pantalla se muestran en inglés (sección CRM HubSpot en inglés, nov 2026)
+export const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
 // Marca según el prefijo del nombre de la entidad (CU / PCU → Control Union, PS → Peterson Solutions)
 export const brandOfEntity = (key) => (/^ps\b/i.test(String(key || '').trim()) ? 'Peterson Solutions' : 'Control Union');
+
+// 'Octubre' → 'October' (para mostrar; las claves siguen en español)
+export const monthEn = (m) => { const i = MONTHS_ES.indexOf(m); return i >= 0 ? MONTHS_EN[i] : (m || ''); };

@@ -32,7 +32,7 @@ export const daysUntil = (deadline, todayIso) => {
 };
 
 // ── Alcance de los ítems del checklist (migration 0075) ──
-const regionOf = (entity) => entity?.region || 'Américas';
+const regionOf = (entity) => entity?.region || 'Americas';
 export const itemAppliesTo = (item, entity) => {
   if (!item || !entity) return false;
   if ((item.excludedCodes || []).includes(entity.code)) return false;
@@ -57,11 +57,11 @@ export const itemScopeLabel = (item, entity) => {
   const codes = item?.targetCodes || [];
   const regions = item?.targetRegions || [];
   const parts = [];
-  if (codes.length) parts.push(codes.length === 1 && entity && codes[0] === entity.code ? 'Solo esta entidad' : `${codes.length === 1 ? 'Entidad' : 'Entidades'} ${codes.join(', ')}`);
+  if (codes.length) parts.push(codes.length === 1 && entity && codes[0] === entity.code ? 'This entity only' : `${codes.length === 1 ? 'Entity' : 'Entities'} ${codes.join(', ')}`);
   if (regions.length) parts.push(regions.join(' + '));
   const base = parts.join(' + ');
   const excluded = (item?.excludedCodes || []).length;
-  return [base, excluded ? `sin ${excluded} ${excluded === 1 ? 'entidad' : 'entidades'}` : ''].filter(Boolean).join(' · ');
+  return [base, excluded ? `except ${excluded} ${excluded === 1 ? 'entity' : 'entities'}` : ''].filter(Boolean).join(' · ');
 };
 
 // ¿Quitar el ítem de esta entidad lo deja sin ninguna? (solo estaba en ella)
@@ -85,12 +85,12 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 export const deadlineTone = (deadline, done, todayIso, dark = false) => {
   const days = daysUntil(deadline, todayIso);
   if (days === null) return null;
-  if (done) return { tone: 'done', days, label: 'Cumplido', hue: null, text: null, bg: null, border: null };
+  if (done) return { tone: 'done', days, label: 'Done', hue: null, text: null, bg: null, border: null };
   const span = DEADLINE_CALM_DAYS - DEADLINE_RED_DAYS;
   const hue = Math.round(140 * Math.min(Math.max(days - DEADLINE_RED_DAYS, 0), span) / span);
   const overdue = days < 0;
-  const label = overdue ? (days === -1 ? 'Venció ayer' : `Venció hace ${plural(-days, 'día', 'días')}`)
-    : days === 0 ? 'Vence hoy' : days === 1 ? 'Vence mañana' : `Vence en ${plural(days, 'día', 'días')}`;
+  const label = overdue ? (days === -1 ? 'Due yesterday' : `Overdue by ${plural(-days, 'day', 'days')}`)
+    : days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : `Due in ${plural(days, 'day', 'days')}`;
   return {
     tone: 'open',
     days,
@@ -201,7 +201,7 @@ export const sortEntities = (entities = [], sort = 'manual', summaries = {}) => 
 // Filtros: región, marca, color del semáforo, importancia y tag (vacío = todos)
 export const filterEntities = (entities = [], { brand = '', light = '', priority = '', tag = '', region = '' } = {}, summaries = {}) => entities.filter((e) => (
   (!brand || e.brand === brand)
-  && (!region || (e.region || 'Américas') === region)
+  && (!region || (e.region || 'Americas') === region)
   && (!light || trafficLight(summaries[e.code])?.id === light)
   && (!priority || (priority === 'none' ? !e.priority : e.priority === priority))
   && (!tag || (e.tags || []).some((t) => norm(t) === norm(tag)))
@@ -220,10 +220,10 @@ export const entityTags = (entities = []) => cleanTags(entities.flatMap((e) => e
 // texto del problema. isNew: el código no se puede repetir.
 export const entityProblem = ({ code, name }, entities = [], isNew = true) => {
   const c = String(code || '').trim();
-  if (!c) return 'Falta el código de HubSpot.';
-  if (!/^[A-Za-z0-9_-]{1,20}$/.test(c)) return 'El código solo puede tener letras, números, - o _ (sin espacios).';
-  if (!String(name || '').trim()) return 'Falta el nombre de la entidad.';
-  if (isNew && entities.some((e) => norm(e.code) === norm(c))) return `Ya hay una entidad con el código ${c}.`;
+  if (!c) return 'The HubSpot code is missing.';
+  if (!/^[A-Za-z0-9_-]{1,20}$/.test(c)) return 'The code can only contain letters, numbers, - or _ (no spaces).';
+  if (!String(name || '').trim()) return 'The entity name is missing.';
+  if (isNew && entities.some((e) => norm(e.code) === norm(c))) return `There is already an entity with code ${c}.`;
   return null;
 };
 
@@ -243,7 +243,7 @@ export const entityActivities = (entity, { checks = {}, steps = [], items = CRM_
     out.push({ kind: 'check', id: `check:${it.id}`, title: it.label, detail: it.hint || '', category: 'Checklist', date: c.deadline, days: daysUntil(c.deadline, todayIso), source: it, pos: it.position ?? 0 });
   });
   steps.filter((s) => s.entityCode === entity?.code && !s.done).forEach((s) => {
-    out.push({ kind: 'step', id: `step:${s.id}`, title: s.title, detail: s.detail || '', category: s.category || 'Próximo step', date: s.dueDate || '', days: daysUntil(s.dueDate, todayIso), source: s, pos: 1000 + (s.position ?? 0) });
+    out.push({ kind: 'step', id: `step:${s.id}`, title: s.title, detail: s.detail || '', category: s.category || 'Next step', date: s.dueDate || '', days: daysUntil(s.dueDate, todayIso), source: s, pos: 1000 + (s.position ?? 0) });
   });
   const undated = out.filter((a) => a.days === null).length;
   const kept = out.filter((a) => (maxDays === null ? true : a.days !== null && a.days <= maxDays));
@@ -259,7 +259,7 @@ export const activityGroups = (entities = [], by = 'entity') => {
   if (by !== 'country' && by !== 'region') return entities.map((e) => ({ key: e.code, label: e.name, entities: [e] }));
   const groups = new Map();
   entities.forEach((e) => {
-    const label = by === 'region' ? (e.region || 'Américas') : String(e.country || '').trim() || 'Sin país';
+    const label = by === 'region' ? (e.region || 'Americas') : String(e.country || '').trim() || 'No country';
     const key = norm(label);
     if (!groups.has(key)) groups.set(key, { key, label, entities: [] });
     groups.get(key).entities.push(e);
@@ -299,5 +299,5 @@ export const countryOptions = (entities = []) => {
     const v = String(c || '').trim();
     if (v && !seen.has(norm(v))) seen.set(norm(v), v);
   });
-  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'es'));
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'en'));
 };

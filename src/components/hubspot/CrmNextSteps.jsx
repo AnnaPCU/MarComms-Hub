@@ -39,7 +39,7 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
       setQuick({ ...quick, title: '', saving: false }); // queda abierto para cargar otro
     } catch (_e) {
       setQuick({ ...quick, saving: false });
-      showError('No se pudo agregar el step. Probá de nuevo.');
+      showError('Could not add the step. Please try again.');
     }
   };
 
@@ -51,7 +51,7 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
 
   const toggleDone = async (s) => {
     try { await updateStep(s.id, { done: !s.done }); }
-    catch (_e) { showError('No se pudo guardar el cambio. Probá de nuevo.'); }
+    catch (_e) { showError('Could not save the change. Please try again.'); }
   };
 
   const footer = (g) => (
@@ -63,15 +63,15 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
             value={quick.title}
             onChange={(e) => setQuick({ ...quick, title: e.target.value })}
             onKeyDown={(e) => { if (e.key === 'Enter') saveQuick(); if (e.key === 'Escape') setQuick(null); }}
-            placeholder={`Nuevo step${g.label ? ` en ${g.label}` : ''}…`}
+            placeholder={`New step${g.label ? ` in ${g.label}` : ''}…`}
             className="flex-1 text-xs font-bold text-slate-800 bg-white border border-sky-300 rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-sky-200"
           />
-          <button onClick={saveQuick} disabled={!quick.title.trim() || quick.saving} className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center disabled:opacity-40" title="Guardar (Enter)"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={() => setQuick(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancelar (Esc)"><X className="w-3.5 h-3.5" /></button>
+          <button onClick={saveQuick} disabled={!quick.title.trim() || quick.saving} className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center disabled:opacity-40" title="Save (Enter)"><Check className="w-3.5 h-3.5" /></button>
+          <button onClick={() => setQuick(null)} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center" title="Cancel (Esc)"><X className="w-3.5 h-3.5" /></button>
         </div>
       ) : (
         <button onClick={() => setQuick({ key: g.key, category: g.label, title: '', saving: false })} className="text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-sky-700 flex items-center gap-1">
-          <Plus className="w-3 h-3" /> Agregar step
+          <Plus className="w-3 h-3" /> Add step
         </button>
       )}
     </div>
@@ -79,9 +79,9 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
 
   return (
     <section>
-      <ReportSectionTitle title="Próximos steps" aside="Lo que sigue en esta entidad" c={c}>
+      <ReportSectionTitle title="Next steps" aside="What comes next for this entity" c={c}>
         <button onClick={() => setEditor({ defaults: { category: groups[0]?.label || '' } })} className="shrink-0 bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5">
-          <Plus className="w-3 h-3" /> Nuevo step
+          <Plus className="w-3 h-3" /> New step
         </button>
       </ReportSectionTitle>
 
@@ -90,7 +90,7 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
       {groups.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-slate-200 px-4 py-8 text-center">
           <ListTodo className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-          <p className="text-[11px] font-bold text-slate-400">{doneCount ? 'No quedan steps pendientes en esta entidad.' : 'Todavía no hay próximos steps para esta entidad.'} Cargá uno con «Nuevo step».</p>
+          <p className="text-[11px] font-bold text-slate-400">{doneCount ? 'No pending steps left for this entity.' : 'No next steps for this entity yet.'} Add one with «New step».</p>
         </div>
       ) : (
         <StepsTable
@@ -106,10 +106,10 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
         />
       )}
       <div className="mt-2 px-1 flex items-center gap-3 flex-wrap">
-        <p className="flex-1 text-[10px] font-bold text-slate-400">Clic en un step para editarlo ({tracking ? 'tipo, nombre, detalle, fecha' : 'tipo, nombre, detalle'}) o eliminarlo.{tracking ? ' Los que tienen fecha aparecen en «Próximas actividades».' : ''}</p>
+        <p className="flex-1 text-[10px] font-bold text-slate-400">Click a step to edit it ({tracking ? 'type, name, detail, date' : 'type, name, detail'}) or delete it.{tracking ? ' Steps with a date show up in «Upcoming activities».' : ''}</p>
         {doneCount > 0 && (
           <button onClick={() => setShowDone((v) => !v)} className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-sky-700">
-            {showDone ? 'Esconder completados' : `Ver completados (${doneCount})`}
+            {showDone ? 'Hide completed' : `Show completed (${doneCount})`}
           </button>
         )}
       </div>
@@ -124,7 +124,7 @@ export default function CrmNextSteps({ entity, steps, c, navy, currentUser, trac
           onSave={saveEditor}
           onDelete={editor.step ? async () => {
             try { await removeStep(editor.step.id); setEditor(null); }
-            catch (_e) { showError('No se pudo eliminar el step. Probá de nuevo.'); }
+            catch (_e) { showError('Could not delete the step. Please try again.'); }
           } : null}
           onClose={() => setEditor(null)}
         />

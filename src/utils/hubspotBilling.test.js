@@ -48,14 +48,14 @@ describe('lectura del Excel', () => {
     expect(meta.unitPrices).toEqual({ salesPro: 145, core: 120 });
     expect(meta.summaryPrices.find((p) => p.label === 'CU Cert Arg').entityKey).toBe('CU Cert Argentina');
     expect(meta.summaryPrices.find((p) => p.label === 'PCU Ecuador').entityKey).toBe('CU Ecuador');
-    expect(warnings.some((w) => w.includes('«Otra» no coincide'))).toBe(true);
+    expect(warnings.some((w) => w.includes('«Otra» does not match'))).toBe(true);
     expect(parse({ summary: false }).meta.unitPrices).toEqual({ salesPro: 145, core: 120 });
   });
 
   it('avisa si el TOTAL del Excel no suma todas las entidades', () => {
     const { warnings } = parse();
-    expect(warnings.some((w) => w.startsWith('Septiembre: el TOTAL del Excel dice $555 pero las entidades suman $795 (no incluye CU Ecuador)'))).toBe(true);
-    expect(warnings.some((w) => w.startsWith('Octubre'))).toBe(true);
+    expect(warnings.some((w) => w.startsWith('September: the Excel TOTAL says $555 but the entities add up to $795 (missing CU Ecuador)'))).toBe(true);
+    expect(warnings.some((w) => w.startsWith('October'))).toBe(true);
   });
 });
 
@@ -114,7 +114,7 @@ describe('unitPricesFor — tarifa especial por entidad (PS Technology)', () => 
     const up = unitPricesFor(tech, 'Septiembre', base);
     const c = priceCheck({ price: 1748, detail: '1 Licencias Sales Pro\n16 Licencias Core' }, up);
     expect(c.explained).toBe(true);
-    expect(c.agreed).toMatch(/acordado/);
+    expect(c.agreed).toMatch(/agreed/);
   });
   it('antes de septiembre usa la tarifa del Summary', () => {
     expect(unitPricesFor(tech, 'Agosto', base)).toEqual(base);
@@ -141,7 +141,7 @@ describe('meses antes de junio: precio variable', () => {
     expect(up.variable).toBe(true);
     const c = priceCheck({ price: 630, detail: '10 Licencias Core' }, up);
     expect(c.explained).toBe(true);
-    expect(c.agreed).toMatch(/variable/);
+    expect(c.agreed).toMatch(/Variable price/);
   });
   it('desde junio sí (tarifa fija)', () => {
     const up = unitPricesFor(peru, 'Junio', base);

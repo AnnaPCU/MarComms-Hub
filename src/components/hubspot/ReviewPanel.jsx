@@ -12,7 +12,7 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 
-import { MONTHS_ES } from '@/constants/hubspotBilling';
+import { MONTHS_ES, monthEn } from '@/constants/hubspotBilling';
 import { totalCheck, priceCheck, userLicenseCheck, monthOf, unitPricesFor } from '@/utils/hubspotBilling';
 import { money } from './BillingBits';
 
@@ -22,26 +22,26 @@ export const reviewItems = (entities, meta, month) => {
   const items = [];
   MONTHS_ES.forEach((m) => {
     const t = totalCheck(entities, meta, m);
-    if (t && t.diff !== 0) items.push({ id: totalWarningId(m), kind: 'total', month: m, text: `${m}: el TOTAL del Excel dice ${money(t.excel)} y las entidades suman ${money(t.computed)}${t.missing.length ? ` (falta ${t.missing.join(', ')})` : ''}.` });
+    if (t && t.diff !== 0) items.push({ id: totalWarningId(m), kind: 'total', month: m, text: `${monthEn(m)}: the Excel TOTAL says ${money(t.excel)} and the entities add up to ${money(t.computed)}${t.missing.length ? ` (missing ${t.missing.join(', ')})` : ''}.` });
   });
   entities.forEach((e) => e.months.forEach((m) => {
     const c = priceCheck(m, unitPricesFor(e, m.month, meta.unitPrices));
     if (c && c.hasLicenses && !c.explained) {
-      items.push({ id: `price:${e.key}:${m.month}`, kind: 'price', month: m.month, text: `${e.key} · ${m.month}: se cobra ${money(m.price)} y las licencias del detalle suman ${money(c.expected)} (${c.diff > 0 ? '+' : '−'}${money(Math.abs(c.diff))} sin detalle).` });
+      items.push({ id: `price:${e.key}:${m.month}`, kind: 'price', month: m.month, text: `${e.key} · ${monthEn(m.month)}: billed ${money(m.price)} but the licenses in the detail add up to ${money(c.expected)} (${c.diff > 0 ? '+' : '−'}${money(Math.abs(c.diff))} unexplained).` });
     }
   }));
   entities.forEach((e) => {
     const m = monthOf(e, month);
     if (!m || !m.price) return;
     const u = userLicenseCheck(e, m);
-    if (!u.ok) items.push({ id: `users:${e.key}:${month}`, kind: 'users', month, text: `${e.key} · ${month}: ${u.licSalesPro} Sales Pro + ${u.licCore} Core facturadas, pero la lista de usuarios tiene ${u.usersSalesPro} Sales Pro (°) y ${u.usersCore} Core (-).` });
+    if (!u.ok) items.push({ id: `users:${e.key}:${month}`, kind: 'users', month, text: `${e.key} · ${monthEn(month)}: ${u.licSalesPro} Sales Pro + ${u.licCore} Core billed, but the user list has ${u.usersSalesPro} Sales Pro (°) and ${u.usersCore} Core (-).` });
   });
   return items;
 };
 
 export function DismissButton({ onClick, className = '' }) {
   return (
-    <button type="button" onClick={onClick} title="Borrar advertencia" aria-label="Borrar advertencia" className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center opacity-50 hover:opacity-100 hover:bg-black/10 transition-all ${className}`}>
+    <button type="button" onClick={onClick} title="Dismiss warning" aria-label="Dismiss warning" className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center opacity-50 hover:opacity-100 hover:bg-black/10 transition-all ${className}`}>
       <X className="w-3.5 h-3.5" />
     </button>
   );
@@ -54,11 +54,11 @@ export default function ReviewPanel({ entities, meta, month, dismissed, onDismis
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
       <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest flex items-center gap-2 mb-3">
-        <AlertTriangle className="w-3.5 h-3.5" /> Para revisar en el Excel
-        {hidden > 0 && <span className="ml-auto text-[10px] font-bold normal-case tracking-normal text-slate-400">{hidden} {hidden === 1 ? 'advertencia borrada' : 'advertencias borradas'}</span>}
+        <AlertTriangle className="w-3.5 h-3.5" /> To review in the Excel
+        {hidden > 0 && <span className="ml-auto text-[10px] font-bold normal-case tracking-normal text-slate-400">{hidden} {hidden === 1 ? 'dismissed warning' : 'dismissed warnings'}</span>}
       </h3>
       {items.length === 0 ? (
-        <p className="text-xs text-emerald-600 font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {hidden ? 'No queda nada para revisar.' : 'Todo cuadra.'}</p>
+        <p className="text-xs text-emerald-600 font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> {hidden ? 'Nothing left to review.' : 'Everything adds up.'}</p>
       ) : (
         <ul className="space-y-1.5">
           {items.map((it) => (

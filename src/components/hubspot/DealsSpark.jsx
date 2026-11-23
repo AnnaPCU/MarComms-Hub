@@ -36,13 +36,13 @@ function WeekTip({ s, align, options = [] }) {
   const pos = align === 'left' ? 'left-0' : align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
   return (
     <div role="tooltip" className={`hub-popover absolute bottom-full mb-2 ${pos} z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2 pointer-events-none`}>
-      <p className="text-[10px] font-black text-slate-700">Semana del {dm(s.week)} al {dm(sunday(s.week))}</p>
+      <p className="text-[10px] font-black text-slate-700">Week of {dm(s.week)} to {dm(sunday(s.week))}</p>
       {s.missing ? (
-        <p className="text-[10px] font-bold text-slate-400 mt-1">Sin datos para esta semana.</p>
+        <p className="text-[10px] font-bold text-slate-400 mt-1">No data for this week.</p>
       ) : (
         <div className="mt-1 space-y-0.5 text-[10px] font-bold text-slate-500">
-          <p className="flex justify-between"><span>CRM UI (a mano)</span><span className="font-mono font-black text-slate-800">{s.ui}</span></p>
-          <p className="flex justify-between"><span>Otros</span><span className="font-mono font-black text-slate-800">{s.other}</span></p>
+          <p className="flex justify-between"><span>CRM UI (manual)</span><span className="font-mono font-black text-slate-800">{s.ui}</span></p>
+          <p className="flex justify-between"><span>Other</span><span className="font-mono font-black text-slate-800">{s.other}</span></p>
           <p className="flex justify-between border-t border-slate-100 pt-0.5"><span>Total</span><span className="font-mono font-black text-slate-800">{s.total}</span></p>
           {options.length > 1 && (
             <div className="border-t border-slate-100 pt-1 mt-1 space-y-0.5">
@@ -64,7 +64,7 @@ export function DealsWeekChart({ series = [], dark = false, options = [] }) {
   const ui = DEAL_COLORS.ui[dark ? 'dark' : 'light'];
   return (
     <div className="w-full">
-      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${series.length}, minmax(0, 1fr))` }} role="img" aria-label={`Deals CRM UI por semana: ${series.map((s) => `${dm(s.week)} ${s.ui}`).join(', ')}`}>
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${series.length}, minmax(0, 1fr))` }} role="img" aria-label={`CRM UI deals per week: ${series.map((s) => `${dm(s.week)} ${s.ui}`).join(', ')}`}>
         {series.map((s, i) => {
           const last = i === series.length - 1;
           const h = s.ui ? Math.max(3, Math.round((s.ui / max) * PLOT_H)) : 0;
@@ -82,14 +82,14 @@ export function DealsWeekChart({ series = [], dark = false, options = [] }) {
                 {h > 0 ? <span className="block w-full rounded-t-[4px]" style={{ height: h, background: ui }} /> : <span className="block w-full h-px bg-slate-200" />}
               </div>
               <span className={`mt-1.5 font-mono text-[10px] leading-none ${last ? 'font-black text-slate-700' : 'font-bold text-slate-400'}`}>{dm(s.week)}</span>
-              <span className="mt-1 font-mono text-[9px] font-bold text-slate-400 leading-none whitespace-nowrap">{s.missing ? '' : `+${s.other} otros`}</span>
-              {last && <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Esta</span>}
+              <span className="mt-1 font-mono text-[9px] font-bold text-slate-400 leading-none whitespace-nowrap">{s.missing ? '' : `+${s.other} other`}</span>
+              {last && <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-0.5">This</span>}
             </div>
           );
         })}
       </div>
       <p className="mt-3 text-[10px] font-medium text-slate-400">
-        Barras: deals <b className="font-black text-slate-500">CRM UI</b> de cada semana (lunes a domingo). Debajo, los <b className="font-black text-slate-500">otros</b> (integraciones, workflows…), que no se grafican. Pasá el mouse (o tocá) una semana para ver el detalle.
+        Bars: <b className="font-black text-slate-500">CRM UI</b> deals per week (Monday to Sunday). Below, the <b className="font-black text-slate-500">other</b> deals (integrations, workflows…), which are not plotted. Hover (or tap) a week to see the detail.
       </p>
     </div>
   );
@@ -103,10 +103,10 @@ export function DealsPanel({ counts = [], code, dark = false }) {
   const all = entityDeals(counts, code);
   const deals = option ? entityDeals(counts, code, new Date(), option) : all;
   if (deals.mapped === null) {
-    return <p className="text-[11px] font-bold text-slate-400">Todavía no hay datos de deals de esta entidad. Se cargan con la próxima actualización.</p>;
+    return <p className="text-[11px] font-bold text-slate-400">No deal data for this entity yet. It loads with the next update.</p>;
   }
   if (deals.mapped === false) {
-    return <p className="text-[11px] font-bold text-slate-500">Esta entidad no tiene opción en «PCU Entity» de HubSpot, así que sus deals no se pueden contar. Cuando la agreguen en HubSpot, aparece sola.</p>;
+    return <p className="text-[11px] font-bold text-slate-500">This entity has no option in HubSpot's «PCU Entity», so its deals cannot be counted. Once it is added in HubSpot, it shows up automatically.</p>;
   }
   const { current, previous, series } = deals;
   const options = all.options || [];
@@ -116,25 +116,25 @@ export function DealsPanel({ counts = [], code, dark = false }) {
   return (
     <div className="space-y-3">
       {many && (
-        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="Opción de PCU Entity">
+        <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="PCU Entity option">
           <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">PCU Entity</span>
-          <button onClick={() => setOption('')} aria-pressed={!option} className={chip(!option)}>Todas</button>
+          <button onClick={() => setOption('')} aria-pressed={!option} className={chip(!option)}>All</button>
           {options.map((o) => <button key={o} onClick={() => setOption(o)} aria-pressed={option === o} title={o} className={chip(option === o)}>{optionShortLabel(o)}</button>)}
         </div>
       )}
       <div className="flex items-start gap-6 flex-wrap lg:flex-nowrap">
         <div className="shrink-0 w-[180px]">
           <p className="font-mono text-4xl font-black text-slate-900 leading-none">{current.ui}</p>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">CRM UI esta semana{option ? ` · ${optionShortLabel(option)}` : ''}</p>
-          <p className="text-[10px] font-bold text-slate-400 mt-0.5">Cargados a mano en HubSpot</p>
-          <p className="text-[11px] font-bold text-slate-500 mt-2">+ {current.other} otros <span className="font-medium text-slate-400">(integraciones, workflows…)</span></p>
-          <p className="text-[11px] font-bold text-slate-500">= {current.total} en total</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">CRM UI this week{option ? ` · ${optionShortLabel(option)}` : ''}</p>
+          <p className="text-[10px] font-bold text-slate-400 mt-0.5">Created manually in HubSpot</p>
+          <p className="text-[11px] font-bold text-slate-500 mt-2">+ {current.other} other <span className="font-medium text-slate-400">(integrations, workflows…)</span></p>
+          <p className="text-[11px] font-bold text-slate-500">= {current.total} in total</p>
           <p className="text-[10px] font-bold text-slate-400 mt-2">
-            {diff === 0 ? 'Igual que' : diff > 0 ? `+${diff} vs` : `${diff} vs`} la semana anterior en CRM UI ({previous?.ui || 0})
+            {diff === 0 ? 'Same as' : diff > 0 ? `+${diff} vs` : `${diff} vs`} last week in CRM UI ({previous?.ui || 0})
           </p>
           {many && !option && (
             <div className="mt-3 pt-2 border-t border-slate-100 space-y-0.5">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Esta semana por opción</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">This week by option</p>
               {options.map((o) => {
                 const v = all.current.byOption?.[o] || { ui: 0, other: 0 };
                 return (

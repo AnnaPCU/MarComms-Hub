@@ -482,27 +482,28 @@ export const buildNotifications = (currentUser, data, options = {}) => {
 
   // ────────────────────────────────────────────────────────────────
   // 16. CRM_DEADLINE — Weekly check de CRM HubSpot: deadlines en rojo.
-  //     Solo para CRM_WEEKLY_NOTIFY_USER.
+  //     Solo para CRM_WEEKLY_NOTIFY_USER. En inglés, como toda la sección
+  //     CRM HubSpot (nov 2026).
   // ────────────────────────────────────────────────────────────────
   if (sameName(options.crmWeeklyNotifyUser || CRM_WEEKLY_NOTIFY_USER)) {
     const todayIso = toIsoDate(today);
     redDeadlines(crmChecks, crmItems || undefined, todayIso, crmEntities || undefined).forEach(({ entity, item, deadline, days }) => {
-      const when = days < 0 ? (days === -1 ? 'venció ayer' : `venció hace ${-days} días`)
-        : days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
+      const when = days < 0 ? (days === -1 ? 'was due yesterday' : `is ${-days} days overdue`)
+        : days === 0 ? 'is due today' : days === 1 ? 'is due tomorrow' : `is due in ${days} days`;
       notifs.push({
         id: `crm-deadline-${entity.code}-${item.id}-${deadline}`, type: 'crm_deadline', icon: AlertCircle, color: 'sky',
-        title: `${entity.code} · ${entity.name}: «${item.label}» ${when} (${formatDate(deadline)}) y todavía no está tildado`,
+        title: `${entity.code} · ${entity.name}: «${item.label}» ${when} (${formatDate(deadline)}) and is not ticked yet`,
         shortTitle: `⏰ ${item.label} · ${entity.code}`,
         emoji: '⏰', project: entity.name, source: 'CRM HubSpot', date: deadline,
         navTo: 'crm', navTab: 'weekly',
       });
     });
     redSteps(crmSteps, todayIso, crmEntities || undefined).forEach(({ entity, step, days }) => {
-      const when = days < 0 ? (days === -1 ? 'venció ayer' : `venció hace ${-days} días`)
-        : days === 0 ? 'vence hoy' : days === 1 ? 'vence mañana' : `vence en ${days} días`;
+      const when = days < 0 ? (days === -1 ? 'was due yesterday' : `is ${-days} days overdue`)
+        : days === 0 ? 'is due today' : days === 1 ? 'is due tomorrow' : `is due in ${days} days`;
       notifs.push({
         id: `crm-step-${step.id}-${step.dueDate}`, type: 'crm_deadline', icon: AlertCircle, color: 'sky',
-        title: `${entity.code} · ${entity.name}: el step «${step.title}» ${when} (${formatDate(step.dueDate)}) y todavía no está completado`,
+        title: `${entity.code} · ${entity.name}: the step «${step.title}» ${when} (${formatDate(step.dueDate)}) and is not done yet`,
         shortTitle: `⏰ Step · ${entity.code}`,
         emoji: '⏰', project: entity.name, source: 'CRM HubSpot', date: step.dueDate,
         navTo: 'crm', navTab: 'weekly',

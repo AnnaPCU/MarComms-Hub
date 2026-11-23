@@ -67,10 +67,10 @@ describe('tags y validación', () => {
     expect(entityTags(ENTS)).toEqual(['Piloto', 'Q1']);
   });
   it('valida el alta de una entidad', () => {
-    expect(entityProblem({ code: '', name: 'X' }, ENTS)).toMatch(/código/);
-    expect(entityProblem({ code: '9 9', name: 'X' }, ENTS)).toMatch(/sin espacios/);
-    expect(entityProblem({ code: '99', name: ' ' }, ENTS)).toMatch(/nombre/);
-    expect(entityProblem({ code: '2', name: 'X' }, ENTS)).toMatch(/Ya hay/);
+    expect(entityProblem({ code: '', name: 'X' }, ENTS)).toMatch(/code/);
+    expect(entityProblem({ code: '9 9', name: 'X' }, ENTS)).toMatch(/no spaces/);
+    expect(entityProblem({ code: '99', name: ' ' }, ENTS)).toMatch(/name is missing/);
+    expect(entityProblem({ code: '2', name: 'X' }, ENTS)).toMatch(/already an entity/);
     expect(entityProblem({ code: '2', name: 'X' }, ENTS, false)).toBeNull(); // edición
     expect(entityProblem({ code: '999', name: 'Nueva' }, ENTS)).toBeNull();
   });
@@ -104,7 +104,7 @@ describe('próximas actividades', () => {
   it('agrupa por entidad o por país', () => {
     expect(activityGroups(ENTS, 'entity')).toHaveLength(4);
     const byCountry = activityGroups([ENTS[1], ENTS[0], ENTS[3], { code: '5', name: 'Cinco' }], 'country');
-    expect(byCountry.map((g) => [g.label, g.entities.map((e) => e.code)])).toEqual([['Argentina', ['2', '4']], ['Perú', ['1']], ['Sin país', ['5']]]);
+    expect(byCountry.map((g) => [g.label, g.entities.map((e) => e.code)])).toEqual([['Argentina', ['2', '4']], ['Perú', ['1']], ['No country', ['5']]]);
   });
   it('entitySummary sigue igual con los ítems de la base', () => {
     expect(entitySummary(checks['1'], TODAY, ITEMS)).toMatchObject({ done: 1, total: 4, overdue: 1 });
@@ -114,24 +114,24 @@ describe('próximas actividades', () => {
 describe('países para el alta', () => {
   it('están los 35 de América más los que ya se usan, sin repetir', () => {
     expect(AMERICA_COUNTRIES).toHaveLength(35);
-    const list = countryOptions([{ country: 'España' }, { country: 'argentina' }, { country: 'Alemania' }, { country: '' }]);
+    const list = countryOptions([{ country: 'Spain' }, { country: 'argentina' }, { country: 'Germany' }, { country: '' }]);
     expect(list).toHaveLength(37);
-    expect(list).toEqual(expect.arrayContaining(['Uruguay', 'Venezuela', 'Canada', 'México', 'España', 'Alemania']));
+    expect(list).toEqual(expect.arrayContaining(['Uruguay', 'Venezuela', 'Canada', 'Mexico', 'Spain', 'Germany']));
     expect(list.filter((c) => c.toLowerCase() === 'argentina')).toEqual(['Argentina']);
-    expect(list[0]).toBe('Alemania');
+    expect(list[0]).toBe('Antigua and Barbuda');
   });
 });
 
 describe('regiones (Global check)', () => {
-  it('filtra por región; sin región cuenta como Américas', () => {
+  it('filtra por región; sin región cuenta como Americas', () => {
     const ents = [{ code: '1', region: 'EMEA' }, { code: '2', region: 'APAC' }, { code: '3' }];
     expect(filterEntities(ents, { region: 'EMEA' }).map((e) => e.code)).toEqual(['1']);
-    expect(filterEntities(ents, { region: 'Américas' }).map((e) => e.code)).toEqual(['3']);
+    expect(filterEntities(ents, { region: 'Americas' }).map((e) => e.code)).toEqual(['3']);
     expect(filterEntities(ents, {})).toHaveLength(3);
   });
   it('agrupa las actividades por región', () => {
     const ents = [{ code: '1', region: 'EMEA' }, { code: '2', region: 'APAC' }, { code: '3', region: 'EMEA' }, { code: '4' }];
-    expect(activityGroups(ents, 'region').map((g) => [g.label, g.entities.length])).toEqual([['EMEA', 2], ['APAC', 1], ['Américas', 1]]);
+    expect(activityGroups(ents, 'region').map((g) => [g.label, g.entities.length])).toEqual([['EMEA', 2], ['APAC', 1], ['Americas', 1]]);
   });
 });
 
@@ -162,8 +162,8 @@ describe('sumSummaries — avance de un país', () => {
 });
 
 describe('alcance de los ítems del checklist (0075)', () => {
-  const arg = { code: '538', region: 'Américas' };
-  const mx = { code: '598', region: 'Américas' };
+  const arg = { code: '538', region: 'Americas' };
+  const mx = { code: '598', region: 'Americas' };
   const de = { code: '383', region: 'EMEA' };
   const my = { code: '544', region: 'APAC' };
   const all = { id: 'a', label: 'Para todas' };
@@ -184,14 +184,14 @@ describe('alcance de los ítems del checklist (0075)', () => {
   it('alta: lo tildado → códigos y regiones; las tres regiones = todas', () => {
     expect(itemTargets({ entityCode: '538', thisEntity: true })).toEqual({ targetCodes: ['538'], targetRegions: null });
     expect(itemTargets({ entityCode: '538', thisEntity: false, regions: ['APAC', 'EMEA'] })).toEqual({ targetCodes: null, targetRegions: ['EMEA', 'APAC'] });
-    expect(itemTargets({ entityCode: '538', thisEntity: true, regions: ['Américas', 'EMEA', 'APAC'] })).toEqual({ targetCodes: null, targetRegions: null });
+    expect(itemTargets({ entityCode: '538', thisEntity: true, regions: ['Americas', 'EMEA', 'APAC'] })).toEqual({ targetCodes: null, targetRegions: null });
   });
 
   it('etiqueta del alcance y si solo está en esta entidad', () => {
     expect(itemScopeLabel(all, arg)).toBe('');
-    expect(itemScopeLabel(onlyArg, arg)).toBe('Solo esta entidad');
-    expect(itemScopeLabel(argEmea, arg)).toBe('Solo esta entidad + EMEA');
-    expect(itemScopeLabel(allButMx, arg)).toBe('sin 1 entidad');
+    expect(itemScopeLabel(onlyArg, arg)).toBe('This entity only');
+    expect(itemScopeLabel(argEmea, arg)).toBe('This entity only + EMEA');
+    expect(itemScopeLabel(allButMx, arg)).toBe('except 1 entity');
     expect(onlyInEntity(onlyArg, arg)).toBe(true);
     expect(onlyInEntity(argEmea, arg)).toBe(false);
   });

@@ -25,7 +25,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Database, FileSpreadsheet, Globe2, Receipt, Upload } from 'lucide-react';
 
 import { useConfirm } from '@/hooks/useConfirm';
-import { brandOfEntity, SPECIAL_UNIT_PRICES } from '@/constants/hubspotBilling';
+import { brandOfEntity, SPECIAL_UNIT_PRICES, monthEn } from '@/constants/hubspotBilling';
 import { monthTotals, latestBilledMonth, previousMonth, monthOf, licensesOf, totalCheck, unitPricesFor } from '@/utils/hubspotBilling';
 import { Delta, Kpi, money } from './BillingBits';
 import MonthlyChart from './MonthlyChart';
@@ -35,16 +35,16 @@ import BillingImportModal from './BillingImportModal';
 import CrmWeeklyCheck from './CrmWeeklyCheck';
 
 const VIEWS = [
-  { id: 'billing', label: 'Facturación HubSpot', icon: Receipt },
+  { id: 'billing', label: 'HubSpot billing', icon: Receipt },
   { id: 'weekly', label: 'Weekly check', icon: ClipboardCheck },
   { id: 'global', label: 'Global check', icon: Globe2 },
 ];
 const TITLES = {
-  weekly: ['Weekly check', 'Implementación de HubSpot por entidad · checklist y próximos steps'],
-  global: ['Global check', 'Américas, EMEA y APAC · mismo checklist y próximos steps que el Weekly check'],
+  weekly: ['Weekly check', 'HubSpot rollout by entity · checklist and next steps'],
+  global: ['Global check', 'Americas, EMEA and APAC · same checklist and next steps as the Weekly check'],
 };
 
-const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function HubspotBillingApp({ data, weekly, autoView = null, onAutoViewDone, currentUser, dark = false, onBack }) {
   const { entities, imports, meta, dismissed, loading, error, importExcel, dismissWarning } = data;
@@ -80,20 +80,20 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
 
   const handleDismiss = async (warningId) => {
     const ok = await confirm({
-      title: '¿Borrar esta advertencia?',
-      message: 'Deja de verse para todo el equipo. Si se vuelve a importar el Excel y sigue sin cuadrar, aparece de nuevo.',
-      confirmText: 'Borrar', tone: 'warning',
+      title: 'Dismiss this warning?',
+      message: 'It will be hidden for the whole team. If the Excel is imported again and it still does not add up, it will show up again.',
+      confirmText: 'Dismiss', cancelText: 'Cancel', tone: 'warning',
     });
     if (!ok) return;
     setDismissError('');
     try { await dismissWarning(warningId); }
-    catch (err) { console.error('[HubspotBillingApp] dismiss error:', err); setDismissError('No se pudo borrar la advertencia. Probá de nuevo.'); }
+    catch (err) { console.error('[HubspotBillingApp] dismiss error:', err); setDismissError('Could not dismiss the warning. Please try again.'); }
   };
 
   const handleImport = async (newEntities, newMeta, { fileName }) => {
     const s = await importExcel(newEntities, newMeta, { fileName, importedBy: currentUser?.name || '' });
     setMonth(null);
-    setFlash(`Listo: ${s.entities} entidades importadas${s.deleted ? `, ${s.deleted} borradas` : ''}.`);
+    setFlash(`Done: ${s.entities} entities imported${s.deleted ? `, ${s.deleted} deleted` : ''}.`);
     setTimeout(() => setFlash(''), 6000);
   };
 
@@ -101,17 +101,17 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
     <div className="min-h-screen bg-slate-50 flex flex-col w-full">
       <header className="bg-gradient-to-r from-sky-500 to-blue-600 text-white p-6 sticky top-0 z-30 shadow-xl">
         <div className="max-w-7xl mx-auto flex items-center gap-4 flex-wrap">
-          <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors" title="Volver"><ArrowLeft className="w-5 h-5 text-white" /></button>
+          <button onClick={onBack} className="p-2 hover:bg-white/20 rounded-xl transition-colors" title="Back"><ArrowLeft className="w-5 h-5 text-white" /></button>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="bg-white text-blue-600 px-3 py-1 rounded-lg font-black text-xs tracking-widest flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> CRM</div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-black uppercase tracking-tight">{TITLES[view]?.[0] || 'Facturación HubSpot'}</h1>
+              <h1 className="text-2xl font-black uppercase tracking-tight">{TITLES[view]?.[0] || 'HubSpot billing'}</h1>
               <p className="text-[10px] text-sky-100 font-bold uppercase tracking-widest truncate">
-                {TITLES[view] ? TITLES[view][1] : lastImport ? `Actualizado ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` por ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licencias por entidad · se actualiza importando el Excel'}
+                {TITLES[view] ? TITLES[view][1] : lastImport ? `Updated ${fmtDateTime(lastImport.importedAt)}${lastImport.importedBy ? ` by ${lastImport.importedBy}` : ''}${lastImport.fileName ? ` · ${lastImport.fileName}` : ''}` : 'Licenses by entity · updated by importing the Excel'}
               </p>
             </div>
           </div>
-          <div className="flex bg-white/15 rounded-xl p-1 gap-1" role="tablist" aria-label="Vista de CRM HubSpot">
+          <div className="flex bg-white/15 rounded-xl p-1 gap-1" role="tablist" aria-label="CRM HubSpot view">
             {VIEWS.map(({ id, label, icon: Icon }) => (
               <button key={id} role="tab" aria-selected={view === id} onClick={() => setView(id)} className={`px-3 py-2 rounded-lg font-black text-[11px] uppercase tracking-widest flex items-center gap-1.5 transition-colors ${view === id ? 'bg-white text-blue-700 shadow' : 'text-white hover:bg-white/15'}`}>
                 <Icon className="w-3.5 h-3.5" /> {label}
@@ -120,7 +120,7 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
           </div>
           {view === 'billing' && (
             <button onClick={() => setShowImport(true)} className="bg-white text-blue-700 hover:bg-sky-50 px-4 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-md">
-              <Upload className="w-4 h-4" /> Importar Excel
+              <Upload className="w-4 h-4" /> Import Excel
             </button>
           )}
         </div>
@@ -134,40 +134,40 @@ export default function HubspotBillingApp({ data, weekly, autoView = null, onAut
       <main className="max-w-7xl mx-auto w-full p-6 space-y-5">
         {flash && <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-2.5 text-xs font-black flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {flash}</div>}
         {dismissError && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">{dismissError}</div>}
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">No se pudieron cargar los datos desde Supabase. Revisá la consola.</div>}
+        {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-2.5 text-xs font-bold">Could not load the data from Supabase. Check the console.</div>}
 
         {loading ? (
-          <p className="text-sm text-slate-400 text-center py-16">Cargando facturación…</p>
+          <p className="text-sm text-slate-400 text-center py-16">Loading billing…</p>
         ) : entities.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 border-2 border-dashed border-slate-200 text-center">
             <FileSpreadsheet className="w-10 h-10 text-sky-400 mx-auto mb-3" />
-            <p className="text-sm font-black text-slate-700 uppercase tracking-tight">Todavía no se importó ningún Excel</p>
-            <p className="text-xs text-slate-400 mt-1 mb-4">Importá «Facturacion_HUBSPOT» para ver la facturación por entidad.</p>
-            <button onClick={() => setShowImport(true)} className="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Importar Excel</button>
+            <p className="text-sm font-black text-slate-700 uppercase tracking-tight">No Excel has been imported yet</p>
+            <p className="text-xs text-slate-400 mt-1 mb-4">Import «Facturacion_HUBSPOT» to see billing by entity.</p>
+            <button onClick={() => setShowImport(true)} className="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest inline-flex items-center gap-2"><Upload className="w-4 h-4" /> Import Excel</button>
           </div>
         ) : (
           <>
             <div className="flex items-center gap-2 flex-wrap">
               {['', 'Control Union', 'Peterson Solutions'].map((b) => (
                 <button key={b || 'all'} onClick={() => setBrand(b)} className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${brand === b ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                  {b || 'Todas las entidades'}
+                  {b || 'All entities'}
                 </button>
               ))}
-              <span className="text-[11px] font-bold text-slate-400 ml-auto">Tarifas: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}{SPECIAL_UNIT_PRICES.length > 0 && <span title={SPECIAL_UNIT_PRICES.map((s) => `${s.entityKey}: Sales Pro ${money(s.salesPro)} · Core ${money(s.core)} desde ${s.from.toLowerCase()}${s.agreed ? ` (${Object.keys(s.agreed).join(', ').toLowerCase()}: precio acordado)` : ''}`).join('\n')}> · {SPECIAL_UNIT_PRICES.map((s) => s.entityKey).join(', ')} con tarifa especial</span>}</span>
+              <span className="text-[11px] font-bold text-slate-400 ml-auto">Rates: Sales Pro {money(meta.unitPrices?.salesPro)} · Core {money(meta.unitPrices?.core)}{SPECIAL_UNIT_PRICES.length > 0 && <span title={SPECIAL_UNIT_PRICES.map((s) => `${s.entityKey}: Sales Pro ${money(s.salesPro)} · Core ${money(s.core)} from ${monthEn(s.from)}${s.agreed ? ` (${Object.keys(s.agreed).map(monthEn).join(', ')}: agreed price)` : ''}`).join('\n')}> · {SPECIAL_UNIT_PRICES.map((s) => s.entityKey).join(', ')} on a special rate</span>}</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              <Kpi label={`Facturado ${current}`} value={money(now.total)} accent="text-blue-600" hint={<span className="flex items-center gap-1">vs {prev || '—'}: <Delta now={now.total} before={before ? before.total : null} /></span>} />
-              <Kpi label="Entidades facturadas" value={now.billed} hint={`de ${visible.length}`} />
-              <Kpi label="Licencias Sales Pro" value={lic.sp} hint={lic.variable ? 'precio variable' : money(lic.spMoney)} />
-              <Kpi label="Licencias Core" value={lic.core} hint={lic.variable ? 'precio variable' : money(lic.coreMoney)} />
-              <Kpi label="Acumulado del año" value={money(totals.reduce((a, t) => a + t.total, 0))} hint={`${totals.filter((t) => t.total > 0).length} meses facturados`} />
+              <Kpi label={`Billed ${monthEn(current)}`} value={money(now.total)} accent="text-blue-600" hint={<span className="flex items-center gap-1">vs {prev ? monthEn(prev) : '—'}: <Delta now={now.total} before={before ? before.total : null} /></span>} />
+              <Kpi label="Entities billed" value={now.billed} hint={`of ${visible.length}`} />
+              <Kpi label="Sales Pro licenses" value={lic.sp} hint={lic.variable ? 'variable price' : money(lic.spMoney)} />
+              <Kpi label="Core licenses" value={lic.core} hint={lic.variable ? 'variable price' : money(lic.coreMoney)} />
+              <Kpi label="Year to date" value={money(totals.reduce((a, t) => a + t.total, 0))} hint={`${totals.filter((t) => t.total > 0).length} months billed`} />
             </div>
 
             {showTotalWarning && (
               <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl pl-4 pr-2 py-2.5 text-xs font-bold flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span className="flex-1 min-w-0">El TOTAL del Excel para {current} dice {money(tCheck.excel)}, pero las entidades suman {money(tCheck.computed)}{tCheck.missing.length ? `: la fórmula no incluye ${tCheck.missing.join(', ')}` : ''}. Acá se muestra la suma real.</span>
+                <span className="flex-1 min-w-0">The Excel TOTAL for {monthEn(current)} says {money(tCheck.excel)}, but the entities add up to {money(tCheck.computed)}{tCheck.missing.length ? `: the formula leaves out ${tCheck.missing.join(', ')}` : ''}. The actual sum is shown here.</span>
                 <DismissButton onClick={() => handleDismiss(totalWarningId(current))} />
               </div>
             )}

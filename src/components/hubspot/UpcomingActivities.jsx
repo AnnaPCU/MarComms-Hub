@@ -31,8 +31,8 @@ function ActivityRow({ a, entity, showEntity, todayIso, dark, onOpen, onToggle }
     <li className="py-2 flex items-start gap-3">
       <button
         onClick={onToggle}
-        role="checkbox" aria-checked={false} aria-label={`Marcar como hecho: ${a.title}`}
-        title={a.kind === 'check' ? 'Tildar el ítem del checklist' : 'Marcar el step como completado'}
+        role="checkbox" aria-checked={false} aria-label={`Mark as done: ${a.title}`}
+        title={a.kind === 'check' ? 'Tick the checklist item' : 'Mark the step as done'}
         className="mt-0.5 w-5 h-5 rounded-md border-2 bg-white border-slate-300 hover:border-sky-400 flex items-center justify-center shrink-0 group"
       >
         <Check className="w-3.5 h-3.5 text-sky-500 opacity-0 group-hover:opacity-60" strokeWidth={3} />
@@ -43,7 +43,7 @@ function ActivityRow({ a, entity, showEntity, todayIso, dark, onOpen, onToggle }
             <span className="block font-mono text-[11px] font-black">{formatShortDate(a.date)}</span>
             <span className="block text-[9px] font-black uppercase tracking-wider leading-tight">{tone?.label}</span>
           </>
-        ) : <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400 py-1">Sin fecha</span>}
+        ) : <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400 py-1">No date</span>}
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-slate-800 leading-snug">{a.title}</p>
@@ -78,26 +78,26 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Ventana de días">
-          {ACTIVITY_RANGES.map((r) => <button key={r.id} role="tab" aria-selected={range === r.id} onClick={() => onRange(r.id)} className={tab(range === r.id)}>{r.days ? `Próximos ${r.label}` : r.label}</button>)}
+        <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Day range">
+          {ACTIVITY_RANGES.map((r) => <button key={r.id} role="tab" aria-selected={range === r.id} onClick={() => onRange(r.id)} className={tab(range === r.id)}>{r.days ? `Next ${r.label}` : r.label}</button>)}
         </div>
-        <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Agrupar">
+        <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Group by">
           {groupOptions.map((g) => (
-            <button key={g} role="tab" aria-selected={groupBy === g} onClick={() => onGroupBy(g)} className={tab(groupBy === g)}>{{ entity: 'Por entidad', country: 'Por país', region: 'Por región' }[g]}</button>
+            <button key={g} role="tab" aria-selected={groupBy === g} onClick={() => onGroupBy(g)} className={tab(groupBy === g)}>{{ entity: 'By entity', country: 'By country', region: 'By region' }[g]}</button>
           ))}
         </div>
         <p className="text-[11px] font-bold text-slate-500 ml-auto">
-          <span className="font-mono font-black text-slate-800">{total}</span> actividades{overdue ? <> · <span className="text-red-600 font-black">{overdue} vencidas</span></> : ''}
+          <span className="font-mono font-black text-slate-800">{total}</span> activities{overdue ? <> · <span className="text-red-600 font-black">{overdue} overdue</span></> : ''}
         </p>
       </div>
 
-      {!tracking && <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-[11px] font-bold">Por ahora solo se ven los deadlines del checklist: la fecha de los próximos steps se activa con la migración 0070.</p>}
+      {!tracking && <p className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-[11px] font-bold">For now only checklist deadlines are shown: next-step dates are enabled by migration 0070.</p>}
 
       {withRows.length === 0 ? (
         <div className="bg-white rounded-3xl p-10 border-2 border-dashed border-slate-200 text-center">
           <CalendarClock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm font-black text-slate-600">No hay actividades {maxDays ? `en los próximos ${maxDays} días` : 'pendientes'}.</p>
-          <p className="text-[11px] font-bold text-slate-400 mt-1">Son los ítems del checklist sin tildar con deadline y los próximos steps sin completar{tracking ? ' (con fecha)' : ''}.</p>
+          <p className="text-sm font-black text-slate-600">No activities {maxDays ? `in the next ${maxDays} days` : 'pending'}.</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-1">These are unticked checklist items with a deadline and next steps not done yet{tracking ? ' (with a date)' : ''}.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
@@ -110,13 +110,13 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
                   <LightDot summary={g.sum} className="w-3 h-3 mt-1" />
                   <div className="flex-1 min-w-0">
                     {one ? (
-                      <button onClick={() => onOpenEntity(one.code)} className="text-left group" title="Abrir la entidad">
+                      <button onClick={() => onOpenEntity(one.code)} className="text-left group" title="Open the entity">
                         <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{one.code}{one.country ? ` · ${one.country}` : ''}</p>
                         <h3 className="text-sm font-black text-slate-900 leading-tight group-hover:text-sky-700 flex items-center gap-1">{one.name}<ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" /></h3>
                       </button>
                     ) : (
                       <>
-                        <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{g.entities.length} entidades</p>
+                        <p className="font-mono text-[10px] font-black text-sky-600 uppercase tracking-widest">{g.entities.length} entities</p>
                         <h3 className="text-sm font-black text-slate-900 leading-tight">{g.label}</h3>
                       </>
                     )}
@@ -126,7 +126,7 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-mono text-lg font-black text-slate-800 leading-none">{g.rows.length}</p>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{g.overdue ? <span className="text-red-600">{g.overdue} vencidas</span> : 'actividades'}</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{g.overdue ? <span className="text-red-600">{g.overdue} overdue</span> : 'activities'}</p>
                     <p className="text-[9px] font-bold text-slate-400 mt-0.5">Checklist {pct} %</p>
                   </div>
                 </header>
@@ -135,7 +135,7 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
                     <ActivityRow key={`${e.code}-${a.id}`} a={a} entity={e} showEntity={!one} todayIso={todayIso} dark={dark} onOpen={() => onOpenEntity(e.code)} onToggle={() => toggle(e, a)} />
                   ))}
                 </ul>
-                {g.undated > 0 && <p className="pt-2 text-[10px] font-bold text-slate-400">+ {g.undated} sin fecha (se ven en «Todas»)</p>}
+                {g.undated > 0 && <p className="pt-2 text-[10px] font-bold text-slate-400">+ {g.undated} without a date (shown in «All»)</p>}
               </section>
             );
           })}
@@ -144,7 +144,7 @@ export default function UpcomingActivities({ entities, map, steps, items, summar
 
       {empty.length > 0 && withRows.length > 0 && (
         <p className="text-[11px] font-bold text-slate-400">
-          Sin actividades {maxDays ? `en los próximos ${maxDays} días` : 'pendientes'}: {empty.map((g) => g.label).join(' · ')}
+          No activities {maxDays ? `in the next ${maxDays} days` : 'pending'}: {empty.map((g) => g.label).join(' · ')}
         </p>
       )}
     </div>

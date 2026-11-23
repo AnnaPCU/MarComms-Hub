@@ -21,7 +21,7 @@
 
 import React, { useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
-import DateFieldEs from '@/components/shared/DateFieldEs';
+import DateField from './DateField';
 import { deadlineTone, formatShortDate, itemScopeLabel } from '@/utils/crmWeekly';
 import AddItemForm from './AddItemForm';
 
@@ -39,8 +39,8 @@ function InlineInput({ initial = '', placeholder, onSave, onCancel }) {
   return (
     <div className="flex items-center gap-1.5 flex-1 min-w-0">
       <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') onCancel(); }} placeholder={placeholder} className={smallInput} />
-      <button onClick={save} disabled={!value.trim() || saving} className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0" title="Guardar (Enter)"><Check className="w-3.5 h-3.5" /></button>
-      <button onClick={onCancel} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center shrink-0" title="Cancelar (Esc)"><X className="w-3.5 h-3.5" /></button>
+      <button onClick={save} disabled={!value.trim() || saving} className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center disabled:opacity-40 shrink-0" title="Save (Enter)"><Check className="w-3.5 h-3.5" /></button>
+      <button onClick={onCancel} className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 flex items-center justify-center shrink-0" title="Cancel (Esc)"><X className="w-3.5 h-3.5" /></button>
     </div>
   );
 }
@@ -58,8 +58,8 @@ export default function WeeklyChecklist({ entity, items = [], checks = {}, today
           const done = !!c.done;
           const tone = deadlineTone(c.deadline, done, todayIso, dark);
           const chip = tone
-            ? (tone.tone === 'done' ? `Cumplido${c.doneAt ? ` el ${formatShortDate(c.doneAt.slice(0, 10))}` : ''}` : tone.label)
-            : done ? 'Cumplido' : '';
+            ? (tone.tone === 'done' ? `Done${c.doneAt ? ` on ${formatShortDate(c.doneAt.slice(0, 10))}` : ''}` : tone.label)
+            : done ? 'Done' : '';
           const toneStyle = tone && tone.tone === 'open' ? { color: tone.text, background: tone.bg, borderColor: tone.border } : undefined;
           return (
             <li key={it.id} className="group py-2.5 flex items-center gap-3 flex-wrap sm:flex-nowrap">
@@ -73,17 +73,17 @@ export default function WeeklyChecklist({ entity, items = [], checks = {}, today
                 {done && <Check className="w-4 h-4" strokeWidth={3} />}
               </button>
               {renaming === it.id ? (
-                <InlineInput initial={it.label} placeholder="Nombre del ítem" onSave={async (label) => { await onRenameItem(it, label); setRenaming(null); }} onCancel={() => setRenaming(null)} />
+                <InlineInput initial={it.label} placeholder="Item name" onSave={async (label) => { await onRenameItem(it, label); setRenaming(null); }} onCancel={() => setRenaming(null)} />
               ) : (
                 <div className="flex-1 min-w-[160px] flex items-start gap-1.5">
                   <div className="min-w-0">
                     <p className={`text-sm font-bold leading-tight ${done ? 'text-slate-400 line-through decoration-slate-300' : 'text-slate-800'}`}>{it.label}</p>
                     {it.hint && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{it.hint}</p>}
-                    {itemScopeLabel(it, entity) && <span className="inline-block mt-0.5 rounded bg-slate-100 text-slate-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wider" title="Este ítem no está en todas las entidades">{itemScopeLabel(it, entity)}</span>}
+                    {itemScopeLabel(it, entity) && <span className="inline-block mt-0.5 rounded bg-slate-100 text-slate-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wider" title="This item is not in every entity">{itemScopeLabel(it, entity)}</span>}
                   </div>
                   <span className="flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity shrink-0">
-                    <button onClick={() => setRenaming(it.id)} className="w-6 h-6 rounded-md text-slate-300 hover:text-sky-700 hover:bg-sky-50 flex items-center justify-center" title="Renombrar (en todas las entidades donde está)" aria-label={`Renombrar ${it.label}`}><Pencil className="w-3 h-3" /></button>
-                    <button onClick={() => onDeleteItem(it)} className="w-6 h-6 rounded-md text-slate-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center" title="Eliminar: solo de esta entidad o de todas" aria-label={`Eliminar ${it.label}`}><Trash2 className="w-3 h-3" /></button>
+                    <button onClick={() => setRenaming(it.id)} className="w-6 h-6 rounded-md text-slate-300 hover:text-sky-700 hover:bg-sky-50 flex items-center justify-center" title="Rename (in every entity that has it)" aria-label={`Rename ${it.label}`}><Pencil className="w-3 h-3" /></button>
+                    <button onClick={() => onDeleteItem(it)} className="w-6 h-6 rounded-md text-slate-300 hover:text-red-600 hover:bg-red-50 flex items-center justify-center" title="Delete: from this entity only or from all" aria-label={`Delete ${it.label}`}><Trash2 className="w-3 h-3" /></button>
                   </span>
                 </div>
               )}
@@ -91,9 +91,9 @@ export default function WeeklyChecklist({ entity, items = [], checks = {}, today
                 <span className={`text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${toneStyle ? '' : 'text-slate-400'}`} style={toneStyle ? { color: tone.text } : undefined}>{chip}</span>
               )}
               <div className="flex items-center gap-1 shrink-0">
-                <DateFieldEs id={`deadline-${entityCode}-${it.id}`} value={c.deadline} style={toneStyle} ariaLabel={`Deadline: ${it.label}`} onChange={(v) => onSave(it.id, { deadline: v })} />
+                <DateField id={`deadline-${entityCode}-${it.id}`} value={c.deadline} style={toneStyle} ariaLabel={`Deadline: ${it.label}`} onChange={(v) => onSave(it.id, { deadline: v })} />
                 {c.deadline ? (
-                  <button onClick={() => onSave(it.id, { deadline: '' })} className="w-6 h-6 rounded-md text-slate-300 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center" title="Sacar la fecha"><X className="w-3 h-3" /></button>
+                  <button onClick={() => onSave(it.id, { deadline: '' })} className="w-6 h-6 rounded-md text-slate-300 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center" title="Clear the date"><X className="w-3 h-3" /></button>
                 ) : <span className="w-6" />}
               </div>
             </li>
@@ -105,7 +105,7 @@ export default function WeeklyChecklist({ entity, items = [], checks = {}, today
           <AddItemForm entity={entity} countFor={countFor} onSave={async (data) => { await onAddItem(data); setAdding(false); }} onCancel={() => setAdding(false)} />
         ) : (
           <button onClick={() => setAdding(true)} className="text-[10px] font-black uppercase tracking-wider text-slate-300 hover:text-sky-700 flex items-center gap-1">
-            <Plus className="w-3 h-3" /> Agregar ítem al checklist
+            <Plus className="w-3 h-3" /> Add checklist item
           </button>
         )}
       </div>

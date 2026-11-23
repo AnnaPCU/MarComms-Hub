@@ -36,7 +36,7 @@ import {
 } from '@/services/crmWeeklyService';
 
 const isMissingTable = (e) => e?.code === '42P01' || e?.code === 'PGRST205' || /does not exist|schema cache/i.test(e?.message || '');
-const FALLBACK_ENTITIES = CRM_ENTITIES.map((e, i) => ({ ...e, region: e.region || 'Américas', priority: null, tags: [], position: i }));
+const FALLBACK_ENTITIES = CRM_ENTITIES.map((e, i) => ({ ...e, region: e.region || 'Americas', priority: null, tags: [], position: i }));
 
 export const useCrmWeekly = (options = {}) => {
   const { realtime = true } = options;

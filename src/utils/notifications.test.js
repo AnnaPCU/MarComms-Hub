@@ -419,8 +419,8 @@ describe('16. crm_deadline — aviso a Valentino cuando un deadline se pone en r
   it('Valentino recibe uno por ítem en rojo, con entidad, ítem y cuándo vence', () => {
     const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmChecks }, opts).filter((n) => n.type === 'crm_deadline');
     expect(notifs.map((n) => n.id)).toEqual(['crm-deadline-592-deals-2026-05-30', 'crm-deadline-538-outlook-2026-06-05']);
-    expect(notifs[0].title).toMatch(/^592 · Peterson Consultancy S\.A\.: «Deals nuevos cargados» venció hace 3 días/);
-    expect(notifs[1].title).toContain('«Outlook y calendario conectados» vence en 3 días');
+    expect(notifs[0].title).toMatch(/^592 · Peterson Consultancy S\.A\.: «New deals logged» is 3 days overdue/);
+    expect(notifs[1].title).toContain('«Outlook & calendar connected» is due in 3 days');
     expect(notifs[1]).toMatchObject({ source: 'CRM HubSpot', navTo: 'crm', navTab: 'weekly' });
   });
 
@@ -444,7 +444,7 @@ describe('16. crm_deadline — aviso a Valentino cuando un deadline se pone en r
     ];
     const notifs = buildNotifications(VALEN, { ...EMPTY_DATA, crmSteps }, opts).filter((n) => n.type === 'crm_deadline');
     expect(notifs.map((n) => n.id)).toEqual(['crm-step-s1-2026-06-01', 'crm-step-s2-2026-06-04']);
-    expect(notifs[0].title).toMatch(/^538 · Control Union Argentina S\.A\.: el step «Conectar Outlook del equipo» venció ayer/);
+    expect(notifs[0].title).toMatch(/^538 · Control Union Argentina S\.A\.: the step «Conectar Outlook del equipo» was due yesterday/);
     expect(notifs[1]).toMatchObject({ navTo: 'crm', navTab: 'weekly' });
     expect(buildNotifications(FELO, { ...EMPTY_DATA, crmSteps }, opts).some((n) => n.type === 'crm_deadline')).toBe(false);
   });

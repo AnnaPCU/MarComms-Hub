@@ -13,7 +13,7 @@
 // por posiciones fijas.
 // ════════════════════════════════════════════════════════════════════
 
-import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES, SPECIAL_UNIT_PRICES, FIXED_PRICES_FROM, VARIABLE_PRICE_NOTE } from '@/constants/hubspotBilling';
+import { BILLING_SHEET, SUMMARY_SHEET, DEFAULT_UNIT_PRICES, ROW_LABELS, MONTHS_ES, SPECIAL_UNIT_PRICES, FIXED_PRICES_FROM, VARIABLE_PRICE_NOTE, monthEn } from '@/constants/hubspotBilling';
 
 const norm = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
   .normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -66,7 +66,7 @@ export const parseBillingWorkbook = ({ sheetNames, grids }) => {
   const warnings = [];
   const name = sheetNames.find((n) => norm(n) === norm(BILLING_SHEET))
     || sheetNames.find((n) => (grids[n] || []).some((row) => row && row.some((v) => norm(v) === 'detalle')));
-  if (!name) return { entities: [], meta: null, warnings: ['No se encontró la hoja de facturación (con la columna «Detalle»). ¿Es el Excel de Facturación HubSpot?'] };
+  if (!name) return { entities: [], meta: null, warnings: ['Billing sheet not found (with the «Detalle» column). Is this the HubSpot Billing Excel?'] };
   const grid = grids[name];
 
   // Fila de encabezados: la que tiene "Detalle"; las entidades están a su derecha
@@ -103,18 +103,18 @@ export const parseBillingWorkbook = ({ sheetNames, grids }) => {
   const summaryName = sheetNames.find((n) => norm(n) === norm(SUMMARY_SHEET));
   const { unitPrices, entityPrices } = parseSummary(summaryName ? grids[summaryName] : null);
   const summaryPrices = entityPrices.map((p) => ({ ...p, entityKey: (entities.find((e) => sameEntity(e.key, p.label)) || {}).key || null }));
-  summaryPrices.filter((p) => !p.entityKey).forEach((p) => warnings.push(`En la hoja Summary, «${p.label}» no coincide con ninguna entidad de la hoja principal.`));
-  if (!summaryName) warnings.push(`No hay hoja «Summary»: se usan las tarifas por defecto (Sales Pro $${DEFAULT_UNIT_PRICES.salesPro}, Core $${DEFAULT_UNIT_PRICES.core}).`);
+  summaryPrices.filter((p) => !p.entityKey).forEach((p) => warnings.push(`In the Summary sheet, «${p.label}» does not match any entity in the main sheet.`));
+  if (!summaryName) warnings.push(`No «Summary» sheet: using the default rates (Sales Pro $${DEFAULT_UNIT_PRICES.salesPro}, Core $${DEFAULT_UNIT_PRICES.core}).`);
 
   const meta = { sheetName: name, unitPrices, excelTotals, summaryPrices };
   // Avisos: TOTAL del Excel que no suma todas las entidades
   MONTHS_ES.forEach((m) => {
     const check = totalCheck(entities, meta, m);
     if (check && check.diff !== 0) {
-      warnings.push(`${m}: el TOTAL del Excel dice $${fmt(check.excel)} pero las entidades suman $${fmt(check.computed)}${check.missing.length ? ` (no incluye ${check.missing.join(', ')})` : ''}. El Hub usa la suma real.`);
+      warnings.push(`${monthEn(m)}: the Excel TOTAL says $${fmt(check.excel)} but the entities add up to $${fmt(check.computed)}${check.missing.length ? ` (missing ${check.missing.join(', ')})` : ''}. The Hub uses the actual sum.`);
     }
   });
-  if (!entities.length) warnings.push('La hoja no tiene entidades (columnas a la derecha de «Detalle»).');
+  if (!entities.length) warnings.push('The sheet has no entities (columns to the right of «Detalle»).');
   return { entities, meta, warnings };
 };
 

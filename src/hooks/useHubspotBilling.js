@@ -47,7 +47,7 @@ export const useHubspotBilling = () => {
   const dismissed = useMemo(() => new Set(dismissedList || []), [dismissedList]);
 
   const dismissWarning = useCallback(async (warningId) => {
-    if (!metaImport) throw new Error('No hay importación donde guardar la advertencia borrada');
+    if (!metaImport) throw new Error('There is no import to save the dismissed warning to');
     await dismissImportWarning(metaImport.id, warningId);
     await refetch();
   }, [metaImport, refetch]);

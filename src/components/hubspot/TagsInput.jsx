@@ -34,9 +34,9 @@ export default function TagsInput({ tags = [], options = [], onChange, compact =
           if (e.key === 'Backspace' && !value && tags.length) onChange(tags.slice(0, -1));
         }}
         onBlur={() => add()}
-        placeholder={tags.length ? '+ tag' : 'Agregar tag…'}
+        placeholder={tags.length ? '+ tag' : 'Add tag…'}
         className="flex-1 min-w-[90px] bg-transparent text-xs font-bold text-slate-700 outline-none px-1 py-0.5 placeholder:text-slate-300"
-        aria-label="Agregar tag"
+        aria-label="Add tag"
       />
       <datalist id={listId}>{free.map((o) => <option key={o} value={o} />)}</datalist>
     </div>

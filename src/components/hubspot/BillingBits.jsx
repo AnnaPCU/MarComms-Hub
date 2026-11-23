@@ -6,7 +6,7 @@ import React from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { brandOfEntity } from '@/constants/hubspotBilling';
 
-export const money = (n) => `$${Number(n || 0).toLocaleString('es-AR')}`;
+export const money = (n) => `$${Number(n || 0).toLocaleString('en-US')}`;
 
 export function Delta({ now, before }) {
   if (before === null || before === undefined) return <span className="text-slate-300 text-[11px]">—</span>;

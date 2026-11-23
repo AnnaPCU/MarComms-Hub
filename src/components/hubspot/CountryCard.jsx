@@ -29,7 +29,7 @@ export default function CountryCard({ card, summaries, activeCode, showRegion = 
   const total = sumSummaries(list.map((e) => summaries[e.code]));
   const light = trafficLight(total);
   const touchX = useRef(null);
-  const regions = [...new Set(list.map((e) => e.region || 'Américas'))];
+  const regions = [...new Set(list.map((e) => e.region || 'Americas'))];
 
   // Cambiar de entidad la abre, sin bajar hasta el detalle en el celular
   const go = (i) => {
@@ -47,17 +47,17 @@ export default function CountryCard({ card, summaries, activeCode, showRegion = 
   const arrow = 'w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-sky-700 hover:bg-sky-50 shrink-0';
 
   return (
-    <section className={`rounded-2xl border transition-all ${active ? 'bg-sky-50 border-sky-300 shadow-sm' : 'bg-white border-slate-200 hover:border-sky-200'}`} aria-label={`${card.country}: ${list.length} entidades`}>
+    <section className={`rounded-2xl border transition-all ${active ? 'bg-sky-50 border-sky-300 shadow-sm' : 'bg-white border-slate-200 hover:border-sky-200'}`} aria-label={`${card.country}: ${list.length} entities`}>
       <header className="px-3 pt-2.5 flex items-center gap-2">
         <LightDot summary={total} className="w-2.5 h-2.5" />
         <span className="text-xs font-black text-slate-800 truncate">{card.country}</span>
         {showRegion && regions.map((r) => <span key={r} className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 rounded px-1 py-px">{r}</span>)}
-        <span className="text-[10px] font-bold text-slate-400 shrink-0">{list.length} entidades</span>
-        <span className="ml-auto font-mono text-[10px] font-black text-slate-500 shrink-0" title={light ? `${light.label}: todas las entidades del país juntas` : ''}>{total.pct} %</span>
+        <span className="text-[10px] font-bold text-slate-400 shrink-0">{list.length} entities</span>
+        <span className="ml-auto font-mono text-[10px] font-black text-slate-500 shrink-0" title={light ? `${light.label}: all the entities in the country together` : ''}>{total.pct} %</span>
       </header>
       <div className="px-2 pt-1.5 flex items-center gap-1">
-        <button onClick={() => go(shown - 1)} className={arrow} aria-label="Entidad anterior" title="Anterior"><ChevronLeft className="w-4 h-4" /></button>
-        <div className="flex-1 min-w-0 flex gap-1 overflow-x-auto" role="tablist" aria-label={`Entidades de ${card.country}`}>
+        <button onClick={() => go(shown - 1)} className={arrow} aria-label="Previous entity" title="Previous"><ChevronLeft className="w-4 h-4" /></button>
+        <div className="flex-1 min-w-0 flex gap-1 overflow-x-auto" role="tablist" aria-label={`Entities in ${card.country}`}>
           {list.map((e, i) => (
             <button
               key={e.code}
@@ -71,14 +71,14 @@ export default function CountryCard({ card, summaries, activeCode, showRegion = 
             </button>
           ))}
         </div>
-        <button onClick={() => go(shown + 1)} className={arrow} aria-label="Entidad siguiente" title="Siguiente"><ChevronRight className="w-4 h-4" /></button>
+        <button onClick={() => go(shown + 1)} className={arrow} aria-label="Next entity" title="Next"><ChevronRight className="w-4 h-4" /></button>
       </div>
       <button
         onClick={() => onPick(entity.code, { scroll: true })}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         className="w-full text-left px-3 pt-2 pb-2.5"
-        title="Abrir la entidad"
+        title="Open the entity"
       >
         <EntityLines entity={entity} summary={summaries[entity.code]} showCountry={false} active={active} />
       </button>

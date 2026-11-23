@@ -21,6 +21,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
+import { normBrand, normRegion } from '@/constants/crmWeekly';
 
 const ENTITIES = 'crm_weekly_entities';
 const DEAL_COUNTS = 'crm_weekly_deal_counts';
@@ -33,9 +34,9 @@ const STEPS = 'crm_next_steps';
 export const entityFromRow = (row) => (row ? {
   code:      row.code,
   name:      row.name || '',
-  brand:     row.brand || 'Control Union',
+  brand:     normBrand(row.brand) || 'Control Union',
   country:   row.country || '',
-  region:    row.region || 'Américas',            // 0073
+  region:    normRegion(row.region),              // 0073 («Américas» → «Americas», 0076)
   priority:  row.priority || null,
   tags:      Array.isArray(row.tags) ? row.tags : [],
   position:  row.position ?? 0,
@@ -48,7 +49,7 @@ const entityToRow = (obj) => {
   if (obj.name      !== undefined) row.name = String(obj.name || '').trim();
   if (obj.brand     !== undefined) row.brand = obj.brand || 'Control Union';
   if (obj.country   !== undefined) row.country = String(obj.country || '').trim() || null;
-  if (obj.region    !== undefined) row.region = obj.region || 'Américas';
+  if (obj.region    !== undefined) row.region = obj.region || 'Americas';
   if (obj.priority  !== undefined) row.priority = obj.priority || null;
   if (obj.tags      !== undefined) row.tags = obj.tags || [];
   if (obj.position  !== undefined) row.position = obj.position ?? 0;
@@ -93,7 +94,7 @@ export const itemFromRow = (row) => (row ? {
   createdBy: row.created_by || '',
   // Alcance (0075): vacíos = todas las entidades
   targetCodes:   row.target_codes || [],
-  targetRegions: row.target_regions || [],
+  targetRegions: (row.target_regions || []).map(normRegion),
   excludedCodes: row.excluded_codes || [],
 } : null);
 

@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { AlertTriangle, ChevronDown, Info } from 'lucide-react';
 
 import { monthOf, previousMonth, priceCheck, licensesOf, userLicenseCheck, unitPricesFor } from '@/utils/hubspotBilling';
+import { monthEn } from '@/constants/hubspotBilling';
 import { BrandChip, Delta, money } from './BillingBits';
 import EntityDetail from './EntityDetail';
 
@@ -20,13 +21,13 @@ export default function EntitiesTable({ entities, month, meta }) {
 
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-      <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest mb-3">Entidades · {month}</h3>
+      <h3 className="text-[11px] font-black uppercase text-slate-500 tracking-widest mb-3">Entities · {monthEn(month)}</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left border-b border-slate-100">
-              <th className="py-2 px-2">Entidad</th><th className="py-2 px-2">Manager</th><th className="py-2 px-2 text-center">Licencias</th>
-              <th className="py-2 px-2">Detalle</th><th className="py-2 px-2 text-right">Precio</th><th className="py-2 px-2 text-right">vs {prev ? prev.slice(0, 3) : '—'}</th><th className="py-2 px-2" />
+              <th className="py-2 px-2">Entity</th><th className="py-2 px-2">Manager</th><th className="py-2 px-2 text-center">Licenses</th>
+              <th className="py-2 px-2">Detail</th><th className="py-2 px-2 text-right">Price</th><th className="py-2 px-2 text-right">vs {prev ? monthEn(prev).slice(0, 3) : '—'}</th><th className="py-2 px-2" />
             </tr>
           </thead>
           <tbody>
@@ -54,9 +55,9 @@ export default function EntitiesTable({ entities, month, meta }) {
                     <td className="py-2.5 px-2 text-[11px] text-slate-600 whitespace-pre-line min-w-[160px]">{m.detail || '—'}</td>
                     <td className="py-2.5 px-2 text-right font-mono font-black text-slate-800 whitespace-nowrap">
                       {money(m.price)}
-                      {warn && <span title={`Licencias × tarifa = ${money(check.expected)}`}><AlertTriangle className="w-3.5 h-3.5 text-amber-500 inline ml-1 -mt-0.5" /></span>}
-                      {check && check.extras.length > 0 && check.diff !== 0 && <span title={`Incluye ${check.extras.join(', ')} (+${money(check.diff)})`}><Info className="w-3.5 h-3.5 text-sky-500 inline ml-1 -mt-0.5" /></span>}
-                      {userWarn && <span className="block text-[9px] font-sans font-black text-amber-600 uppercase tracking-wider">usuarios ≠ licencias</span>}
+                      {warn && <span title={`Licenses × rate = ${money(check.expected)}`}><AlertTriangle className="w-3.5 h-3.5 text-amber-500 inline ml-1 -mt-0.5" /></span>}
+                      {check && check.extras.length > 0 && check.diff !== 0 && <span title={`Includes ${check.extras.join(', ')} (+${money(check.diff)})`}><Info className="w-3.5 h-3.5 text-sky-500 inline ml-1 -mt-0.5" /></span>}
+                      {userWarn && <span className="block text-[9px] font-sans font-black text-amber-600 uppercase tracking-wider">users ≠ licenses</span>}
                     </td>
                     <td className="py-2.5 px-2 text-right whitespace-nowrap"><Delta now={m.price} before={before} /></td>
                     <td className="py-2.5 px-2 text-slate-300"><ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} /></td>
