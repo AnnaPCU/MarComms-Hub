@@ -6,21 +6,20 @@
 // (src/utils/crmWeeklyCrm.js), y se testea con Vitest.
 //
 // Contactos y empresas no tienen «PCU Entity»: se asignan a una oficina
-// por la persona. Owner del registro (hubspot_owner_id) y, si no tiene,
-// quien lo creó (hs_created_by_user_id). Cada usuario de HubSpot va a una
-// oficina SEGÚN EL CRM (nov 2026, a pedido: global, no el Excel):
-//   1. La entidad (por PCU Entity) de la mayoría de sus deals de los
-//      últimos 180 días. Vale para Americas, EMEA y APAC.
-//   2. Si no tiene deals, la entidad donde figura en Facturación HubSpot
-//      (Excel, solo Americas), si figura.
-// El tipo de licencia (Sales Pro / Core) no lo da el API de owners: sale
-// de Facturación HubSpot cuando el nombre coincide (sin acentos y con
-// diferencias chicas de escritura: «Gracia» = «Garcia»); si no, se ve sin
-// tipo. Las cuentas compartidas y los nombres que no están en HubSpot no
-// se muestran.
-//
-// Licencia activa = el usuario creó o editó un deal, contacto o empresa
-// en los últimos 30 días (último que lo modificó, hs_updated_by_user_id).
+// por la persona que los creó (hs_created_by_user_id) y, si no se sabe,
+// por el owner (hubspot_owner_id). También se separan por unidad de
+// negocio: el main team de esa persona (ej. «538 - … (Certifications)»).
+// Cada usuario de
+// HubSpot va a una oficina SOLO POR SU MAIN TEAM (nov 2026, a pedido:
+// global, sacado del CRM): el código al principio del nombre del equipo
+// principal («538 - Control Union Argentina SA (Certifications)» → 538, y
+// la unidad de negocio es el nombre del equipo). Los equipos sin código
+// («CRM Global Team», «PCU Spain»…) no asignan oficina.
+// Licencia = seat del objeto Users de HubSpot (hs_assigned_seats: core,
+// sales-enterprise, view-only…; scope crm.objects.users.read). Si no se
+// puede leer, el tipo sale de Facturación HubSpot cuando el nombre coincide.
+// Activo = «Last Active» de HubSpot (hs_last_activity_time) en los últimos
+// 30 días; sin ese dato, el último deal / contacto / empresa que modificó.
 // ════════════════════════════════════════════════════════════════════
 
 import { SOURCE_IMPORT, SOURCE_UI, codeFromLabel, monthStartAr, normCode, weekStartAr } from './logic.js';
@@ -88,62 +87,73 @@ export const billingUsers = (billingEntities = []) => billingEntities
 // Deals → la entidad de la mayoría de los deals de cada owner.
 // deals: [{ owner, pcu }], valueToCode: PCU Entity (valor → código),
 // entityCodes: códigos del Hub → { [ownerId]: code }
+const topKey = (t) => Object.entries(t).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
 export const ownerCodesFromDeals = (deals = [], valueToCode = {}, entityCodes = []) => {
+  /** @type {Record<string, string>} */
+  const out = {};
+  Object.entries(ownerOptionsFromDeals(deals, valueToCode, entityCodes)).forEach(([o, v]) => { out[o] = v.code; });
+  return out;
+};
+// Lo mismo con la unidad de negocio: { [ownerId]: { code, option } }. La
+// entidad es la de más deals (sumando sus opciones); la opción, la de más
+// deals dentro de esa entidad (label de PCU Entity, con valueToLabel).
+export const ownerOptionsFromDeals = (deals = [], valueToCode = {}, entityCodes = [], valueToLabel = {}) => {
   const known = new Set(entityCodes.map(normCode));
-  const tally = {};
+  const byCode = {};
+  const byOption = {};
   deals.forEach((d) => {
     const code = d.owner && valueToCode[d.pcu];
     if (!code || !known.has(code)) return;
-    const t = (tally[d.owner] = tally[d.owner] || {});
+    const t = (byCode[d.owner] = byCode[d.owner] || {});
     t[code] = (t[code] || 0) + 1;
+    const label = valueToLabel[d.pcu] || d.pcu;
+    const o = ((byOption[d.owner] = byOption[d.owner] || {})[code] = byOption[d.owner][code] || {});
+    o[label] = (o[label] || 0) + 1;
   });
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, { code: string, option: string }>} */
   const out = {};
-  Object.entries(tally).forEach(([owner, t]) => {
-    out[owner] = Object.entries(t).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  Object.entries(byCode).forEach(([owner, t]) => {
+    const code = topKey(t);
+    out[owner] = { code, option: topKey(byOption[owner][code]) };
   });
   return out;
 };
 
-const slug = (s) => nameTokens(s).join('-') || 'user';
-
-// Filas de crm_hubspot_users: una por usuario activo de HubSpot que tenga
-// entidad (ver arriba).
-//   owners: [{ ownerId, userId, firstName, lastName, email, archived }]
-//   billing: billingUsers(...) (Facturación HubSpot, solo para el tipo de licencia)
-//   ownerCodes: ownerCodesFromDeals(...)
-//   entityCodes: códigos del Hub (solo se guardan las de esas entidades)
-// source = 'crm' (entidad por sus deals) o 'billing' (sin deals: entidad
-// de Facturación HubSpot).
-/** @param {{ owners?: any[], billing?: any[], ownerCodes?: Record<string, string>, entityCodes?: string[], computedAt?: string }} args */
-export const buildUserRows = ({ owners = [], billing = [], ownerCodes = {}, entityCodes = [], computedAt }) => {
+// Filas de crm_hubspot_users: una por usuario de HubSpot (no desactivado)
+// cuyo main team tiene código de una entidad del Hub.
+//   owners: [{ ownerId, userId, firstName, lastName, email, archived, primaryTeam }]
+//   crmUsers: { [userId]: { seat, lastActive, deactivated } } (objeto Users; {} si no hay scope)
+//   billing: billingUsers(...) (Facturación HubSpot: tipo de licencia si no hay seat)
+//   entityCodes: códigos del Hub
+/** @param {{ owners?: any[], crmUsers?: Record<string, any>, billing?: any[], entityCodes?: string[], computedAt?: string }} args */
+export const buildUserRows = ({ owners = [], crmUsers = {}, billing = [], entityCodes = [], computedAt }) => {
   const known = new Set(entityCodes.map(normCode));
+  const teamCodes = {};
+  owners.forEach((o) => { const c = codeFromLabel(o.primaryTeam); if (c) teamCodes[String(o.ownerId)] = c; });
   const licenseOf = {};
-  const billingCodeOf = {};
   billing.forEach(({ code, users }) => users.forEach((u) => {
     if (isSharedUser(u.name)) return;
-    const o = matchOwner(u.name, owners, { code, ownerCodes });
-    if (!o) return;
-    const id = String(o.ownerId);
-    if (!(id in licenseOf) || u.license) licenseOf[id] = u.license || null;
-    if (!billingCodeOf[id]) billingCodeOf[id] = code;
+    const o = matchOwner(u.name, owners, { code, ownerCodes: teamCodes });
+    if (o && !licenseOf[String(o.ownerId)]) licenseOf[String(o.ownerId)] = u.license || null;
   }));
   const rows = [];
   owners.forEach((o) => {
     const id = String(o.ownerId);
-    if (o.archived) return;
-    const code = ownerCodes[id] || billingCodeOf[id];
+    const cu = (o.userId && crmUsers[String(o.userId)]) || null;
+    if (o.archived || cu?.deactivated) return;
+    const code = teamCodes[id];
     if (!code || !known.has(normCode(code))) return;
     rows.push({
       id: `${code}:${id}`,
       entity_code: code,
-      source: ownerCodes[id] ? 'crm' : 'billing',
+      source: 'team',
       name: ownerName(o),
       hubspot_name: ownerName(o),
       email: o.email || null,
       owner_id: id,
       user_id: o.userId ? String(o.userId) : null,
-      license: licenseOf[id] ?? null,
+      license: cu?.seat || licenseOf[id] || null,
+      pcu_option: String(o.primaryTeam || '').trim() || null,
       matched: true,
       shared: false,
       archived: false,
@@ -151,6 +161,24 @@ export const buildUserRows = ({ owners = [], billing = [], ownerCodes = {}, enti
     });
   });
   return rows;
+};
+
+// Objeto Users de HubSpot → { [userId]: { seat, lastActive, deactivated } }
+export const crmUsersById = (results = []) => {
+  const out = {};
+  results.forEach((r) => {
+    const p = r.properties || r;
+    const id = p.hs_internal_user_id;
+    if (!id) return;
+    out[String(id)] = { seat: p.hs_assigned_seats || null, lastActive: p.hs_last_activity_time || null, deactivated: String(p.hs_deactivated) === 'true' };
+  });
+  return out;
+};
+// Last Active de cada usuario (para withActivity)
+export const lastActiveByUser = (crmUsers = {}) => {
+  const out = {};
+  Object.entries(crmUsers).forEach(([id, u]) => { if (u.lastActive) out[id] = u.lastActive; });
+  return out;
 };
 
 // Suma la última actividad (ISO, la más reciente de deals / contactos /
@@ -170,39 +198,45 @@ export const mergeLatest = (...maps) => {
   return out;
 };
 
-// Owner / usuario → entidad, desde las filas de crm_hubspot_users.
-// Facturación HubSpot tiene prioridad sobre los deals.
+// Owner / usuario → entidad (y unidad de negocio, pcu_option), desde las
+// filas de crm_hubspot_users (una por persona)
 export const personCodes = (userRows = []) => {
   const owner = {};
   const user = {};
-  const rank = (r) => (r.source === 'billing' ? 0 : 1);
-  [...userRows].sort((a, b) => rank(a) - rank(b)).forEach((r) => {
-    if (r.owner_id && !owner[r.owner_id]) owner[r.owner_id] = r.entity_code;
-    if (r.user_id && !user[r.user_id]) user[r.user_id] = r.entity_code;
+  const ownerOption = {};
+  const userOption = {};
+  userRows.forEach((r) => {
+    if (r.owner_id && !owner[r.owner_id]) { owner[r.owner_id] = r.entity_code; ownerOption[r.owner_id] = r.pcu_option || null; }
+    if (r.user_id && !user[r.user_id]) { user[r.user_id] = r.entity_code; userOption[r.user_id] = r.pcu_option || null; }
   });
-  return { owner, user };
+  return { owner, user, ownerOption, userOption };
 };
 
-// Cuenta contactos o empresas creados por entidad, semana y mes.
+// Cuenta contactos o empresas creados por entidad, semana y mes, por quien
+// los creó (o, si no se sabe, por el owner), y por unidad de negocio.
 // records: [{ owner, createdBy, source, createdAt }]
-// → { weeks: { [week]: { [code]: { ui, other } } }, months: {…}, unassigned: { weeks: {…}, months: {…} } }
+// → { weeks: { [week]: { [code]: { ui, other, byOption: { [label]: { ui, other } } } } }, months: {…},
+//     unassigned: { weeks: {…}, months: {…} } }
 export const countObjects = (records = [], codes = { owner: {}, user: {} }, weeks = [], months = []) => {
   const wSet = new Set(weeks);
   const mSet = new Set(months);
   const out = { weeks: {}, months: {}, unassigned: { weeks: {}, months: {} } };
-  const add = (bucket, key, code, ui) => {
-    const c = ((bucket[key] = bucket[key] || {})[code] = bucket[key][code] || { ui: 0, other: 0 });
-    if (ui) c.ui += 1; else c.other += 1;
+  const add = (bucket, key, code, option, ui) => {
+    const c = ((bucket[key] = bucket[key] || {})[code] = bucket[key][code] || { ui: 0, other: 0, byOption: {} });
+    const o = option ? (c.byOption[option] = c.byOption[option] || { ui: 0, other: 0 }) : null;
+    if (ui) { c.ui += 1; if (o) o.ui += 1; } else { c.other += 1; if (o) o.other += 1; }
   };
   records.forEach((r) => {
     if (r.source === SOURCE_IMPORT || !r.createdAt) return;
-    const code = (r.owner && codes.owner[r.owner]) || (r.createdBy && codes.user[r.createdBy]) || null;
+    const byCreator = r.createdBy && codes.user[r.createdBy];
+    const code = byCreator || (r.owner && codes.owner[r.owner]) || null;
+    const option = byCreator ? (codes.userOption || {})[r.createdBy] : code ? (codes.ownerOption || {})[r.owner] : null;
     const week = weekStartAr(r.createdAt);
     const month = monthStartAr(r.createdAt);
     const ui = r.source === SOURCE_UI;
     if (code) {
-      if (wSet.has(week)) add(out.weeks, week, code, ui);
-      if (mSet.has(month)) add(out.months, month, code, ui);
+      if (wSet.has(week)) add(out.weeks, week, code, option, ui);
+      if (mSet.has(month)) add(out.months, month, code, option, ui);
     } else {
       if (wSet.has(week)) out.unassigned.weeks[week] = (out.unassigned.weeks[week] || 0) + 1;
       if (mSet.has(month)) out.unassigned.months[month] = (out.unassigned.months[month] || 0) + 1;
@@ -213,17 +247,31 @@ export const countObjects = (records = [], codes = { owner: {}, user: {} }, week
 
 // Filas de crm_weekly_object_counts de un tipo (contacts / companies).
 // Las entidades sin ninguna persona asignada van con null (no con 0).
-export const objectRows = (entities = [], counted = { weeks: {}, months: {} }, objectType, weeks = [], months = [], mappedCodes = new Set(), computedAt) => {
+// optionsByCode (opcional): { [code]: { [label]: { ui: 0, other: 0 } } } con
+// las unidades de negocio de las personas de cada entidad (aparecen en 0).
+export const objectRows = (entities = [], counted = { weeks: {}, months: {} }, objectType, weeks = [], months = [], mappedCodes = new Set(), computedAt, optionsByCode = {}) => {
   const rows = [];
   const push = (period, start, bucket) => entities.forEach((e) => {
     const mapped = mappedCodes.has(e.code);
-    const c = (bucket[start] || {})[e.code] || { ui: 0, other: 0 };
+    const c = (bucket[start] || {})[e.code] || { ui: 0, other: 0, byOption: {} };
     rows.push({
       entity_code: e.code, object_type: objectType, period, period_start: start,
-      created_ui: mapped ? c.ui : null, created_other: mapped ? c.other : null, computed_at: computedAt,
+      created_ui: mapped ? c.ui : null, created_other: mapped ? c.other : null,
+      by_option: mapped ? { ...(optionsByCode[e.code] || {}), ...c.byOption } : {}, computed_at: computedAt,
     });
   });
   weeks.forEach((w) => push('week', w, counted.weeks));
   months.forEach((m) => push('month', m, counted.months));
   return rows;
+};
+
+// Unidades de negocio de cada entidad según sus personas (para que en la
+// ficha aparezcan todas, también las que no crearon nada en el período)
+export const optionsByCodeFromUsers = (userRows = []) => {
+  const out = {};
+  userRows.forEach((r) => {
+    if (!r.pcu_option) return;
+    (out[r.entity_code] = out[r.entity_code] || {})[r.pcu_option] = { ui: 0, other: 0 };
+  });
+  return out;
 };

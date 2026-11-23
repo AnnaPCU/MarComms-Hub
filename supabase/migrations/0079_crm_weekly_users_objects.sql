@@ -59,6 +59,11 @@ create table if not exists public.crm_weekly_object_counts (
 );
 create index if not exists idx_crm_weekly_object_counts_start on public.crm_weekly_object_counts (period, period_start);
 
+-- Unidad de negocio (nov 2026, mismo día): la opción de PCU Entity de la
+-- mayoría de los deals de cada usuario, y contactos / empresas por opción
+alter table public.crm_hubspot_users add column if not exists pcu_option text;
+alter table public.crm_weekly_object_counts add column if not exists by_option jsonb not null default '{}'::jsonb;
+
 create table if not exists public.crm_weekly_crm_sync (
   id          text primary key,              -- 'users' | 'objects'
   last_run_at timestamptz,

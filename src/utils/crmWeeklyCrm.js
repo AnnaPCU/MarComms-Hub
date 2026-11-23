@@ -25,7 +25,7 @@ export const objectsAsDeals = (rows = [], type, period) => rows
     dealsUi: r.createdUi,
     dealsOther: r.createdOther,
     dealsImport: null,
-    byOption: {},
+    byOption: r.byOption || {},
   }));
 
 export const userStatus = (u) => {
@@ -35,7 +35,11 @@ export const userStatus = (u) => {
   return u.active ? 'active' : 'inactive';
 };
 
-export const LICENSE_LABELS = { salesPro: 'Sales Pro', core: 'Core' };
+// Seats de HubSpot (hs_assigned_seats) y los tipos del Excel
+export const LICENSE_LABELS = { salesPro: 'Sales Pro', core: 'Core', 'view-only': 'View-only', 'sales-enterprise': 'Sales Enterprise', 'service-enterprise': 'Service Enterprise', 'sales-professional': 'Sales Pro', 'service-professional': 'Service Pro', partner: 'Partner', developer: 'Developer' };
+export const licenseLabel = (seat) => LICENSE_LABELS[seat] || String(seat || '').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+// Licencia paga = cualquier seat que no sea view-only
+export const isPaidSeat = (seat) => !!seat && seat !== 'view-only';
 
 // Días desde la última actividad (null si no hay)
 export const daysSince = (iso, now = new Date()) => (iso ? Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86400000)) : null);
@@ -55,6 +59,9 @@ export const entityLicenses = (users = [], code) => {
     users: list,
     summary: {
       total: list.length,
+      paid: count((u) => isPaidSeat(u.license)),
+      viewOnly: count((u) => u.license === 'view-only'),
+      bySeat: list.reduce((acc, u) => { if (isPaidSeat(u.license)) acc[u.license] = (acc[u.license] || 0) + 1; return acc; }, {}),
       salesPro: count((u) => u.license === 'salesPro'),
       core: count((u) => u.license === 'core'),
       noType: count((u) => !u.license),

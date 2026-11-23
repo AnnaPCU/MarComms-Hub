@@ -15,11 +15,11 @@
 //
 // Partes (body.part, nov 2026, migration 0079):
 //   (sin part)  deals por semana y por mes (lo de arriba)
-//   'users'     usuarios de HubSpot por oficina (Facturación HubSpot o la
-//               mayoría de sus deals), licencia y última actividad (30 días)
-//               → crm_hubspot_users
-//   'objects'   contactos y empresas creados por oficina, por semana y por
-//               mes desde enero (por owner / creador) → crm_weekly_object_counts
+//   'users'     usuarios de HubSpot por oficina (por su MAIN TEAM), seat
+//               (licencia) y Last Active (30 días) → crm_hubspot_users
+//   'objects'   contactos y empresas creados por oficina y unidad de negocio,
+//               por semana y por mes desde enero (por quien los creó o, si
+//               no se sabe, el owner) → crm_weekly_object_counts
 // Cada parte tiene su freno y su estado en crm_weekly_crm_sync (id = parte).
 // Lógica pura de esas dos en crm.js.
 //
@@ -34,7 +34,8 @@
 //   HUBSPOT_TOKEN  — token de la app privada de HubSpot, scopes
 //                    crm.objects.deals.read + crm.schemas.deals.read
 //                    (+ crm.objects.contacts.read, crm.objects.companies.read
-//                    y crm.objects.owners.read para 'users' / 'objects')
+//                    y crm.objects.owners.read para 'users' / 'objects';
+//                    crm.objects.users.read para seat y Last Active)
 //   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — los pone Supabase solo
 //
 // Deploy: supabase functions deploy hubspot-weekly-deals --no-verify-jwt
@@ -48,7 +49,7 @@ import {
   cooldownFor, countWeek, lastWeeks, monthRangeMs, monthsSinceJanuary, pcuEntityProperty, redactSecrets, toMonthRows, tokenShape, weekRangeMs, weekRows,
 } from './logic.js';
 import {
-  LASTMOD_PROPERTY, OBJECT_TYPES, billingUsers, buildUserRows, countObjects, mergeLatest, objectRows, ownerCodesFromDeals, personCodes, withActivity,
+  LASTMOD_PROPERTY, OBJECT_TYPES, billingUsers, buildUserRows, countObjects, crmUsersById, lastActiveByUser, mergeLatest, objectRows, optionsByCodeFromUsers, personCodes, withActivity,
 } from './crm.js';
 
 const HUBSPOT = 'https://api.hubapi.com';
@@ -126,7 +127,7 @@ const chunks = (start: number, end: number, size = 31 * DAY) => {
 
 // Owners de HubSpot (activos y desactivados)
 async function listOwners(token: string) {
-  const out: { ownerId: string; userId: string | null; firstName: string; lastName: string; email: string; archived: boolean }[] = [];
+  const out: { ownerId: string; userId: string | null; firstName: string; lastName: string; email: string; archived: boolean; primaryTeam: string | null }[] = [];
   for (const archived of [false, true]) {
     let after: string | undefined;
     do {
@@ -134,6 +135,7 @@ async function listOwners(token: string) {
       (page.results || []).forEach((o: Record<string, unknown>) => out.push({
         ownerId: String(o.id), userId: o.userId ? String(o.userId) : null,
         firstName: String(o.firstName || ''), lastName: String(o.lastName || ''), email: String(o.email || ''), archived,
+        primaryTeam: ((o.teams as { name?: string; primary?: boolean }[] | undefined) || []).find((t) => t.primary)?.name || null,
       }));
       after = page.paging?.next?.after;
       await sleep(PAUSE_MS);
@@ -175,6 +177,25 @@ async function lastActivity(token: string, objectType: string, userIds: string[]
   return found;
 }
 
+// Objeto Users (seat, Last Active, desactivado). Sin el scope
+// crm.objects.users.read devuelve {} y se sigue sin esos datos.
+async function listCrmUsers(token: string) {
+  const all: unknown[] = [];
+  let after: string | undefined;
+  try {
+    do {
+      const page = await hubspot(token, `/crm/v3/objects/users?limit=100&properties=hs_internal_user_id,hs_assigned_seats,hs_last_activity_time,hs_deactivated${after ? `&after=${after}` : ''}`);
+      all.push(...(page.results || []));
+      after = page.paging?.next?.after;
+      await sleep(PAUSE_MS);
+    } while (after);
+  } catch (err) {
+    if (err instanceof HubspotError && (err.status === 403 || err.status === 401)) return { users: {}, missingScope: true };
+    throw err;
+  }
+  return { users: crmUsersById(all as { properties?: Record<string, string> }[]), missingScope: false };
+}
+
 async function runUsers(token: string, db: ReturnType<typeof createClient>, startedAt: string) {
   const owners = await listOwners(token);
   const { data: entities, error: eErr } = await db.from('crm_weekly_entities').select('code');
@@ -182,53 +203,46 @@ async function runUsers(token: string, db: ReturnType<typeof createClient>, star
   const codes = (entities || []).map((e: { code: string }) => e.code);
   const { data: billing, error: bErr } = await db.from('hubspot_billing_entities').select('legal_entity, users');
   if (bErr) throw new Error(`Could not read the HubSpot billing users: ${bErr.message}`);
+  const { users: crmUsers, missingScope } = await listCrmUsers(token);
 
-  // Oficina de cada owner por sus deals de los últimos 180 días
-  const props = await hubspot(token, '/crm/v3/properties/deals');
-  const pcu = pcuEntityProperty(props.results || []);
-  if (!pcu) throw new Error(`Could not find the deal property «${PCU_ENTITY_LABEL}» in HubSpot.`);
-  await sleep(PAUSE_MS);
+  // Oficina = main team de cada usuario
+  const rows = buildUserRows({ owners, crmUsers, billing: billingUsers(billing || []), entityCodes: codes, computedAt: startedAt });
+
+  // Actividad: Last Active de HubSpot; sin el objeto Users, el último deal /
+  // contacto / empresa que modificó en los últimos 30 días
   const now = Date.now();
-  const deals: { owner: string | null; pcu: string | null }[] = [];
-  for (const r of chunks(now - 180 * DAY, now)) {
-    const rows = await searchRange(token, 'deals', r.start, r.end, [
-      { propertyName: 'hubspot_owner_id', operator: 'HAS_PROPERTY' },
-      { propertyName: pcu.name, operator: 'HAS_PROPERTY' },
-    ], ['hubspot_owner_id', pcu.name]);
-    rows.forEach((p) => deals.push({ owner: p.hubspot_owner_id, pcu: p[pcu.name] }));
+  let last: Record<string, string>;
+  if (!missingScope) last = lastActiveByUser(crmUsers);
+  else {
+    const ids = rows.map((r) => r.user_id).filter(Boolean) as string[];
+    const since = now - 30 * DAY;
+    last = mergeLatest(
+      await lastActivity(token, 'deals', ids, since),
+      await lastActivity(token, 'contacts', ids, since),
+      await lastActivity(token, 'companies', ids, since),
+    );
   }
-  const ownerCodes = ownerCodesFromDeals(deals, pcu.valueToCode, codes);
-  const rows = buildUserRows({ owners, billing: billingUsers(billing || []), ownerCodes, entityCodes: codes, computedAt: startedAt });
-
-  // Última actividad (deals, contactos y empresas, últimos 30 días)
-  const ids = rows.map((r) => r.user_id).filter(Boolean) as string[];
-  const since = now - 30 * DAY;
-  const last = mergeLatest(
-    await lastActivity(token, 'deals', ids, since),
-    await lastActivity(token, 'contacts', ids, since),
-    await lastActivity(token, 'companies', ids, since),
-  );
   const final = withActivity(rows, last, new Date(now));
 
   const { error: uErr } = await db.from('crm_hubspot_users').upsert(final, { onConflict: 'id' });
   if (uErr) throw new Error(`Could not save the users: ${uErr.message}`);
   await db.from('crm_hubspot_users').delete().lt('computed_at', startedAt);
-  const billingRows = final.filter((r) => r.source === 'billing');
   return {
     users: final.length,
-    billing: billingRows.length,
-    notFound: billingRows.filter((r) => !r.matched && !r.shared).length,
     active: final.filter((r) => r.active).length,
+    withSeat: final.filter((r) => r.license).length,
+    seatsFromHubspot: !missingScope,
   };
 }
 
 async function runObjects(token: string, db: ReturnType<typeof createClient>, startedAt: string) {
   const { data: entities, error: eErr } = await db.from('crm_weekly_entities').select('code');
   if (eErr) throw new Error(`Could not read the entities: ${eErr.message}`);
-  const { data: users, error: uErr } = await db.from('crm_hubspot_users').select('entity_code, owner_id, user_id, source');
+  const { data: users, error: uErr } = await db.from('crm_hubspot_users').select('entity_code, owner_id, user_id, source, pcu_option');
   if (uErr) throw new Error(`Could not read the HubSpot users: ${uErr.message}`);
   if (!users?.length) throw new Error('There are no HubSpot users per office yet: run the «users» update first.');
   const codes = personCodes(users);
+  const optionsByCode = optionsByCodeFromUsers(users);
   const mapped = new Set(users.filter((u: { owner_id: string | null; user_id: string | null }) => u.owner_id || u.user_id).map((u: { entity_code: string }) => u.entity_code));
 
   const weeks = lastWeeks(WEEKS_TO_LOAD);
@@ -245,7 +259,7 @@ async function runObjects(token: string, db: ReturnType<typeof createClient>, st
       rows.forEach((p) => records.push({ owner: p.hubspot_owner_id, createdBy: p.hs_created_by_user_id, source: p[SOURCE_PROPERTY], createdAt: p.createdate }));
     }
     const counted = countObjects(records, codes, weeks, months);
-    const out = objectRows(entities || [], counted, type, weeks, months, mapped, startedAt);
+    const out = objectRows(entities || [], counted, type, weeks, months, mapped, startedAt, optionsByCode);
     const { error } = await db.from('crm_weekly_object_counts').upsert(out, { onConflict: 'entity_code,object_type,period,period_start' });
     if (error) throw new Error(`Could not save the ${type} counts: ${error.message}`);
     info[type] = { records: records.length, unassigned: counted.unassigned };

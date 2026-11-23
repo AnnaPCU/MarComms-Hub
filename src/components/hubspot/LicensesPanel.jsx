@@ -16,7 +16,7 @@
 
 import React, { useState } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { ACTIVE_DAYS, LICENSE_LABELS, daysSince, entityLicenses, nameTokens, userStatus } from '@/utils/crmWeeklyCrm';
+import { ACTIVE_DAYS, daysSince, entityLicenses, licenseLabel, nameTokens, userStatus } from '@/utils/crmWeeklyCrm';
 
 const STATUS = {
   active:   { label: 'Active',                  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -50,7 +50,7 @@ function UserRow({ u }) {
         <p className="text-[10px] font-bold text-slate-400 truncate">{lastActivityText(u)}</p>
       </div>
       {u.license && (
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">{LICENSE_LABELS[u.license] || u.license}</span>
+        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">{licenseLabel(u.license)}</span>
       )}
       <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest border rounded-md px-1.5 py-0.5 ${st.cls}`}>{st.label}</span>
     </li>
@@ -78,7 +78,7 @@ export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, 
     <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color }}>HubSpot licenses</p>
-        <span className="text-[10px] font-bold text-slate-400">{usersSync.lastOkAt ? `Updated ${fmtDateTime(usersSync.lastOkAt)}` : 'No data yet'} · active = created or edited a deal, contact or company in the last {ACTIVE_DAYS} days</span>
+        <span className="text-[10px] font-bold text-slate-400">{usersSync.lastOkAt ? `Updated ${fmtDateTime(usersSync.lastOkAt)}` : 'No data yet'} · active = used HubSpot in the last {ACTIVE_DAYS} days («Last Active»)</span>
         {onRefresh && (
           <button onClick={refresh} disabled={busy} className="ml-auto bg-white border border-slate-200 hover:border-sky-300 hover:text-sky-700 text-slate-600 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-50" title="Fetch the HubSpot users, their activity and the contacts / companies created (takes about two minutes)">
             <RefreshCw className={`w-3 h-3 ${busy ? 'animate-spin' : ''}`} /> {busy ? 'Updating…' : 'Update'}
@@ -103,15 +103,16 @@ export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, 
             <p className="text-[11px] font-bold text-slate-500">
               <span className="text-emerald-700">{summary.active} active</span> · <span className="text-amber-800">{summary.inactive} inactive</span>
             </p>
-            {(summary.salesPro > 0 || summary.core > 0) && (
-              <p className="text-[11px] font-bold text-slate-500">{summary.salesPro} Sales Pro · {summary.core} Core{summary.noType ? ` · ${summary.noType} without known type` : ''}</p>
-            )}
+            <p className="text-[11px] font-bold text-slate-500">
+              {summary.paid} paid license{summary.paid === 1 ? '' : 's'}{Object.keys(summary.bySeat).length ? ` (${Object.entries(summary.bySeat).map(([k, n]) => `${n} ${licenseLabel(k)}`).join(' · ')})` : ''}
+              {summary.viewOnly ? ` · ${summary.viewOnly} view-only` : ''}{summary.noType ? ` · ${summary.noType} without seat data` : ''}
+            </p>
           </div>
-          <p className="text-[10px] font-medium text-slate-400">Users come from the HubSpot CRM: each active user counts for the entity of most of their deals (last 180 days). The license type comes from Facturación HubSpot (Americas only) when the name matches.</p>
+          <p className="text-[10px] font-medium text-slate-400">Users come from HubSpot: each user counts for the entity of their main team (the business unit is the team). Seat and «Last Active» come from HubSpot too.</p>
           <ul>{list.map((u) => <UserRow key={u.id} u={u} />)}</ul>
         </>
       ) : (
-        <p className="text-[11px] font-bold text-slate-400">No HubSpot user works the deals of this entity (last 180 days).</p>
+        <p className="text-[11px] font-bold text-slate-400">No HubSpot user has this entity as main team.</p>
       )}
     </section>
   );

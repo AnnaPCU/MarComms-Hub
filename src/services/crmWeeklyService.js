@@ -303,6 +303,7 @@ export const objectCountFromRow = (row) => ({
   periodStart: row.period_start,
   createdUi: row.created_ui,
   createdOther: row.created_other,
+  byOption: row.by_option || {},  // unidad de negocio (label de PCU Entity) → { ui, other }
 });
 // ~2.000 filas (53 entidades × 2 tipos × 19 períodos): de a 1000
 export const listObjectCounts = async (since) => {
