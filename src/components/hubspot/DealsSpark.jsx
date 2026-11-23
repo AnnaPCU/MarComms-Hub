@@ -151,13 +151,13 @@ export function DealsPanel({ counts = [], months = [], code, dark = false }) {
   }
   const options = all.options?.length ? all.options : Object.keys(yearAll.byOption || {});
   const many = options.length > 1;
-  const showMonths = view === 'months' && hasMonths;
+  const showMonths = view === 'months';
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex bg-slate-100 rounded-xl p-1 gap-1" role="tablist" aria-label="Period">
           <button role="tab" aria-selected={!showMonths} onClick={() => setView('weeks')} className={tabCls(!showMonths)}>Last 8 weeks</button>
-          <button role="tab" aria-selected={showMonths} onClick={() => setView('months')} disabled={!hasMonths} title={hasMonths ? '' : 'Loads with the next update'} className={`${tabCls(showMonths)} disabled:opacity-40`}>Since January</button>
+          <button role="tab" aria-selected={showMonths} onClick={() => setView('months')} className={tabCls(showMonths)}>Since January</button>
         </div>
         {many && (
           <div className="flex items-center gap-1.5 flex-wrap" role="group" aria-label="PCU Entity option">
@@ -167,7 +167,9 @@ export function DealsPanel({ counts = [], months = [], code, dark = false }) {
           </div>
         )}
       </div>
-      {showMonths ? (
+      {showMonths && !hasMonths ? (
+        <p className="text-[11px] font-bold text-slate-400">No monthly data for this entity yet. It loads with the next update (daily at 06:07 Argentina time, or with «Update»).</p>
+      ) : showMonths ? (
         <div className="flex items-start gap-6 flex-wrap lg:flex-nowrap">
           <div className="shrink-0 w-[180px]">
             <p className="font-mono text-4xl font-black text-slate-900 leading-none">{year.total.ui}</p>
