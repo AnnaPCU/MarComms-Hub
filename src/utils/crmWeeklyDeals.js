@@ -37,12 +37,13 @@ export const dealSeries = (counts = [], code, weeks = lastWeeks(DEAL_WEEKS), opt
   counts.forEach((r) => { if (r.entityCode === code) byWeek[r.weekStart] = r; });
   return weeks.map((week) => {
     const r = byWeek[week];
-    if (!r) return { week, ui: 0, other: 0, total: 0, missing: true, byOption: {} };
+    if (!r) return { week, ui: 0, other: 0, imported: 0, total: 0, missing: true, byOption: {} };
     const unmapped = r.dealsUi === null && r.dealsOther === null;
     const o = option ? (r.byOption || {})[option] || { ui: 0, other: 0 } : null;
     const ui = o ? o.ui : r.dealsUi ?? 0;
     const other = o ? o.other : r.dealsOther ?? 0;
-    return { week, ui, other, total: ui + other, missing: false, unmapped, byOption: r.byOption || {} };
+    const imported = o ? o.imported || 0 : r.dealsImport ?? 0; // 0079: importados, aparte
+    return { week, ui, other, imported, total: ui + other + imported, missing: false, unmapped, byOption: r.byOption || {} };
   });
 };
 
@@ -85,12 +86,13 @@ export const monthSeries = (rows = [], code, months = monthsSinceJanuary(), opti
   rows.forEach((r) => { if (r.entityCode === code) byMonth[r.monthStart] = r; });
   return months.map((month) => {
     const r = byMonth[month];
-    if (!r) return { month, ui: 0, other: 0, total: 0, missing: true, byOption: {} };
+    if (!r) return { month, ui: 0, other: 0, imported: 0, total: 0, missing: true, byOption: {} };
     const unmapped = r.dealsUi === null && r.dealsOther === null;
     const o = option ? (r.byOption || {})[option] || { ui: 0, other: 0 } : null;
     const ui = o ? o.ui : r.dealsUi ?? 0;
     const other = o ? o.other : r.dealsOther ?? 0;
-    return { month, ui, other, total: ui + other, missing: false, unmapped, byOption: r.byOption || {} };
+    const imported = o ? o.imported || 0 : r.dealsImport ?? 0;
+    return { month, ui, other, imported, total: ui + other + imported, missing: false, unmapped, byOption: r.byOption || {} };
   });
 };
 
@@ -101,14 +103,18 @@ export const entityMonths = (rows = [], code, now = new Date(), option = '') => 
   const series = monthSeries(rows, code, monthsSinceJanuary(now), option);
   const withData = series.filter((s) => !s.missing);
   const mapped = withData.length ? !withData[withData.length - 1].unmapped : null;
-  const total = withData.reduce((acc, s) => ({ ui: acc.ui + s.ui, other: acc.other + s.other }), { ui: 0, other: 0 });
+  const total = withData.reduce((acc, s) => ({ ui: acc.ui + s.ui, other: acc.other + s.other, imported: acc.imported + (s.imported || 0) }), { ui: 0, other: 0, imported: 0 });
   const closed = withData.filter((s) => s.month !== monthStartAr(now));
   const avg = closed.length ? Math.round((closed.reduce((n, s) => n + s.ui, 0) / closed.length) * 10) / 10 : null;
   const best = withData.reduce((b, s) => (!b || s.ui > b.ui ? s : b), null);
+  // Lo mismo con el total (CRM UI + otros + importados): «Since January»
+  // suma las importaciones (nov 2026, a pedido)
+  const avgAll = closed.length ? Math.round((closed.reduce((n, s) => n + s.total, 0) / closed.length) * 10) / 10 : null;
+  const bestAll = withData.reduce((b, s) => (!b || s.total > b.total ? s : b), null);
   const byOption = {};
   withData.forEach((s) => Object.entries(s.byOption || {}).forEach(([k, v]) => {
-    const t = (byOption[k] = byOption[k] || { ui: 0, other: 0 });
-    t.ui += v.ui || 0; t.other += v.other || 0;
+    const t = (byOption[k] = byOption[k] || { ui: 0, other: 0, imported: 0 });
+    t.ui += v.ui || 0; t.other += v.other || 0; t.imported += v.imported || 0;
   }));
-  return { mapped, series, total: { ...total, all: total.ui + total.other }, avg, best: best && best.ui > 0 ? best : null, byOption };
+  return { mapped, series, total: { ...total, all: total.ui + total.other + total.imported }, avg, best: best && best.ui > 0 ? best : null, avgAll, bestAll: bestAll && bestAll.total > 0 ? bestAll : null, byOption };
 };

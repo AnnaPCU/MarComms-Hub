@@ -26,6 +26,9 @@ import { normBrand, normRegion } from '@/constants/crmWeekly';
 const ENTITIES = 'crm_weekly_entities';
 const DEAL_COUNTS = 'crm_weekly_deal_counts';
 const DEAL_MONTHS = 'crm_weekly_deal_months'; // 0078
+const HS_USERS = 'crm_hubspot_users';          // 0079
+const OBJECT_COUNTS = 'crm_weekly_object_counts'; // 0079
+const CRM_SYNC = 'crm_weekly_crm_sync';         // 0079
 const DEAL_SYNC = 'crm_weekly_deal_sync';
 const ITEMS = 'crm_check_items';
 const CHECKS = 'crm_weekly_checks';
@@ -228,7 +231,8 @@ export const dealCountFromRow = (row) => ({
   weekStart:  row.week_start,
   dealsUi:    row.deals_ui,
   dealsOther: row.deals_other,
-  byOption:   row.by_option || {},              // 0074: { [label de PCU Entity]: { ui, other } }
+  dealsImport: row.deals_import ?? null,         // 0079: importados (ej. Commercial Tool)
+  byOption:   row.by_option || {},              // 0074: { [label de PCU Entity]: { ui, other, imported } }
   computedAt: row.computed_at,
 });
 export const listDealCounts = async (sinceWeek) => {
@@ -244,6 +248,7 @@ export const dealMonthFromRow = (row) => ({
   monthStart: row.month_start,
   dealsUi:    row.deals_ui,
   dealsOther: row.deals_other,
+  dealsImport: row.deals_import ?? null,
   byOption:   row.by_option || {},
   computedAt: row.computed_at,
 });
@@ -271,6 +276,65 @@ export const refreshDealCounts = async () => {
   return data;
 };
 
+// ── Licencias, contactos y empresas por oficina (0079) ──
+export const hubspotUserFromRow = (row) => ({
+  id: row.id,
+  entityCode: row.entity_code,
+  source: row.source,            // 'billing' (Facturación HubSpot) | 'deals'
+  name: row.name,
+  hubspotName: row.hubspot_name,
+  email: row.email,
+  license: row.license,          // 'salesPro' | 'core' | null
+  matched: row.matched,
+  shared: row.shared,
+  archived: row.archived,
+  lastActivityAt: row.last_activity_at,
+  active: row.active,
+});
+export const listHubspotUsers = async () => {
+  const { data, error } = await supabase.from(HS_USERS).select('*');
+  if (error) throw error;
+  return (data || []).map(hubspotUserFromRow);
+};
+export const objectCountFromRow = (row) => ({
+  entityCode: row.entity_code,
+  objectType: row.object_type,   // 'contacts' | 'companies'
+  period: row.period,            // 'week' | 'month'
+  periodStart: row.period_start,
+  createdUi: row.created_ui,
+  createdOther: row.created_other,
+});
+// ~2.000 filas (53 entidades × 2 tipos × 19 períodos): de a 1000
+export const listObjectCounts = async (since) => {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    let q = supabase.from(OBJECT_COUNTS).select('*').order('entity_code').order('object_type').order('period').order('period_start').range(from, from + 999);
+    if (since) q = q.gte('period_start', since);
+    const { data, error } = await q;
+    if (error) throw error;
+    out.push(...(data || []).map(objectCountFromRow));
+    if (!data || data.length < 1000) return out;
+  }
+};
+export const getCrmSync = async () => {
+  const { data, error } = await supabase.from(CRM_SYNC).select('*');
+  if (error) throw error;
+  const out = {};
+  (data || []).forEach((r) => { out[r.id] = { lastRunAt: r.last_run_at, lastOkAt: r.last_ok_at, ok: r.ok, error: r.error, info: r.info || {} }; });
+  return out;
+};
+// «Update» de licencias / contactos y empresas: primero los usuarios
+// (oficina y actividad) y después los contactos y empresas, que los usan
+export const refreshCrmPart = async (part) => {
+  const { data, error } = await supabase.functions.invoke('hubspot-weekly-deals', { body: { trigger: 'manual', part } });
+  if (error) {
+    let msg = error.message;
+    try { const body = await error.context?.json?.(); if (body?.error) msg = body.error; } catch (_e) { /* sin cuerpo */ }
+    throw new Error(msg);
+  }
+  return data;
+};
+
 // ── Realtime (las tablas del Weekly check en un canal) ──
 export const subscribeCrmWeekly = (onChange) => {
   const channel = supabase
@@ -279,6 +343,7 @@ export const subscribeCrmWeekly = (onChange) => {
     .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_COUNTS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_SYNC }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_MONTHS }, (p) => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: CRM_SYNC }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: ITEMS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: CHECKS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: STEPS }, (p) => onChange(p))

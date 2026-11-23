@@ -9,6 +9,9 @@
 //   dealCounts / dealMonths (por mes desde enero, 0078) / dealSync / dealsReady (deals nuevos por semana de HubSpot,
 //   migration 0071; dealsReady = false si falta la tabla) +
 //   refreshDeals() (botón «Actualizar»: llama a la Edge Function)
+//   hubspotUsers / objectCounts / crmSync / crmReady (0079: licencias,
+//   contactos y empresas por oficina) + refreshCrm() (usuarios y después
+//   contactos y empresas)
 //   items (ítems del checklist; CRM_CHECK_ITEMS si falta la migración
 //   0044), checks, steps, loading, error, missing
 //   saveCheck({ entityCode, itemId, patch: { done?, deadline? }, updatedBy })
@@ -31,6 +34,7 @@ import { DEAL_WEEKS, lastWeeks, monthsSinceJanuary } from '@/utils/crmWeeklyDeal
 import {
   listEntities, createEntity, updateEntity, deleteEntity,
   listDealCounts, listDealMonths, getDealSync, refreshDealCounts,
+  listHubspotUsers, listObjectCounts, getCrmSync, refreshCrmPart,
   listItems, createItem, updateItem, deleteItem, excludeItemFor,
   listChecks, saveCheck, listSteps, createStep, updateStep, deleteStep, subscribeCrmWeekly,
 } from '@/services/crmWeeklyService';
@@ -44,6 +48,10 @@ export const useCrmWeekly = (options = {}) => {
   const [tracking, setTracking] = useState(false);
   const [dealCounts, setDealCounts] = useState([]);
   const [dealMonths, setDealMonths] = useState([]);
+  const [hubspotUsers, setHubspotUsers] = useState([]);
+  const [objectCounts, setObjectCounts] = useState([]);
+  const [crmSync, setCrmSync] = useState({});
+  const [crmReady, setCrmReady] = useState(false);
   const [dealSync, setDealSync] = useState(null);
   const [dealsReady, setDealsReady] = useState(false);
   const [items, setItems] = useState(CRM_CHECK_ITEMS);
@@ -72,6 +80,12 @@ export const useCrmWeekly = (options = {}) => {
       // Deals por mes desde enero (0078): si falta la tabla, no hay «Since January»
       try { setDealMonths(await listDealMonths(monthsSinceJanuary()[0])); }
       catch (e) { if (!isMissingTable(e)) console.error('[useCrmWeekly] monthly deals error:', e); setDealMonths([]); }
+      // Licencias, contactos y empresas (0079): sin las tablas, no se muestran
+      try {
+        const since = [lastWeeks(DEAL_WEEKS)[0], monthsSinceJanuary()[0]].sort()[0];
+        const [hu, oc, cs] = await Promise.all([listHubspotUsers(), listObjectCounts(since), getCrmSync()]);
+        setHubspotUsers(hu); setObjectCounts(oc); setCrmSync(cs); setCrmReady(true);
+      } catch (e) { if (!isMissingTable(e)) console.error('[useCrmWeekly] users / objects error:', e); setCrmReady(false); }
     } catch (e) {
       if (isMissingTable(e)) setMissing(true);
       else { console.error('[useCrmWeekly] fetch error:', e); setError(e); }
@@ -130,6 +144,11 @@ export const useCrmWeekly = (options = {}) => {
       }),
       removeEntity: wrap(deleteEntity),
       refreshDeals: wrap(refreshDealCounts),
+      refreshCrm: wrap(async () => {
+        const users = await refreshCrmPart('users');
+        if (users?.skipped) return users;
+        return refreshCrmPart('objects');
+      }),
       updateStepOptimistic: wrap(async (id, patch) => {
         setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
         return updateStep(id, patch);
@@ -141,5 +160,5 @@ export const useCrmWeekly = (options = {}) => {
   // deadlines en rojo a Valentino)
   const weeklyEntities = useMemo(() => entities.filter((e) => (e.region || WEEKLY_REGION) === WEEKLY_REGION), [entities]);
 
-  return { entities, weeklyEntities, tracking, dealCounts, dealMonths, dealSync, dealsReady, items, checks, steps, loading, error, missing, refetch, ...api };
+  return { entities, weeklyEntities, tracking, dealCounts, dealMonths, dealSync, dealsReady, hubspotUsers, objectCounts, crmSync, crmReady, items, checks, steps, loading, error, missing, refetch, ...api };
 };

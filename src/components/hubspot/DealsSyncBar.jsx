@@ -39,7 +39,7 @@ export default function DealsSyncBar({ sync, onRefresh }) {
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">HubSpot deals</span>
         <span>{sync?.lastOkAt ? `Updated ${fmt(sync.lastOkAt)}` : 'No data yet'}</span>
         <span className="text-slate-300">·</span>
-        <span>Imports excluded · Monday to Sunday week (Argentina time)</span>
+        <span>Imports counted apart · Monday to Sunday week (Argentina time)</span>
         <button onClick={refresh} disabled={busy} className="ml-auto bg-white border border-slate-200 hover:border-sky-300 hover:text-sky-700 text-slate-600 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 disabled:opacity-50" title="Fetch the deals of the last 8 weeks from HubSpot">
           <RefreshCw className={`w-3 h-3 ${busy ? 'animate-spin' : ''}`} /> {busy ? 'Updating…' : 'Update'}
         </button>

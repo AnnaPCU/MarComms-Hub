@@ -106,6 +106,9 @@ export const pcuEntityProperty = (properties = []) => {
 // valueToLabel (opcional): para separar por opción de PCU Entity
 // → { byCode: { [code]: { ui, other } }, byOption: { [code]: { [label]: { ui, other } } },
 //     unassigned, outside }
+// Las importaciones (nov 2026, 0079) se cuentan aparte, en `imported`
+// (ej. los 931 deals de la Commercial Tool de la 555 en junio), para que
+// el total cierre con HubSpot; no entran en unassigned ni outside.
 //   unassigned = deals SIN «PCU Entity» (lo que hay que completar en HubSpot)
 //   outside    = deals de entidades que no están en el Hub (el portal de
 //                HubSpot es global: Malasia, Reino Unido…), no es un problema
@@ -116,14 +119,14 @@ export const countWeek = (deals = [], valueToCode = {}, entityCodes = [], valueT
   let unassigned = 0;
   let outside = 0;
   deals.forEach((d) => {
-    if (d.source === SOURCE_IMPORT) return;
-    if (!d.pcu) { unassigned += 1; return; }
+    const imported = d.source === SOURCE_IMPORT;
+    if (!d.pcu) { if (!imported) unassigned += 1; return; }
     const code = valueToCode[d.pcu];
-    if (!code || !known.has(code)) { outside += 1; return; }
-    const c = (byCode[code] = byCode[code] || { ui: 0, other: 0 });
+    if (!code || !known.has(code)) { if (!imported) outside += 1; return; }
+    const c = (byCode[code] = byCode[code] || { ui: 0, other: 0, imported: 0 });
     const label = valueToLabel[d.pcu] || d.pcu;
-    const o = ((byOption[code] = byOption[code] || {})[label] = byOption[code][label] || { ui: 0, other: 0 });
-    if (d.source === SOURCE_UI) { c.ui += 1; o.ui += 1; } else { c.other += 1; o.other += 1; }
+    const o = ((byOption[code] = byOption[code] || {})[label] = byOption[code][label] || { ui: 0, other: 0, imported: 0 });
+    if (imported) { c.imported += 1; o.imported += 1; } else if (d.source === SOURCE_UI) { c.ui += 1; o.ui += 1; } else { c.other += 1; o.other += 1; }
   });
   return { byCode, byOption, unassigned, outside };
 };
@@ -135,10 +138,10 @@ export const countWeek = (deals = [], valueToCode = {}, entityCodes = [], valueT
 export const weekRows = (entities = [], pcuCodes = new Set(), counted = { byCode: {} }, weekStart, computedAt, optionsByCode = {}) => entities.map((e) => {
   const code = normCode(e.code);
   const mapped = pcuCodes.has(code);
-  const c = counted.byCode[code] || { ui: 0, other: 0 };
+  const c = counted.byCode[code] || { ui: 0, other: 0, imported: 0 };
   const byOption = {};
   if (mapped) {
-    (optionsByCode[code] || []).forEach((label) => { byOption[label] = { ui: 0, other: 0 }; });
+    (optionsByCode[code] || []).forEach((label) => { byOption[label] = { ui: 0, other: 0, imported: 0 }; });
     Object.entries((counted.byOption || {})[code] || {}).forEach(([label, v]) => { byOption[label] = { ...v }; });
   }
   return {
@@ -146,6 +149,7 @@ export const weekRows = (entities = [], pcuCodes = new Set(), counted = { byCode
     week_start: weekStart,
     deals_ui: mapped ? c.ui : null,
     deals_other: mapped ? c.other : null,
+    deals_import: mapped ? c.imported || 0 : null, // 0079
     by_option: byOption,
     computed_at: computedAt,
   };

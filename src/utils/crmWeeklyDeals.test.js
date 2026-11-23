@@ -44,24 +44,25 @@ describe('PCU Entity → código de la entidad', () => {
     expect([...pcu.codes].sort()).toEqual(['538', '573U', '880']);
     expect(pcuEntityProperty([{ name: 'x', label: 'Otra' }])).toBeNull();
   });
-  it('cuenta por entidad: suma opciones del mismo código, separa CRM UI, deja afuera importaciones', () => {
+  it('cuenta por entidad: suma opciones del mismo código, separa CRM UI y las importaciones', () => {
     const pcu = pcuEntityProperty(props);
     const deals = [
       { pcu: 'CU Cert. Argentina', source: 'CRM_UI' },
       { pcu: 'CU Inspections Argentina', source: 'CRM_UI' },
       { pcu: 'CU Inspections Argentina', source: 'AUTOMATION_PLATFORM' },
-      { pcu: 'CU Cert. Argentina', source: 'IMPORT' },  // no cuenta
+      { pcu: 'CU Cert. Argentina', source: 'IMPORT' },  // va aparte, en imported
+      { pcu: null, source: 'IMPORT' },                  // importado sin PCU Entity: no avisa
       { pcu: 'PS China', source: 'CRM_UI' },            // opción sin código → fuera del Hub
       { pcu: null, source: 'CRM_UI' },                  // sin PCU Entity
       { pcu: 'CU Cert. Uruguay', source: 'FORM' },      // entidad que no está en el Hub
       { pcu: 'PS Mexico', source: 'CRM_UI' },
     ];
     const counted = countWeek(deals, pcu.valueToCode, ['538', '880', '864']);
-    expect(counted.byCode).toEqual({ 538: { ui: 2, other: 1 }, 880: { ui: 1, other: 0 } });
+    expect(counted.byCode).toEqual({ 538: { ui: 2, other: 1, imported: 1 }, 880: { ui: 1, other: 0, imported: 0 } });
     expect(counted.unassigned).toBe(1); // solo los que no tienen PCU Entity
     expect(counted.outside).toBe(2);
     const rows = weekRows([{ code: '538' }, { code: '880' }, { code: '864' }, { code: '592' }], new Set(['538', '880', '592']), counted, '2026-11-09', 'T');
-    expect(rows.map((r) => [r.entity_code, r.deals_ui, r.deals_other])).toEqual([['538', 2, 1], ['880', 1, 0], ['864', null, null], ['592', 0, 0]]);
+    expect(rows.map((r) => [r.entity_code, r.deals_ui, r.deals_other, r.deals_import])).toEqual([['538', 2, 1, 1], ['880', 1, 0, 0], ['864', null, null, null], ['592', 0, 0, 0]]);
   });
   it('separa por opción de PCU Entity (con todas las opciones del código)', () => {
     const pcu = pcuEntityProperty(props);
@@ -73,8 +74,8 @@ describe('PCU Entity → código de la entidad', () => {
     const counted = countWeek(deals, pcu.valueToCode, ['538'], pcu.valueToLabel);
     const [row] = weekRows([{ code: '538' }], pcu.codes, counted, '2026-11-09', 'T', pcu.optionsByCode);
     expect(row.by_option).toEqual({
-      '538 - Control Union Argentina SA (Certifications)': { ui: 1, other: 0 },
-      '538 - Control Union Argentina SA (Inspections)': { ui: 1, other: 1 },
+      '538 - Control Union Argentina SA (Certifications)': { ui: 1, other: 0, imported: 0 },
+      '538 - Control Union Argentina SA (Inspections)': { ui: 1, other: 1, imported: 0 },
     });
     expect(optionShortLabel('538 - Control Union Argentina SA (Warrants)')).toBe('Warrants');
     expect(optionShortLabel('593 - Control Union Certification (Shanghai) - Inspections')).toBe('Inspections');
@@ -164,11 +165,29 @@ describe('deals por mes desde enero (0078)', () => {
     const now = new Date('2026-03-15T12:00:00Z');
     const m = entityMonths(rows, '538', now);
     expect(m.series.map((s) => s.ui)).toEqual([10, 20, 5]);
-    expect(m.total).toEqual({ ui: 35, other: 3, all: 38 });
+    expect(m.total).toEqual({ ui: 35, other: 3, imported: 0, all: 38 });
     expect(m.avg).toBe(15); // enero y febrero (marzo está en curso)
     expect(m.best.month).toBe('2026-02-01');
-    expect(m.byOption).toEqual({ A: { ui: 31, other: 3 }, B: { ui: 4, other: 0 } });
+    expect(m.byOption).toEqual({ A: { ui: 31, other: 3, imported: 0 }, B: { ui: 4, other: 0, imported: 0 } });
     expect(entityMonths(rows, '538', now, 'B').series.map((s) => s.ui)).toEqual([4, 0, 0]);
     expect(entityMonths(rows, '777', now).mapped).toBe(null);
+  });
+});
+
+describe('importados (0079)', () => {
+  it('suman al total de la semana y del año; promedio y mejor mes con el total', () => {
+    const rows = [
+      { entityCode: '555', monthStart: '2026-06-01', dealsUi: 0, dealsOther: 4, dealsImport: 931, byOption: { P: { ui: 0, other: 4, imported: 931 } } },
+      { entityCode: '555', monthStart: '2026-07-01', dealsUi: 0, dealsOther: 6, dealsImport: 0, byOption: { P: { ui: 0, other: 6, imported: 0 } } },
+      { entityCode: '555', monthStart: '2026-08-01', dealsUi: 1, dealsOther: 5, dealsImport: null, byOption: {} }, // corrida vieja
+    ];
+    const m = entityMonths(rows, '555', new Date('2026-08-15T12:00:00Z'));
+    expect(m.total).toEqual({ ui: 1, other: 15, imported: 931, all: 947 });
+    expect(m.series.slice(5).map((x) => x.total)).toEqual([935, 6, 6]);
+    expect(m.avgAll).toBe(470.5); // meses cerrados con datos: jun + jul = 941 / 2
+    expect(m.bestAll.month).toBe('2026-06-01');
+    expect(m.byOption.P).toEqual({ ui: 0, other: 10, imported: 931 });
+    const w = entityDeals([{ entityCode: '555', weekStart: '2026-11-16', dealsUi: 2, dealsOther: 1, dealsImport: 7, byOption: {} }], '555', new Date('2026-11-18T12:00:00Z'));
+    expect(w.current).toMatchObject({ ui: 2, other: 1, imported: 7, total: 10 });
   });
 });

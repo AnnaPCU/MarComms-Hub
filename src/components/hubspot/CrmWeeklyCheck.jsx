@@ -42,7 +42,8 @@ import EntityFormModal from './EntityFormModal';
 import TagsInput from './TagsInput';
 import UpcomingActivities from './UpcomingActivities';
 import DealsSyncBar from './DealsSyncBar';
-import { DealsPanel } from './DealsSpark';
+import NewInHubspot from './NewInHubspot';
+import LicensesPanel from './LicensesPanel';
 
 // Colores de las tablas de steps (paleta del módulo: sky / azul)
 const LIGHT = { primary: '#0284c7', dark: '#0f172a', label: '#64748b', text: '#334155' };
@@ -61,6 +62,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const {
     entities: allEntities, weeklyEntities, tracking, items, checks, steps, loading, error, missing,
     dealCounts, dealMonths = [], dealSync, dealsReady, refreshDeals,
+    hubspotUsers = [], objectCounts = [], crmSync = {}, crmReady = false, refreshCrm,
     saveCheck, createStep, updateStep, removeStep, updateStepOptimistic,
     createItem, updateItem, removeItem, excludeItem, createEntity, updateEntity, removeEntity,
   } = data;
@@ -220,11 +222,9 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
           {entity && (
             <div ref={detailRef} className="space-y-5 min-w-0 scroll-mt-24">
               {dealsReady && (
-                <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: c.primary }}>New deals in HubSpot</p>
-                  <DealsPanel key={entity.code} counts={dealCounts} months={dealMonths} code={entity.code} dark={dark} />
-                </section>
+                <NewInHubspot key={entity.code} dealCounts={dealCounts} dealMonths={dealMonths} objectCounts={objectCounts} crmReady={crmReady} code={entity.code} dark={dark} color={c.primary} />
               )}
+              {crmReady && <LicensesPanel users={hubspotUsers} code={entity.code} sync={crmSync} onRefresh={refreshCrm} color={c.primary} />}
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                   <div className="min-w-0">
