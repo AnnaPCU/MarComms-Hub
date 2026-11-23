@@ -10,6 +10,9 @@
 // Cada corrida recalcula las últimas 8 semanas: es una búsqueda por semana
 // (todas las entidades juntas), unas 8–10 llamadas a HubSpot en total.
 // Así una entidad nueva tiene su historia y se corrigen cambios recientes.
+// Desde nov 2026 (migration 0078) también cuenta cada mes desde enero del
+// año en curso (una búsqueda por mes, ~45 llamadas más) y lo guarda en
+// crm_weekly_deal_months, para el gráfico «Since January» de la ficha.
 //
 // La llama: pg_cron todos los días (migration 0072) y el botón «Actualizar»
 // del Weekly check. Tiene un freno de 10 minutos entre corridas (1 minuto
@@ -31,7 +34,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import {
   PCU_ENTITY_LABEL, SOURCE_IMPORT, SOURCE_PROPERTY, WEEKS_TO_LOAD,
-  cooldownFor, countWeek, lastWeeks, pcuEntityProperty, redactSecrets, tokenShape, weekRangeMs, weekRows,
+  cooldownFor, countWeek, lastWeeks, monthRangeMs, monthsSinceJanuary, pcuEntityProperty, redactSecrets, toMonthRows, tokenShape, weekRangeMs, weekRows,
 } from './logic.js';
 
 const HUBSPOT = 'https://api.hubapi.com';
@@ -69,9 +72,9 @@ async function hubspot(token: string, path: string, init: RequestInit = {}) {
   throw new Error('HubSpot did not respond after several attempts (rate limit or server error).');
 }
 
-// Todos los deals no importados de una semana (paginado de a 200)
-async function dealsOfWeek(token: string, pcuName: string, weekStart: string) {
-  const { start, end } = weekRangeMs(weekStart);
+// Todos los deals no importados de un rango [start, end) en ms UTC (una
+// semana o un mes; paginado de a 200)
+async function dealsInRange(token: string, pcuName: string, { start, end }: { start: number; end: number }) {
   const out: { pcu: string | null; source: string | null }[] = [];
   let after: string | undefined;
   do {
@@ -132,7 +135,7 @@ Deno.serve(async (req) => {
     const rows: ReturnType<typeof weekRows> = [];
     const unassigned: Record<string, number> = {};
     for (const week of weeks) {
-      const deals = await dealsOfWeek(token, pcu.name, week);
+      const deals = await dealsInRange(token, pcu.name, weekRangeMs(week));
       const counted = countWeek(deals, pcu.valueToCode, codes, pcu.valueToLabel);
       unassigned[week] = counted.unassigned;
       rows.push(...weekRows(entities || [], pcu.codes, counted, week, startedAt, pcu.optionsByCode));
@@ -141,9 +144,21 @@ Deno.serve(async (req) => {
     // 4) Guardar
     const { error: uErr } = await db.from('crm_weekly_deal_counts').upsert(rows, { onConflict: 'entity_code,week_start' });
     if (uErr) throw new Error(`Could not save the counts: ${uErr.message}`);
+
+    // 5) Meses desde enero (0078): una búsqueda por mes
+    const months = monthsSinceJanuary();
+    const monthRows: ReturnType<typeof toMonthRows> = [];
+    for (const month of months) {
+      const deals = await dealsInRange(token, pcu.name, monthRangeMs(month));
+      const counted = countWeek(deals, pcu.valueToCode, codes, pcu.valueToLabel);
+      monthRows.push(...toMonthRows(weekRows(entities || [], pcu.codes, counted, month, startedAt, pcu.optionsByCode)));
+    }
+    const { error: mErr } = await db.from('crm_weekly_deal_months').upsert(monthRows, { onConflict: 'entity_code,month_start' });
+    if (mErr) throw new Error(`Could not save the monthly counts: ${mErr.message}`);
+
     await db.from('crm_weekly_deal_sync').upsert({ id: 1, last_run_at: startedAt, last_ok_at: new Date().toISOString(), ok: true, error: null, unassigned, trigger });
 
-    return json({ ok: true, weeks: weeks.length, rows: rows.length });
+    return json({ ok: true, weeks: weeks.length, rows: rows.length, months: months.length, monthRows: monthRows.length });
   } catch (err) {
     let message = err instanceof Error ? err.message : String(err);
     if (err instanceof HubspotError) {

@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { addWeeks, codeFromLabel, optionShortLabel, cooldownFor, cooldownLeft, redactSecrets, tokenShape, countWeek, lastWeeks, pcuEntityProperty, weekRangeMs, weekRows, weekStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
 import { dealSeries, entityDeals, entityOptions, syncStatus, unassignedOf } from './crmWeeklyDeals';
+import { entityMonths, monthsSinceJanuary, monthStartAr } from './crmWeeklyDeals';
 
 describe('semana de lunes a domingo en hora de Argentina', () => {
   it('el domingo 22 h de Argentina (lunes 01 h UTC) sigue en la semana anterior', () => {
@@ -142,5 +143,32 @@ describe('deals por opción de PCU Entity en el Hub', () => {
     expect(entityDeals(counts, '381', NOW).current).toMatchObject({ ui: 3, other: 1, total: 4 });
     expect(entityDeals(counts, '381', NOW, B).current).toMatchObject({ ui: 2, other: 0, total: 2 });
     expect(entityDeals(counts, '381', NOW, A).previous).toMatchObject({ ui: 0, total: 0 });
+  });
+});
+
+describe('deals por mes desde enero (0078)', () => {
+  it('meses de Argentina desde enero hasta el actual', () => {
+    expect(monthsSinceJanuary(new Date('2026-11-23T12:00:00Z'))).toHaveLength(11);
+    expect(monthsSinceJanuary(new Date('2026-11-23T12:00:00Z'))[0]).toBe('2026-01-01');
+    // 1 de diciembre a las 01:00 UTC = 30 de noviembre en Argentina
+    expect(monthStartAr(new Date('2026-12-01T01:00:00Z'))).toBe('2026-11-01');
+    expect(monthsSinceJanuary(new Date('2027-01-05T12:00:00Z'))).toEqual(['2027-01-01']);
+  });
+  it('total del año, promedio sin el mes en curso y mejor mes; por opción', () => {
+    const rows = [
+      { entityCode: '538', monthStart: '2026-01-01', dealsUi: 10, dealsOther: 2, byOption: { A: { ui: 6, other: 2 }, B: { ui: 4, other: 0 } } },
+      { entityCode: '538', monthStart: '2026-02-01', dealsUi: 20, dealsOther: 0, byOption: { A: { ui: 20, other: 0 } } },
+      { entityCode: '538', monthStart: '2026-03-01', dealsUi: 5, dealsOther: 1, byOption: { A: { ui: 5, other: 1 } } },
+      { entityCode: '999', monthStart: '2026-01-01', dealsUi: 99, dealsOther: 0, byOption: {} },
+    ];
+    const now = new Date('2026-03-15T12:00:00Z');
+    const m = entityMonths(rows, '538', now);
+    expect(m.series.map((s) => s.ui)).toEqual([10, 20, 5]);
+    expect(m.total).toEqual({ ui: 35, other: 3, all: 38 });
+    expect(m.avg).toBe(15); // enero y febrero (marzo está en curso)
+    expect(m.best.month).toBe('2026-02-01');
+    expect(m.byOption).toEqual({ A: { ui: 31, other: 3 }, B: { ui: 4, other: 0 } });
+    expect(entityMonths(rows, '538', now, 'B').series.map((s) => s.ui)).toEqual([4, 0, 0]);
+    expect(entityMonths(rows, '777', now).mapped).toBe(null);
   });
 });

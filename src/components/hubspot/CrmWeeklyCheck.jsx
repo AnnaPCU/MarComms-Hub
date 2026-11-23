@@ -60,7 +60,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   const isGlobal = scope === 'global';
   const {
     entities: allEntities, weeklyEntities, tracking, items, checks, steps, loading, error, missing,
-    dealCounts, dealSync, dealsReady, refreshDeals,
+    dealCounts, dealMonths = [], dealSync, dealsReady, refreshDeals,
     saveCheck, createStep, updateStep, removeStep, updateStepOptimistic,
     createItem, updateItem, removeItem, excludeItem, createEntity, updateEntity, removeEntity,
   } = data;
@@ -222,7 +222,7 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
               {dealsReady && (
                 <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">
                   <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: c.primary }}>New deals in HubSpot</p>
-                  <DealsPanel key={entity.code} counts={dealCounts} code={entity.code} dark={dark} />
+                  <DealsPanel key={entity.code} counts={dealCounts} months={dealMonths} code={entity.code} dark={dark} />
                 </section>
               )}
               <section className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm">

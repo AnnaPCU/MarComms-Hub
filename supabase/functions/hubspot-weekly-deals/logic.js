@@ -48,6 +48,29 @@ export const lastWeeks = (count = WEEKS_TO_LOAD, now = new Date()) => {
   return Array.from({ length: count }, (_, i) => addWeeks(current, i - (count - 1)));
 };
 
+// ── Meses (nov 2026, migration 0078): deals por mes desde enero ──
+// Mes = del 1 a las 00:00 al último día a las 23:59, hora de Argentina.
+// Primer día (YYYY-MM-01) del mes de Argentina que contiene ese instante
+export const monthStartAr = (date = new Date()) => {
+  const local = new Date(new Date(date).getTime() - AR_OFFSET_HOURS * 3600000);
+  return `${local.getUTCFullYear()}-${pad(local.getUTCMonth() + 1)}-01`;
+};
+
+// Mes → rango en milisegundos UTC [start, end)
+export const monthRangeMs = (monthStart) => {
+  const [y, m] = monthStart.split('-').map(Number);
+  return { start: Date.UTC(y, m - 1, 1, AR_OFFSET_HOURS), end: Date.UTC(y, m, 1, AR_OFFSET_HOURS) };
+};
+
+// Los meses desde enero del año en curso hasta el actual (incluido)
+export const monthsSinceJanuary = (now = new Date()) => {
+  const [y, m] = monthStartAr(now).split('-').map(Number);
+  return Array.from({ length: m }, (_, i) => `${y}-${pad(i + 1)}-01`);
+};
+
+// Filas de weekRows → filas de crm_weekly_deal_months (month_start en vez de week_start)
+export const toMonthRows = (rows = []) => rows.map(({ week_start: monthStart, ...r }) => ({ ...r, month_start: monthStart }));
+
 // «538 - Control Union …» → '538'; «573U - Control Union Uruguay» → '573U';
 // «PS China» → null
 export const codeFromLabel = (label) => {

@@ -11,11 +11,14 @@
 //   entityDeals(counts, code, now, option) → { mapped, series, current, previous, options }
 //   (option = label de una opción de PCU Entity; '' = todas sumadas)
 //   syncStatus(sync, now)           → texto y estado de la última corrida
+//   monthSeries / entityMonths      → lo mismo por mes desde enero (0078,
+//                                     crm_weekly_deal_months): total del año,
+//                                     promedio por mes y mejor mes
 // ════════════════════════════════════════════════════════════════════
 
-import { lastWeeks, weekStartAr, cooldownLeft, cooldownFor, optionShortLabel } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
+import { lastWeeks, weekStartAr, cooldownLeft, cooldownFor, optionShortLabel, monthsSinceJanuary, monthStartAr } from '../../supabase/functions/hubspot-weekly-deals/logic.js';
 
-export { lastWeeks, weekStartAr, cooldownLeft, cooldownFor, optionShortLabel };
+export { lastWeeks, weekStartAr, cooldownLeft, cooldownFor, optionShortLabel, monthsSinceJanuary, monthStartAr };
 export const DEAL_WEEKS = 8;
 
 // Colores (validados con el skill dataviz: claro y oscuro). El gráfico de la
@@ -73,4 +76,39 @@ export const unassignedOf = (sync, now = new Date()) => {
   const [prev, cur] = lastWeeks(2, now);
   const u = sync?.unassigned || {};
   return { current: u[cur] || 0, previous: u[prev] || 0 };
+};
+
+// ── Por mes desde enero (0078) ──
+// rows: filas de crm_weekly_deal_months ({ entityCode, monthStart, dealsUi, dealsOther, byOption })
+export const monthSeries = (rows = [], code, months = monthsSinceJanuary(), option = '') => {
+  const byMonth = {};
+  rows.forEach((r) => { if (r.entityCode === code) byMonth[r.monthStart] = r; });
+  return months.map((month) => {
+    const r = byMonth[month];
+    if (!r) return { month, ui: 0, other: 0, total: 0, missing: true, byOption: {} };
+    const unmapped = r.dealsUi === null && r.dealsOther === null;
+    const o = option ? (r.byOption || {})[option] || { ui: 0, other: 0 } : null;
+    const ui = o ? o.ui : r.dealsUi ?? 0;
+    const other = o ? o.other : r.dealsOther ?? 0;
+    return { month, ui, other, total: ui + other, missing: false, unmapped, byOption: r.byOption || {} };
+  });
+};
+
+// Resumen del año de una entidad: total CRM UI / otros, promedio de CRM UI
+// por mes (solo meses completos, sin el mes en curso) y el mejor mes.
+// mapped como entityDeals; byOption = totales del año por opción.
+export const entityMonths = (rows = [], code, now = new Date(), option = '') => {
+  const series = monthSeries(rows, code, monthsSinceJanuary(now), option);
+  const withData = series.filter((s) => !s.missing);
+  const mapped = withData.length ? !withData[withData.length - 1].unmapped : null;
+  const total = withData.reduce((acc, s) => ({ ui: acc.ui + s.ui, other: acc.other + s.other }), { ui: 0, other: 0 });
+  const closed = withData.filter((s) => s.month !== monthStartAr(now));
+  const avg = closed.length ? Math.round((closed.reduce((n, s) => n + s.ui, 0) / closed.length) * 10) / 10 : null;
+  const best = withData.reduce((b, s) => (!b || s.ui > b.ui ? s : b), null);
+  const byOption = {};
+  withData.forEach((s) => Object.entries(s.byOption || {}).forEach(([k, v]) => {
+    const t = (byOption[k] = byOption[k] || { ui: 0, other: 0 });
+    t.ui += v.ui || 0; t.other += v.other || 0;
+  }));
+  return { mapped, series, total: { ...total, all: total.ui + total.other }, avg, best: best && best.ui > 0 ? best : null, byOption };
 };

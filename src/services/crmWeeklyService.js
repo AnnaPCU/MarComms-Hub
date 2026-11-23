@@ -25,6 +25,7 @@ import { normBrand, normRegion } from '@/constants/crmWeekly';
 
 const ENTITIES = 'crm_weekly_entities';
 const DEAL_COUNTS = 'crm_weekly_deal_counts';
+const DEAL_MONTHS = 'crm_weekly_deal_months'; // 0078
 const DEAL_SYNC = 'crm_weekly_deal_sync';
 const ITEMS = 'crm_check_items';
 const CHECKS = 'crm_weekly_checks';
@@ -237,6 +238,22 @@ export const listDealCounts = async (sinceWeek) => {
   if (error) throw error;
   return (data || []).map(dealCountFromRow);
 };
+// Deals nuevos por mes desde enero (0078): misma forma, con monthStart
+export const dealMonthFromRow = (row) => ({
+  entityCode: row.entity_code,
+  monthStart: row.month_start,
+  dealsUi:    row.deals_ui,
+  dealsOther: row.deals_other,
+  byOption:   row.by_option || {},
+  computedAt: row.computed_at,
+});
+export const listDealMonths = async (sinceMonth) => {
+  let q = supabase.from(DEAL_MONTHS).select('*');
+  if (sinceMonth) q = q.gte('month_start', sinceMonth);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []).map(dealMonthFromRow);
+};
 export const getDealSync = async () => {
   const { data, error } = await supabase.from(DEAL_SYNC).select('*').eq('id', 1).maybeSingle();
   if (error) throw error;
@@ -261,6 +278,7 @@ export const subscribeCrmWeekly = (onChange) => {
     .on('postgres_changes', { event: '*', schema: 'public', table: ENTITIES }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_COUNTS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_SYNC }, (p) => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: DEAL_MONTHS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: ITEMS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: CHECKS }, (p) => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: STEPS }, (p) => onChange(p))

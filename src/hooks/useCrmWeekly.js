@@ -6,7 +6,7 @@
 //   entities (de crm_weekly_entities; CRM_ENTITIES si falta la migración
 //   0070), weeklyEntities (las del Weekly check = región Américas), tracking (true si la 0070 está: se pueden sumar entidades,
 //   importancia, tags y fecha / estado de los steps),
-//   dealCounts / dealSync / dealsReady (deals nuevos por semana de HubSpot,
+//   dealCounts / dealMonths (por mes desde enero, 0078) / dealSync / dealsReady (deals nuevos por semana de HubSpot,
 //   migration 0071; dealsReady = false si falta la tabla) +
 //   refreshDeals() (botón «Actualizar»: llama a la Edge Function)
 //   items (ítems del checklist; CRM_CHECK_ITEMS si falta la migración
@@ -27,10 +27,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CRM_CHECK_ITEMS, CRM_ENTITIES, WEEKLY_REGION } from '@/constants/crmWeekly';
-import { DEAL_WEEKS, lastWeeks } from '@/utils/crmWeeklyDeals';
+import { DEAL_WEEKS, lastWeeks, monthsSinceJanuary } from '@/utils/crmWeeklyDeals';
 import {
   listEntities, createEntity, updateEntity, deleteEntity,
-  listDealCounts, getDealSync, refreshDealCounts,
+  listDealCounts, listDealMonths, getDealSync, refreshDealCounts,
   listItems, createItem, updateItem, deleteItem, excludeItemFor,
   listChecks, saveCheck, listSteps, createStep, updateStep, deleteStep, subscribeCrmWeekly,
 } from '@/services/crmWeeklyService';
@@ -43,6 +43,7 @@ export const useCrmWeekly = (options = {}) => {
   const [entities, setEntities] = useState(FALLBACK_ENTITIES);
   const [tracking, setTracking] = useState(false);
   const [dealCounts, setDealCounts] = useState([]);
+  const [dealMonths, setDealMonths] = useState([]);
   const [dealSync, setDealSync] = useState(null);
   const [dealsReady, setDealsReady] = useState(false);
   const [items, setItems] = useState(CRM_CHECK_ITEMS);
@@ -68,6 +69,9 @@ export const useCrmWeekly = (options = {}) => {
         const [dc, ds] = await Promise.all([listDealCounts(lastWeeks(DEAL_WEEKS)[0]), getDealSync()]);
         setDealCounts(dc); setDealSync(ds); setDealsReady(true);
       } catch (e) { if (!isMissingTable(e)) console.error('[useCrmWeekly] deals error:', e); setDealsReady(false); }
+      // Deals por mes desde enero (0078): si falta la tabla, no hay «Since January»
+      try { setDealMonths(await listDealMonths(monthsSinceJanuary()[0])); }
+      catch (e) { if (!isMissingTable(e)) console.error('[useCrmWeekly] monthly deals error:', e); setDealMonths([]); }
     } catch (e) {
       if (isMissingTable(e)) setMissing(true);
       else { console.error('[useCrmWeekly] fetch error:', e); setError(e); }
@@ -137,5 +141,5 @@ export const useCrmWeekly = (options = {}) => {
   // deadlines en rojo a Valentino)
   const weeklyEntities = useMemo(() => entities.filter((e) => (e.region || WEEKLY_REGION) === WEEKLY_REGION), [entities]);
 
-  return { entities, weeklyEntities, tracking, dealCounts, dealSync, dealsReady, items, checks, steps, loading, error, missing, refetch, ...api };
+  return { entities, weeklyEntities, tracking, dealCounts, dealMonths, dealSync, dealsReady, items, checks, steps, loading, error, missing, refetch, ...api };
 };
