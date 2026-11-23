@@ -102,6 +102,7 @@ export const CRM_PRIORITIES = [
 // segundo desempata al primero; 'manual' = sin segundo criterio)
 export const CRM_SORTS = [
   { id: 'manual',   label: 'Original order' },
+  { id: 'code',     label: 'Company code (0–9)' },
   { id: 'redFirst', label: 'Status: red first' },
   { id: 'greenFirst', label: 'Status: green first' },
   { id: 'priority', label: 'Priority' },

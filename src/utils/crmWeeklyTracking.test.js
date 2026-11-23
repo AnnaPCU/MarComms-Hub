@@ -203,3 +203,10 @@ describe('alcance de los ítems del checklist (0075)', () => {
     expect(red).toEqual([]); // el ítem «Solo 538» no es de México
   });
 });
+
+describe('orden por código de empresa', () => {
+  it('de menor a mayor, numérico (573U después de 573)', () => {
+    const ents = [{ code: '818' }, { code: '383' }, { code: '573U' }, { code: '573' }, { code: '1000' }, { code: '506' }];
+    expect(sortEntities(ents, ['code']).map((e) => e.code)).toEqual(['383', '506', '573', '573U', '818', '1000']);
+  });
+});

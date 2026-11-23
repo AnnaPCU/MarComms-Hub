@@ -67,8 +67,9 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   // Weekly check: solo Américas; Global check: todas
   const entities = isGlobal ? allEntities : weeklyEntities;
   const [filters, setFilters] = useState(NO_FILTERS);
-  const [sortFirst, setSortFirst] = useStoredPref('marcomms_hub_crm_weekly_sort', 'manual');
-  const [sortSecond, setSortSecond] = useStoredPref('marcomms_hub_crm_weekly_sort2', 'manual');
+  // Orden guardado por pestaña; el Global check arranca por código de empresa
+  const [sortFirst, setSortFirst] = useStoredPref(`marcomms_hub_crm_${scope}_sort`, isGlobal ? 'code' : 'manual');
+  const [sortSecond, setSortSecond] = useStoredPref(`marcomms_hub_crm_${scope}_sort2`, 'manual');
   const sort = [sortFirst, sortSecond];
   const setSort = ([a, b]) => { setSortFirst(a); setSortSecond(b); };
   const [subview, setSubview] = useStoredPref('marcomms_hub_crm_weekly_view', 'entities');
@@ -95,7 +96,8 @@ export default function CrmWeeklyCheck({ scope = 'weekly', data, currentUser, da
   }, {}), [entities, filters, summaries]);
   const visible = useMemo(() => sortEntities(filterEntities(entities, filters, summaries), sort, summaries), [entities, filters, summaries, sortFirst, sortSecond]); // eslint-disable-line react-hooks/exhaustive-deps
   // Las entidades del mismo país van juntas en una tarjeta (CountryCard)
-  const cards = useMemo(() => countryCards(visible), [visible]);
+  // (en el Global check no: una tarjeta por empresa, sin agrupar por país)
+  const cards = useMemo(() => (isGlobal ? visible.map((e) => ({ key: `entity:${e.code}`, country: '', entities: [e] })) : countryCards(visible)), [visible, isGlobal]);
   const entity = visible.find((e) => e.code === selected) || visible[0];
   const entitySteps = steps.filter((s) => s.entityCode === entity?.code);
   const summary = entity ? summaries[entity.code] : null;

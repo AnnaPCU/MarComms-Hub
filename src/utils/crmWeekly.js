@@ -190,6 +190,8 @@ export const sortEntities = (entities = [], sort = 'manual', summaries = {}) => 
     greenFirst: (a, b) => light(b) - light(a) || exactPct(summaries[b.code]) - exactPct(summaries[a.code]),
     priority: (a, b) => priorityRank(a) - priorityRank(b),
     country: (a, b) => norm(a.country).localeCompare(norm(b.country)),
+    // Código de la empresa en HubSpot, de menor a mayor (381, 383, 506… 573U)
+    code: (a, b) => String(a.code).localeCompare(String(b.code), 'en', { numeric: true }),
   };
   const keys = (Array.isArray(sort) ? sort : [sort]).filter((k) => by[k]);
   return [...entities].sort((a, b) => {
