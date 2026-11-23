@@ -8,12 +8,16 @@
 // Contactos y empresas no tienen «PCU Entity»: se asignan a una oficina
 // por la persona. Owner del registro (hubspot_owner_id) y, si no tiene,
 // quien lo creó (hs_created_by_user_id). Cada usuario de HubSpot va a una
-// oficina así:
-//   1. Si figura en la lista de usuarios de Facturación HubSpot de una
-//      entidad (por nombre; «°» = Sales Pro, «-» = Core), esa entidad.
-//   2. Si no, la entidad (por PCU Entity) de la mayoría de sus deals desde
-//      enero. Así entran también las oficinas de EMEA y APAC, que no están
-//      en Facturación HubSpot (sin tipo de licencia).
+// oficina SEGÚN EL CRM (nov 2026, a pedido: global, no el Excel):
+//   1. La entidad (por PCU Entity) de la mayoría de sus deals de los
+//      últimos 180 días. Vale para Americas, EMEA y APAC.
+//   2. Si no tiene deals, la entidad donde figura en Facturación HubSpot
+//      (Excel, solo Americas), si figura.
+// El tipo de licencia (Sales Pro / Core) no lo da el API de owners: sale
+// de Facturación HubSpot cuando el nombre coincide (sin acentos y con
+// diferencias chicas de escritura: «Gracia» = «Garcia»); si no, se ve sin
+// tipo. Las cuentas compartidas y los nombres que no están en HubSpot no
+// se muestran.
 //
 // Licencia activa = el usuario creó o editó un deal, contacto o empresa
 // en los últimos 30 días (último que lo modificó, hs_updated_by_user_id).
@@ -37,23 +41,42 @@ export const isSharedUser = (name) => /compartid|shared/i.test(String(name || ''
 
 const ownerName = (o) => `${o.firstName || ''} ${o.lastName || ''}`.trim() || o.email || '';
 
+// Distancia de edición (para «Seijin» / «Sejin», «Garcia» / «Gracia»)
+const editDistance = (a, b) => {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  return d[a.length][b.length];
+};
+// Dos palabras «iguales»: exactas o, si son largas, con 1–2 letras distintas
+const sameWord = (a, b) => a === b || (Math.min(a.length, b.length) >= 5 && editDistance(a, b) <= (Math.min(a.length, b.length) >= 6 ? 2 : 1));
+
 // Owner de HubSpot de un nombre de Facturación HubSpot: mismo primer nombre
 // y al menos otra palabra en común («Martin Tezanos Pinto» = «Martín
-// Tezanos»). Si hay más de uno, el de más palabras en común; si empatan,
-// el activo; si sigue habiendo más de uno, ninguno (ambiguo).
-export const matchOwner = (name, owners = []) => {
+// Tezanos»), exacta o parecida («Echevarria» = «Echeverria»). Si hay más de
+// uno, el de más palabras exactas; si empatan, el activo; si siguen
+// empatando, el que tiene sus deals en esa entidad (hint: { code,
+// ownerCodes }); si no, ninguno (ambiguo).
+export const matchOwner = (name, owners = [], hint = {}) => {
   const t = nameTokens(name);
   if (t.length < 2) return null;
   const scored = owners.map((o) => {
     const ot = nameTokens(ownerName(o));
     if (!ot.length || ot[0] !== t[0]) return null;
-    const common = t.slice(1).filter((x) => ot.slice(1).includes(x)).length;
-    return common ? { o, common } : null;
+    const rest = ot.slice(1);
+    const exact = t.slice(1).filter((x) => rest.includes(x)).length;
+    const near = t.slice(1).filter((x) => rest.some((y) => sameWord(x, y))).length;
+    return near ? { o, score: exact * 10 + near } : null;
   }).filter(Boolean);
   if (!scored.length) return null;
-  const best = Math.max(...scored.map((s) => s.common));
-  let top = scored.filter((s) => s.common === best);
+  const best = Math.max(...scored.map((s) => s.score));
+  let top = scored.filter((s) => s.score === best);
   if (top.length > 1) top = top.filter((s) => !s.o.archived);
+  if (top.length > 1 && hint.code && hint.ownerCodes) top = top.filter((s) => hint.ownerCodes[String(s.o.ownerId)] === hint.code);
   return top.length === 1 ? top[0].o : null;
 };
 
@@ -84,63 +107,50 @@ export const ownerCodesFromDeals = (deals = [], valueToCode = {}, entityCodes = 
 
 const slug = (s) => nameTokens(s).join('-') || 'user';
 
-// Filas de crm_hubspot_users: una por persona y entidad.
+// Filas de crm_hubspot_users: una por usuario activo de HubSpot que tenga
+// entidad (ver arriba).
 //   owners: [{ ownerId, userId, firstName, lastName, email, archived }]
-//   billing: billingUsers(...)
+//   billing: billingUsers(...) (Facturación HubSpot, solo para el tipo de licencia)
 //   ownerCodes: ownerCodesFromDeals(...)
 //   entityCodes: códigos del Hub (solo se guardan las de esas entidades)
-// source = 'billing' (figura en Facturación HubSpot, con licencia) o
-// 'deals' (sin licencia conocida: trabaja los deals de esa oficina).
+// source = 'crm' (entidad por sus deals) o 'billing' (sin deals: entidad
+// de Facturación HubSpot).
 /** @param {{ owners?: any[], billing?: any[], ownerCodes?: Record<string, string>, entityCodes?: string[], computedAt?: string }} args */
 export const buildUserRows = ({ owners = [], billing = [], ownerCodes = {}, entityCodes = [], computedAt }) => {
   const known = new Set(entityCodes.map(normCode));
+  const licenseOf = {};
+  const billingCodeOf = {};
+  billing.forEach(({ code, users }) => users.forEach((u) => {
+    if (isSharedUser(u.name)) return;
+    const o = matchOwner(u.name, owners, { code, ownerCodes });
+    if (!o) return;
+    const id = String(o.ownerId);
+    if (!(id in licenseOf) || u.license) licenseOf[id] = u.license || null;
+    if (!billingCodeOf[id]) billingCodeOf[id] = code;
+  }));
   const rows = [];
-  const inBilling = new Set();
-  billing.forEach(({ code, users }) => {
-    if (!known.has(normCode(code))) return;
-    users.forEach((u) => {
-      const shared = isSharedUser(u.name);
-      const o = shared ? null : matchOwner(u.name, owners);
-      if (o) inBilling.add(String(o.ownerId));
-      rows.push({
-        id: `${code}:${o ? o.ownerId : `billing-${slug(u.name)}`}`,
-        entity_code: code,
-        source: 'billing',
-        name: u.name,
-        hubspot_name: o ? ownerName(o) : null,
-        email: o?.email || null,
-        owner_id: o ? String(o.ownerId) : null,
-        user_id: o?.userId ? String(o.userId) : null,
-        license: u.license || null,
-        matched: !!o,
-        shared,
-        archived: !!o?.archived,
-        computed_at: computedAt,
-      });
-    });
-  });
   owners.forEach((o) => {
-    const code = ownerCodes[String(o.ownerId)];
-    if (!code || inBilling.has(String(o.ownerId)) || o.archived) return;
+    const id = String(o.ownerId);
+    if (o.archived) return;
+    const code = ownerCodes[id] || billingCodeOf[id];
+    if (!code || !known.has(normCode(code))) return;
     rows.push({
-      id: `${code}:${o.ownerId}`,
+      id: `${code}:${id}`,
       entity_code: code,
-      source: 'deals',
+      source: ownerCodes[id] ? 'crm' : 'billing',
       name: ownerName(o),
       hubspot_name: ownerName(o),
       email: o.email || null,
-      owner_id: String(o.ownerId),
+      owner_id: id,
       user_id: o.userId ? String(o.userId) : null,
-      license: null,
+      license: licenseOf[id] ?? null,
       matched: true,
       shared: false,
       archived: false,
       computed_at: computedAt,
     });
   });
-  // Sin repetir id (la misma persona dos veces en la lista de una entidad)
-  const seen = new Set();
-  return rows.filter((r) => (seen.has(r.id) ? false : seen.add(r.id)));
+  return rows;
 };
 
 // Suma la última actividad (ISO, la más reciente de deals / contactos /

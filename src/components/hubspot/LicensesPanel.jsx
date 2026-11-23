@@ -2,16 +2,13 @@
 // LicensesPanel — Licencias de HubSpot de una entidad y si se usan
 // ════════════════════════════════════════════════════════════════════
 // Nov 2026 (migration 0079): en la ficha del Weekly / Global check.
-// Arriba, el resumen (Sales Pro / Core de la lista de Facturación
-// HubSpot, cuántas activas). Debajo, una fila por usuario con su licencia,
-// el estado y la última actividad. Activa = creó o editó un deal,
-// contacto o empresa en los últimos 30 días.
-// Estados: Active · Inactive · Deactivated in HubSpot · Not found in
-// HubSpot (el nombre de la lista no coincide con ningún usuario) · Shared
-// user (cuenta compartida, no se puede seguir).
-// Abajo, «Other HubSpot users of this entity»: los que trabajan sus deals
-// pero no están en Facturación HubSpot (en EMEA / APAC son todos: la
-// planilla no tiene esas entidades, así que no hay tipo de licencia).
+// Los usuarios salen del CRM (global, nov 2026): cada usuario activo de
+// HubSpot va a la entidad de la mayoría de sus deals. Arriba, el resumen
+// (usuarios, activos / inactivos y tipo de licencia cuando se conoce: el
+// API de owners no lo da, sale de Facturación HubSpot, solo Americas).
+// Debajo, una fila por usuario con su licencia, el estado y la última
+// actividad. Activo = creó o editó un deal, contacto o empresa en los
+// últimos 30 días.
 // Botón «Update»: usuarios y después contactos / empresas (refreshCrm).
 //
 // Props: users (hubspotUsers), code, sync (crmSync), onRefresh, color
@@ -52,8 +49,8 @@ function UserRow({ u }) {
         </p>
         <p className="text-[10px] font-bold text-slate-400 truncate">{lastActivityText(u)}</p>
       </div>
-      {u.source === 'billing' && (
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">{LICENSE_LABELS[u.license] || 'No type'}</span>
+      {u.license && (
+        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">{LICENSE_LABELS[u.license] || u.license}</span>
       )}
       <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest border rounded-md px-1.5 py-0.5 ${st.cls}`}>{st.label}</span>
     </li>
@@ -63,8 +60,7 @@ function UserRow({ u }) {
 export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, color }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [showOthers, setShowOthers] = useState(false);
-  const { licensed, others, summary } = entityLicenses(users, code);
+  const { users: list, summary } = entityLicenses(users, code);
   const usersSync = sync.users || {};
   const failed = [sync.users, sync.objects].find((x) => x && x.ok === false);
 
@@ -97,34 +93,25 @@ export default function LicensesPanel({ users = [], code, sync = {}, onRefresh, 
       )}
       {msg && <p className="text-[11px] font-bold text-slate-500">{msg}</p>}
 
-      {licensed.length > 0 ? (
+      {list.length > 0 ? (
         <>
           <div className="flex items-end gap-6 flex-wrap">
             <div>
               <p className="font-mono text-4xl font-black text-slate-900 leading-none">{summary.total}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">Licenses (Facturación HubSpot)</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">HubSpot users</p>
             </div>
-            <p className="text-[11px] font-bold text-slate-500">{summary.salesPro} Sales Pro · {summary.core} Core{summary.noType ? ` · ${summary.noType} without type` : ''}</p>
             <p className="text-[11px] font-bold text-slate-500">
               <span className="text-emerald-700">{summary.active} active</span> · <span className="text-amber-800">{summary.inactive} inactive</span>
-              {summary.notFound > 0 && <> · {summary.notFound} not found</>}
-              {summary.shared > 0 && <> · {summary.shared} shared</>}
             </p>
+            {(summary.salesPro > 0 || summary.core > 0) && (
+              <p className="text-[11px] font-bold text-slate-500">{summary.salesPro} Sales Pro · {summary.core} Core{summary.noType ? ` · ${summary.noType} without known type` : ''}</p>
+            )}
           </div>
-          <ul>{licensed.map((u) => <UserRow key={u.id} u={u} />)}</ul>
+          <p className="text-[10px] font-medium text-slate-400">Users come from the HubSpot CRM: each active user counts for the entity of most of their deals (last 180 days). The license type comes from Facturación HubSpot (Americas only) when the name matches.</p>
+          <ul>{list.map((u) => <UserRow key={u.id} u={u} />)}</ul>
         </>
       ) : (
-        <p className="text-[11px] font-bold text-slate-400">This entity has no users in Facturación HubSpot, so its license types are unknown.{others.length ? ' Below, the HubSpot users that work its deals.' : ''}</p>
-      )}
-
-      {others.length > 0 && (
-        <div className="pt-2 border-t border-slate-100">
-          <button onClick={() => setShowOthers(!showOthers)} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-sky-700" aria-expanded={showOthers || !licensed.length}>
-            Other HubSpot users of this entity ({others.length}, {summary.othersActive} active) {licensed.length ? (showOthers ? '▾' : '▸') : ''}
-          </button>
-          <p className="text-[10px] font-medium text-slate-400">Owners of deals of this entity who are not in its Facturación HubSpot list (license type unknown).</p>
-          {(showOthers || !licensed.length) && <ul className="mt-1">{others.map((u) => <UserRow key={u.id} u={u} />)}</ul>}
-        </div>
+        <p className="text-[11px] font-bold text-slate-400">No HubSpot user works the deals of this entity (last 180 days).</p>
       )}
     </section>
   );

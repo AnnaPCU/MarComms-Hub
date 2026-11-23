@@ -40,31 +40,26 @@ export const LICENSE_LABELS = { salesPro: 'Sales Pro', core: 'Core' };
 // Días desde la última actividad (null si no hay)
 export const daysSince = (iso, now = new Date()) => (iso ? Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86400000)) : null);
 
-// Usuarios de una entidad: con licencia (Facturación HubSpot) y los demás
-// (por sus deals), cada grupo ordenado por activos primero y última
-// actividad. summary cuenta solo los de Facturación HubSpot.
+// Usuarios de HubSpot de una entidad (del CRM: por sus deals, nov 2026),
+// activos primero y por última actividad. summary: total, activos,
+// inactivos y tipo de licencia cuando se conoce (Facturación HubSpot).
 export const entityLicenses = (users = [], code) => {
   const mine = users.filter((u) => u.entityCode === code);
   const order = { active: 0, inactive: 1, archived: 2, notFound: 3, shared: 4 };
   const sort = (a, b) => order[userStatus(a)] - order[userStatus(b)]
     || String(b.lastActivityAt || '').localeCompare(String(a.lastActivityAt || ''))
     || a.name.localeCompare(b.name);
-  const licensed = mine.filter((u) => u.source === 'billing').sort(sort);
-  const others = mine.filter((u) => u.source !== 'billing').sort(sort);
-  const count = (list, fn) => list.filter(fn).length;
+  const list = [...mine].sort(sort);
+  const count = (fn) => list.filter(fn).length;
   return {
-    licensed,
-    others,
+    users: list,
     summary: {
-      total: licensed.length,
-      salesPro: count(licensed, (u) => u.license === 'salesPro'),
-      core: count(licensed, (u) => u.license === 'core'),
-      noType: count(licensed, (u) => !u.license),
-      active: count(licensed, (u) => userStatus(u) === 'active'),
-      inactive: count(licensed, (u) => userStatus(u) === 'inactive' || userStatus(u) === 'archived'),
-      notFound: count(licensed, (u) => userStatus(u) === 'notFound'),
-      shared: count(licensed, (u) => userStatus(u) === 'shared'),
-      othersActive: count(others, (u) => userStatus(u) === 'active'),
+      total: list.length,
+      salesPro: count((u) => u.license === 'salesPro'),
+      core: count((u) => u.license === 'core'),
+      noType: count((u) => !u.license),
+      active: count((u) => userStatus(u) === 'active'),
+      inactive: count((u) => userStatus(u) === 'inactive' || userStatus(u) === 'archived'),
     },
   };
 };

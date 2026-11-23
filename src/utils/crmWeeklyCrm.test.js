@@ -12,6 +12,9 @@ const owners = [
   { ownerId: '3', userId: '33', firstName: 'Ana', lastName: 'Vegas', email: 'a@x.com', archived: true },
   { ownerId: '4', userId: '44', firstName: 'Piotr', lastName: 'Nowak', email: 'p@x.com', archived: false },
   { ownerId: '5', userId: '55', firstName: 'Ana', lastName: 'Lopez', email: 'al@x.com', archived: false },
+  { ownerId: '6', userId: '66', firstName: 'Kevin', lastName: 'Gracia', email: 'k@x.com', archived: false },
+  { ownerId: '7', userId: '77', firstName: 'Rodrigo', lastName: 'Duret', email: 'r1@x.com', archived: false },
+  { ownerId: '8', userId: '88', firstName: 'Rodrigo', lastName: 'Duret', email: 'r2@x.com', archived: false },
 ];
 
 describe('usuarios de HubSpot por oficina', () => {
@@ -27,6 +30,12 @@ describe('usuarios de HubSpot por oficina', () => {
     expect(matchOwner('Ana', owners)).toBe(null);           // una sola palabra
     expect(matchOwner('Lucia Vegas', owners)).toBe(null);   // otro nombre
   });
+  it('tolera diferencias chicas de escritura y desempata por los deals', () => {
+    expect(matchOwner('Kevin Garcia', owners).ownerId).toBe('6');
+    expect(matchOwner('Ana Lope', owners)).toBe(null);       // palabra de 4 letras: tiene que ser exacta
+    expect(matchOwner('Rodrigo Duret', owners)).toBe(null);  // dos iguales
+    expect(matchOwner('Rodrigo Duret', owners, { code: '598', ownerCodes: { 8: '598' } }).ownerId).toBe('8');
+  });
   it('oficina de cada owner por la mayoría de sus deals (solo entidades del Hub)', () => {
     const deals = [
       { owner: '4', pcu: 'pl' }, { owner: '4', pcu: 'pl' }, { owner: '4', pcu: 'ar' },
@@ -34,18 +43,17 @@ describe('usuarios de HubSpot por oficina', () => {
     ];
     expect(ownerCodesFromDeals(deals, { pl: '555', ar: '538', xx: '999' }, ['555', '538'])).toEqual({ 4: '555' });
   });
-  it('arma las filas: Facturación HubSpot primero, después los de deals', () => {
+  it('arma las filas desde el CRM (entidad por deals); Facturación HubSpot solo da el tipo de licencia', () => {
     const billing = billingUsers([
-      { legal_entity: '598 - Control Union de Mexico S.A.', users: [{ name: 'Saul A. Espinoza', license: 'core' }, { name: 'Usuario Compartido', license: 'core' }, { name: 'Nadie Encontrado', license: 'salesPro' }] },
+      { legal_entity: '598 - Control Union de Mexico S.A.', users: [{ name: 'Saul A. Espinoza', license: 'core' }, { name: 'Usuario Compartido', license: 'core' }, { name: 'Nadie Encontrado', license: 'salesPro' }, { name: 'Kevin Garcia', license: 'salesPro' }] },
       { legal_entity: 'Sin código', users: [{ name: 'X Y', license: 'core' }] },
     ]);
     const rows = buildUserRows({ owners, billing, ownerCodes: { 1: '555', 4: '555', 3: '555' }, entityCodes: ['598', '555'], computedAt: 'T' });
-    expect(rows.map((r) => [r.id, r.source, r.matched, r.shared, r.license])).toEqual([
-      ['598:1', 'billing', true, false, 'core'],
-      ['598:billing-usuario-compartido', 'billing', false, true, 'core'],
-      ['598:billing-nadie-encontrado', 'billing', false, false, 'salesPro'],
-      ['555:4', 'deals', true, false, null], // el 1 ya está por Facturación; el 3 está desactivado
-    ]);
+    expect(rows.map((r) => [r.id, r.source, r.license])).toEqual([
+      ['555:1', 'crm', 'core'],       // el CRM manda: sus deals son de la 555; la licencia, del Excel
+      ['555:4', 'crm', null],         // sin licencia conocida
+      ['598:6', 'billing', 'salesPro'], // sin deals: entidad del Excel («Gracia» = «Garcia»)
+    ]);                               // el 3 está desactivado; compartidos y no encontrados no van
   });
   it('actividad: la más reciente de los tres objetos, activa si es de los últimos 30 días', () => {
     const last = mergeLatest({ 11: '2026-11-01T10:00:00Z' }, { 11: '2026-11-20T10:00:00Z', 44: '2026-09-01T00:00:00Z' });
@@ -97,9 +105,8 @@ describe('licencias de una entidad', () => {
       { entityCode: '555', source: 'deals', name: 'E', matched: true, active: true },
     ];
     const l = entityLicenses(users, '598');
-    expect(l.licensed.map((u) => u.name)).toEqual(['A', 'B', 'C', 'Usuario Compartido']);
-    expect(l.licensed.map(userStatus)).toEqual(['active', 'inactive', 'notFound', 'shared']);
-    expect(l.others.map((u) => u.name)).toEqual(['D']);
-    expect(l.summary).toMatchObject({ total: 4, salesPro: 1, core: 3, active: 1, inactive: 1, notFound: 1, shared: 1, othersActive: 1 });
+    expect(l.users.map((u) => u.name)).toEqual(['D', 'A', 'B', 'C', 'Usuario Compartido']);
+    expect(l.users.map(userStatus)).toEqual(['active', 'active', 'inactive', 'notFound', 'shared']);
+    expect(l.summary).toMatchObject({ total: 5, salesPro: 1, core: 3, noType: 1, active: 2, inactive: 1 });
   });
 });
