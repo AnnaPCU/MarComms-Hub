@@ -12,6 +12,9 @@
 //   weeks            — semanas del mes que se está mirando
 //   defaultWeekStart — semana preseleccionada
 //   onSave(data), onDelete() | null, onClose()
+//
+// Si el posteo es un pedido del cliente (link de la cuenta, migration
+// 0055), arriba se ve lo que cargó (ClientRequestInfo, solo lectura).
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useState } from 'react';
@@ -23,6 +26,8 @@ import { POST_STATUSES, DEFAULT_POST_STATUS, SCHEDULED_STATUS } from '@/constant
 import { WORLD_DAY_THEMES } from '@/constants/worldDays';
 import { scheduleMissing } from '@/utils/socialPosts';
 import ScheduleFields from './ScheduleFields';
+import ClientRequestInfo from './ClientRequestInfo';
+import { isClientRequest } from '@/utils/socialClient';
 
 const inputCls = 'w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-pink-300';
 const labelCls = 'text-[10px] font-black text-slate-400 uppercase tracking-widest';
@@ -78,7 +83,7 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
   return (
     <ModalPortal>
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[85] flex items-center justify-center p-4" onClick={onClose}>
-        <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
           <div className="px-5 py-4 border-b border-slate-100 bg-pink-50 flex items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-pink-600">{account?.group} · {account?.name}</p>
@@ -87,7 +92,8 @@ export default function PostEditor({ post, account, weeks, defaultWeekStart, onS
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center shrink-0" title="Cerrar"><X className="w-4 h-4 text-slate-600" /></button>
           </div>
 
-          <div className="p-5 space-y-4">
+          <div className="p-5 space-y-4 overflow-y-auto">
+            {isClientRequest(post) && <ClientRequestInfo post={post} />}
             <div className="space-y-1">
               <label className={labelCls}>Título / tema del posteo</label>
               <input

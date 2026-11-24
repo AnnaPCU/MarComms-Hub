@@ -37,6 +37,10 @@
 //                                   También los próximos steps sin completar con la fecha
 //                                   en rojo (redSteps, nov 2026)
 //
+//   Social Media (nov 2026):
+//  18. social_request             — un cliente pidió un posteo desde el link de su cuenta
+//                                   (últimos días y todavía «En proceso»), a SOCIAL_MEDIA_OWNER
+//
 //   Facturación:
 //  17. invoicing_mention          — te etiquetaron con @ en las notas del mes de una hoja o
 //                                   en las notas de MKT Plan; abre ese mes y esa hoja
@@ -45,7 +49,7 @@
 //   webinar/evento, tareas asignadas entre usuarios y el resumen diario.
 // ════════════════════════════════════════════════════════════════════
 
-import { AlertCircle, AtSign, Clock, MessageCircle, Sparkles, User, CheckCircle2, Calendar } from 'lucide-react';
+import { AlertCircle, AtSign, Clock, Inbox, MessageCircle, Sparkles, User, CheckCircle2, Calendar } from 'lucide-react';
 import { SERVICE_OWNERS as DEFAULT_SERVICE_OWNERS, PEOPLE } from '@/constants/team';
 import { EVENT_PHASES } from '@/constants/events';
 import { NOTIFICATION_TEMPLATES, NOTIFICATION_PRIORITY } from '@/constants/userNotifications';
@@ -55,6 +59,7 @@ import { activeWorldDayNotices, accountsForWorldDay, isGlobalWorldDay, worldDayC
 import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
 import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
+import { clientRequestsToNotice } from './socialClient';
 import { CRM_WEEKLY_NOTIFY_USER } from '@/constants/crmWeekly';
 import { redDeadlines, redSteps } from './crmWeekly';
 import { SHEET_LABELS as INVOICING_SHEET_LABELS } from '@/constants/invoicing';
@@ -444,6 +449,18 @@ export const buildNotifications = (currentUser, data, options = {}) => {
   // ────────────────────────────────────────────────────────────────
   if (sameName(options.socialMediaOwner || SOCIAL_MEDIA_OWNER)) {
     const todayIso = toIsoDate(today);
+    // 18. Pedidos de posteo desde el link de cada cuenta
+    clientRequestsToNotice(socialPosts, now).forEach((p) => {
+      const acc = socialAccounts.find((a) => a.id === p.accountId);
+      const accName = acc?.name || 'Una cuenta';
+      notifs.push({
+        id: `social-request-${p.id}`, type: 'social_request', icon: Inbox, color: 'pink',
+        title: `${accName}: ${p.requestedBy || 'el cliente'} pidió un posteo${p.publishDate ? ` para el ${formatDate(p.publishDate)}` : ''} (${p.title})`,
+        shortTitle: `📥 Pedido de posteo: ${accName}`,
+        emoji: '📥', project: acc?.group || 'Social Media', source: 'Social Media', date: String(p.requestedAt).slice(0, 10),
+        navTo: 'content', navTab: 'posteos',
+      });
+    });
     missingPostAlerts(socialAccounts, socialPosts, todayIso)
       .filter((a) => a.daysAgo <= 21) // las últimas 3 semanas; lo más viejo se ve en la hoja
       .forEach((a) => {

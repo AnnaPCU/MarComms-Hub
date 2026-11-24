@@ -27,12 +27,13 @@
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Settings2, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Settings2, Check, X, Inbox } from 'lucide-react';
 
 import { POST_STATUSES, POST_STATUS_BY_ID, ACCOUNT_PLAN_BY_ID, nextPostStatus, ACCOUNT_GROUPS, COUNTER_TONES, DEFAULT_POST_STATUS, SCHEDULED_STATUS, SCHEDULE_PLATFORM_BY_ID } from '@/constants/socialPosts';
 import { WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
 import { weeksOfMonth, expectedPostsBy, accountMonthSummary, counterTone, scheduleLabel } from '@/utils/socialPosts';
 import { todayIso as getTodayIso } from '@/utils/date';
+import { isClientRequest } from '@/utils/socialClient';
 import PostEditor from './PostEditor';
 import ScheduleModal from './ScheduleModal';
 import AccountsModal from './AccountsModal';
@@ -130,7 +131,7 @@ export default function PostsSheet({
     const st = POST_STATUS_BY_ID[post.status] || POST_STATUSES[0];
     const theme = post.theme ? WORLD_DAY_THEME_BY_ID[post.theme] : null;
     return (
-      <div key={post.id} className={`group flex items-stretch rounded-md border text-[10px] font-bold leading-tight overflow-hidden ${st.color}`} title={`${post.title}\nEstado: ${st.label}${theme ? `\nTemática: ${theme.label}` : ''}`}>
+      <div key={post.id} className={`group flex items-stretch rounded-md border text-[10px] font-bold leading-tight overflow-hidden ${st.color}`} title={`${post.title}\nEstado: ${st.label}${theme ? `\nTemática: ${theme.label}` : ''}${isClientRequest(post) ? `\nPedido del cliente: ${post.requestedBy}` : ''}`}>
         <button
           onClick={() => rotateStatus(post)}
           className={`w-5 shrink-0 flex items-center justify-center ${st.solid} hover:brightness-110`}
@@ -139,7 +140,7 @@ export default function PostsSheet({
           <span className="w-1.5 h-1.5 rounded-full bg-white/90" />
         </button>
         <button onClick={() => setEditor({ post })} className="flex-1 min-w-0 text-left px-1.5 py-1">
-          <p className="truncate">{post.title || 'Sin título'}</p>
+          <p className="truncate">{isClientRequest(post) && <Inbox className="w-2.5 h-2.5 inline -mt-0.5 mr-0.5 text-sky-600" aria-label="Pedido del cliente" />}{post.title || 'Sin título'}</p>
           <p className="text-[8px] font-black uppercase tracking-wider opacity-70 truncate">
             {st.short}{theme ? ` · ${theme.label}` : ''}{scheduleLabel(post, SCHEDULE_PLATFORM_BY_ID) ? ` · ${scheduleLabel(post, SCHEDULE_PLATFORM_BY_ID)}` : ''}
           </p>

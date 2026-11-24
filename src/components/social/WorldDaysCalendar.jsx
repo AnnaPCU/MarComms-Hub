@@ -21,6 +21,13 @@
 //   mundiales que repercuten en el país de esa cuenta (los globales siempre).
 //   onThemeChange(themeId)
 //   posts, accounts — de useSocialPosts (opcionales)
+//
+// Link del cliente (nov 2026, SocialPublicPage): con `external` se fija la
+// cuenta (lockAccountId) y se ocultan el filtro de cuentas, el bloque de
+// competencia y el pie interno; `accent` ({ bg, fg }) pinta «hoy» y la
+// selección con el color de la marca, y `renderSide(ctx)` reemplaza el panel
+// lateral (ctx: selectedPost, selectedDay, closePost, closeDay). Al cliquear
+// un día mundial se llama a onPickWorldDay(día) (prearma el pedido).
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -38,6 +45,9 @@ import { isCompetitionReviewDay } from '@/utils/socialPosts';
 import { worldDaysInMonth, monthGrid, upcomingWorldDays, worldDayCountries, worldDayCountriesText, accountsForWorldDay, isGlobalWorldDay } from '@/utils/worldDays';
 import { ACCOUNT_GROUPS } from '@/constants/socialPosts';
 import { formatDate, todayIso as getTodayIso } from '@/utils/date';
+import { isClientRequest } from '@/utils/socialClient';
+import AccountLinkButtons from './AccountLinkButtons';
+import ClientRequestInfo from './ClientRequestInfo';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -50,13 +60,14 @@ const countdown = (daysLeft) => {
   return 'Ya pasó';
 };
 
-export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChange, posts = [], accounts = [] }) {
+export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChange, posts = [], accounts = [], external = false, lockAccountId = null, accent = null, renderSide = null, onPickWorldDay = null }) {
   const today = todayIso || getTodayIso();
   const notifyShort = TEAM_MEMBERS.find(m => m.name === WORLD_DAYS_NOTIFY_USER)?.short || WORLD_DAYS_NOTIFY_USER;
 
   const [cursor, setCursor] = useState({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
   const [selected, setSelected] = useState(null); // día mundial decorado
-  const [accountId, setAccountId] = useState('all'); // filtro de cuenta
+  const [accountId, setAccountId] = useState(lockAccountId || 'all'); // filtro de cuenta (fijo en el link del cliente)
+  const selRing = (on) => (on && accent ? { boxShadow: `0 0 0 2px ${accent.bg}` } : undefined);
   const account = accountId === 'all' ? null : (accounts || []).find((a) => a.id === accountId) || null;
   // Un día mundial se muestra si es global o si repercute en el país de la cuenta elegida
   const dayMatchesAccount = (d) => !account || isGlobalWorldDay(d) || accountsForWorldDay(d, [account]).length > 0;
@@ -106,9 +117,10 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
     return (
       <button
         key={`${d.id}-${d.date}`}
-        onClick={(e) => { e.stopPropagation(); setSelected(isSel ? null : d); }}
+        onClick={(e) => { e.stopPropagation(); setSelected(isSel ? null : d); setSelectedPost(null); if (!isSel && onPickWorldDay) onPickWorldDay(d); }}
         title={`${d.name} · ${worldDayCountriesText(d, 4)}`}
-        className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate transition-all ${t ? t.color : 'bg-slate-50 text-slate-600 border-slate-200'} ${isSel ? 'ring-2 ring-pink-400' : 'hover:brightness-95'}`}
+        style={selRing(isSel)}
+        className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate transition-all ${t ? t.color : 'bg-slate-50 text-slate-600 border-slate-200'} ${isSel ? (accent ? '' : 'ring-2 ring-pink-400') : 'hover:brightness-95'}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${t ? t.dot : 'bg-slate-400'}`} />
         <span className="truncate">{compact ? (d.short || d.name) : d.name}</span>
@@ -118,7 +130,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 items-start">
+    <div className={`grid grid-cols-1 gap-4 items-start ${external ? 'lg:grid-cols-[1fr_380px]' : 'lg:grid-cols-[1fr_300px]'}`}>
       {/* ── Calendario ── */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         {/* Barra superior: mes + navegación + filtro */}
@@ -135,12 +147,12 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
             {MONTHS[cursor.month - 1]} <span className="text-slate-400 font-bold">{cursor.year}</span>
           </h2>
           {!isCurrentMonth && (
-            <button onClick={goToday} className="text-[10px] font-black uppercase tracking-wider text-pink-600 hover:text-pink-700 px-2 py-1 rounded-md hover:bg-pink-50">
+            <button onClick={goToday} style={accent ? { color: accent.text || accent.bg } : undefined} className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md ${accent ? 'hover:bg-slate-50' : 'text-pink-600 hover:text-pink-700 hover:bg-pink-50'}`}>
               Hoy
             </button>
           )}
           <div className="flex-1" />
-          <select
+          {!external && <select
             value={accountId}
             onChange={e => { setAccountId(e.target.value); setSelected(null); setSelectedPost(null); }}
             className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-pink-300"
@@ -151,7 +163,8 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
               const items = (accounts || []).filter((a) => a.group === g && a.active !== false);
               return items.length ? <optgroup key={g} label={g}>{items.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup> : null;
             })}
-          </select>
+          </select>}
+          {!external && account && <AccountLinkButtons token={account.publicToken} withLabel />}
           <select
             value={theme}
             onChange={e => { onThemeChange && onThemeChange(e.target.value); setSelected(null); }}
@@ -181,14 +194,14 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
               <div
                 key={cell.iso}
                 onClick={() => setSelected(items.length === 1 ? items[0] : null)}
-                className={`min-h-[92px] p-1.5 border-b border-r border-slate-100 flex flex-col gap-1 ${idx % 7 === 6 ? 'border-r-0' : ''} ${cell.inMonth ? 'bg-white' : 'bg-slate-50/60'} ${isToday ? 'bg-pink-50/50' : ''}`}
+                className={`min-h-[92px] p-1.5 border-b border-r border-slate-100 flex flex-col gap-1 ${idx % 7 === 6 ? 'border-r-0' : ''} ${cell.inMonth ? 'bg-white' : 'bg-slate-50/60'} ${isToday && !accent ? 'bg-pink-50/50' : ''}`}
               >
-                <span className={`self-end w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-mono font-bold ${
-                  isToday ? 'bg-pink-600 text-white' : cell.inMonth ? 'text-slate-700' : 'text-slate-300'
+                <span style={isToday && accent ? { background: accent.bg, color: accent.fg } : undefined} className={`self-end w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-mono font-bold ${
+                  isToday ? (accent ? '' : 'bg-pink-600 text-white') : cell.inMonth ? 'text-slate-700' : 'text-slate-300'
                 }`}>
                   {cell.day}
                 </span>
-                {isCompetitionReviewDay(cell.iso) && cell.inMonth && (
+                {!external && isCompetitionReviewDay(cell.iso) && cell.inMonth && (
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-dashed border-slate-300 bg-slate-100 text-slate-500 text-[9px] font-bold leading-tight" title={`${COMPETITION_REVIEW.label} · ${COMPETITION_REVIEW.start} a ${COMPETITION_REVIEW.end}`}>
                     <Search className="w-2.5 h-2.5 shrink-0" />
                     <span className="truncate">{COMPETITION_REVIEW.short}</span>
@@ -200,11 +213,12 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
                     <button
                       key={p.id}
                       onClick={(e) => { e.stopPropagation(); setSelected(null); setSelectedPost(p); }}
-                      title={`${p.account?.name || ''}: ${p.title}`}
-                      className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate ${st ? st.color : 'bg-violet-50 text-violet-700 border-violet-200'} ${selectedPost?.id === p.id ? 'ring-2 ring-pink-400' : ''}`}
+                      title={external ? `${p.title}${st ? ` · ${st.label}` : ''}` : `${p.account?.name || ''}: ${p.title}`}
+                      style={selRing(selectedPost?.id === p.id)}
+                      className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-tight truncate ${st ? st.color : 'bg-violet-50 text-violet-700 border-violet-200'} ${selectedPost?.id === p.id && !accent ? 'ring-2 ring-pink-400' : ''}`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${st ? st.dot : 'bg-violet-500'}`} />
-                      <span className="truncate">{p.account?.name ? `${p.account.name}: ` : ''}{p.title}</span>
+                      <span className="truncate">{!external && p.account?.name ? `${p.account.name}: ` : ''}{p.title}</span>
                     </button>
                   );
                 })}
@@ -222,18 +236,18 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
           })}
         </div>
 
-        {/* Pie: regla del aviso */}
-        <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center gap-2 text-[10px] font-bold text-slate-500">
+        {/* Pie: regla del aviso (solo en el Hub) */}
+        {!external && <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center gap-2 text-[10px] font-bold text-slate-500">
           <Bell className="w-3 h-3 text-pink-600 shrink-0" />
           Aviso a {notifyShort} {WORLD_DAYS_NOTICE_BUSINESS_DAYS} días hábiles antes de cada fecha. La campanita marca las que ya están en ventana de aviso.
           <span className="text-slate-300">·</span>
           <Search className="w-3 h-3 shrink-0" /> Bloque de competencia los martes de {COMPETITION_REVIEW.start} a {COMPETITION_REVIEW.end}.
-        </div>
+        </div>}
       </div>
 
       {/* ── Panel lateral ── */}
-      <aside className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 lg:sticky lg:top-28">
-        {selectedPost ? (
+      <aside className={`bg-white border border-slate-200 rounded-2xl p-4 space-y-3 ${external ? 'lg:sticky lg:top-4' : 'lg:sticky lg:top-28'}`}>
+        {renderSide ? renderSide({ selectedPost, selectedDay: selected, closePost: () => setSelectedPost(null), closeDay: () => setSelected(null) }) : selectedPost ? (
           <>
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -253,6 +267,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
                 <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider border ${WORLD_DAY_THEME_BY_ID[selectedPost.theme].color}`}>{WORLD_DAY_THEME_BY_ID[selectedPost.theme].label}</span>
               )}
             </div>
+            {isClientRequest(selectedPost) && <ClientRequestInfo post={selectedPost} compact />}
             {selectedPost.notes && <p className="text-xs text-slate-600 leading-relaxed">{selectedPost.notes}</p>}
             {selectedPost.link && <a href={selectedPost.link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all">{selectedPost.link}</a>}
             <p className="text-[10px] text-slate-400">Se edita desde la pestaña Posteos.</p>

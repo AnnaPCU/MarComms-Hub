@@ -114,3 +114,27 @@ export const DEFAULT_SOCIAL_ACCOUNTS = [
   { key: 'bel',                     group: 'Bel',                 name: 'Bel',              plan: 'none', sortOrder: 190 },
 // Las cuentas agregadas después (migrations 0033 y 0045) traen su sortOrder, igual que en la base
 ].map((a, _i, all) => ({ ...a, sortOrder: a.sortOrder ?? (all.filter((x) => x.sortOrder === undefined).indexOf(a) + 1) * 10, active: true }));
+
+// ── Pedidos de posteo del cliente (nov 2026, migration 0055) ──
+// Cada cuenta tiene un link (/?social=<token>) con el calendario de sus
+// posteos y un formulario para pedir uno. El pedido entra como un posteo
+// más de la cuenta (source = 'cliente', estado «En proceso»).
+export const CLIENT_REQUEST_SOURCE = 'cliente';
+export const SOCIAL_NETWORKS = [
+  { id: 'linkedin',  label: 'LinkedIn' },
+  { id: 'instagram', label: 'Instagram' },
+];
+export const SOCIAL_NETWORK_BY_ID = SOCIAL_NETWORKS.reduce((acc, n) => { acc[n.id] = n; return acc; }, {});
+export const CLIENT_POST_TYPES = [
+  { id: 'webinar',     label: 'Webinar' },
+  { id: 'evento',      label: 'Evento' },
+  { id: 'informativo', label: 'Informativo' },
+  { id: 'otros',       label: 'Otros' },
+];
+export const CLIENT_POST_TYPE_BY_ID = CLIENT_POST_TYPES.reduce((acc, t) => { acc[t.id] = t; return acc; }, {});
+// Archivos del pedido: bucket público de Supabase Storage (carpeta = token de la cuenta)
+export const SOCIAL_MEDIA_BUCKET = 'social-requests';
+export const CLIENT_MEDIA_MAX_FILES = 10;
+export const CLIENT_MEDIA_MAX_MB = 50;
+// Avisos a la responsable: pedidos de los últimos días que siguen «En proceso»
+export const CLIENT_REQUEST_NOTICE_DAYS = 14;

@@ -346,6 +346,26 @@ describe('12. world_day — aviso 3 días hábiles antes', () => {
 // NOW = mar 02/06/2026. Semanas de mayo (lunes): 04, 11, 18, 25.
 // La del 18–24/05 cierra dom 24/05 → aviso mié 27/05 (ya pasó → avisa).
 // La del 25–31/05 cierra dom 31/05 → aviso mié 03/06 (todavía no).
+describe('18. social_request — pedido de posteo desde el link de la cuenta', () => {
+  const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
+  const PERU = { id: 'acc-peru', name: 'Peru', group: 'CU Latinoamérica', plan: 'none', active: true };
+  const pedido = { id: 'p1', accountId: 'acc-peru', weekStart: '2026-05-25', monthKey: '2026-05', status: 'en_proceso', title: 'Webinar · EUDR', source: 'cliente', requestedBy: 'Ana Pérez', requestedAt: new Date(NOW.getTime() - 86400000).toISOString(), publishDate: '2026-05-28' };
+
+  it('avisa a Delfi con la cuenta, quién lo pidió y la fecha', () => {
+    const notifs = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [pedido] }, opts);
+    const n = notifs.find(x => x.id === 'social-request-p1');
+    expect(n).toBeTruthy();
+    expect(n.type).toBe('social_request');
+    expect(n.title).toContain('Peru: Ana Pérez pidió un posteo para el 28/5/2026 (Webinar · EUDR)');
+    expect(n.navTab).toBe('posteos');
+  });
+
+  it('deja de avisar cuando el posteo avanza de estado, y solo a Delfi', () => {
+    expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [{ ...pedido, status: 'listo' }] }, opts).some(n => n.type === 'social_request')).toBe(false);
+    expect(buildNotifications(AGUS, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [pedido] }, opts).some(n => n.type === 'social_request')).toBe(false);
+  });
+});
+
 describe('13. missing_post — cuenta por debajo del plan', () => {
   const DELFI = { name: 'Delfina Palmero', team: 'Comunicación' };
   const PERU = { id: 'acc-peru', name: 'Peru', group: 'CU Latinoamérica', plan: 'active', active: true };

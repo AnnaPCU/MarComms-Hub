@@ -8,11 +8,18 @@
 // Posteo (UI):  { id, accountId, weekStart, monthKey, title, theme,
 //                 status, publishDate, publishTime ('HH:MM'), scheduledOn
 //                 ('hubspot' | 'linkedin', migration 0046), link, notes,
-//                 createdBy, createdAt, updatedAt }
+//                 createdBy, createdAt, updatedAt,
+//                 + pedido del cliente (migration 0055): source ('cliente'),
+//                 requestedBy, requestedAt, networks, postType, copy,
+//                 requestNotes, media [{ path, name, type, size }] }
+// Link de cada cuenta (/?social=<token>): getPublicSocialAccount,
+// uploadClientMedia y submitClientRequest (RPCs security definer + bucket
+// «social-requests»); mediaUrl arma la URL pública de un archivo.
 // ════════════════════════════════════════════════════════════════════
 
 import { supabase } from '@/lib/supabaseClient';
 import { monthKeyOfWeek } from '@/utils/socialPosts';
+import { SOCIAL_MEDIA_BUCKET } from '@/constants/socialPosts';
 
 const ACCOUNTS = 'social_accounts';
 const POSTS = 'social_posts';
@@ -26,6 +33,7 @@ export const accountFromRow = (row) => (row ? {
   plan:      row.plan || 'none',
   sortOrder: row.sort_order ?? 0,
   active:    row.active !== false,
+  publicToken: row.public_token || null,
   createdAt: row.created_at || null,
   updatedAt: row.updated_at || null,
 } : null);
@@ -54,6 +62,14 @@ export const postFromRow = (row) => (row ? {
   scheduledOn: row.scheduled_on || '',
   link:      row.link || '',
   notes:     row.notes || '',
+  source:       row.source || null,
+  requestedBy:  row.requested_by || '',
+  requestedAt:  row.requested_at || null,
+  networks:     row.networks || [],
+  postType:     row.post_type || '',
+  copy:         row.copy || '',
+  requestNotes: row.request_notes || '',
+  media:        Array.isArray(row.media) ? row.media : [],
   createdBy: row.created_by || '',
   createdAt: row.created_at || null,
   updatedAt: row.updated_at || null,
@@ -131,4 +147,36 @@ export const subscribeSocial = (onChange) => {
     .on('postgres_changes', { event: '*', schema: 'public', table: POSTS },    (p) => onChange({ table: POSTS, ...p }))
     .subscribe();
   return () => { supabase.removeChannel(channel); };
+};
+
+// ── Link de cada cuenta (/?social=<token>) ──
+export const mediaUrl = (path) => supabase.storage.from(SOCIAL_MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+
+// Cuenta + sus posteos (sin notas internas); null si el token no existe o la cuenta está desactivada
+export const getPublicSocialAccount = async (token) => {
+  const { data, error } = await supabase.rpc('get_public_social_account', { p_token: token });
+  if (error) throw error;
+  if (!data) return null;
+  const posts = (data.posts || []).map((p) => ({
+    ...p,
+    accountId: data.id,
+    publishDate: p.publishDate || '',
+    publishTime: p.publishTime || '',
+    networks: p.networks || [],
+    media: Array.isArray(p.media) ? p.media : [],
+  }));
+  return { id: data.id, name: data.name || '', group: data.group || '', posts };
+};
+
+// Sube un archivo a la carpeta del token (la política del bucket lo exige)
+export const uploadClientMedia = async (path, file) => {
+  const { error } = await supabase.storage.from(SOCIAL_MEDIA_BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false });
+  if (error) throw error;
+  return { path, name: file.name, type: file.type || '', size: file.size || 0 };
+};
+
+export const submitClientRequest = async (token, payload) => {
+  const { data, error } = await supabase.rpc('submit_public_social_post', { p_token: token, p_post: payload });
+  if (error) throw error;
+  return data;
 };
