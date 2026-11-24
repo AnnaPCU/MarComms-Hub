@@ -61,19 +61,22 @@ Este archivo le indica a **Claude Code** cómo trabajar con este proyecto. Cuand
 
 ## 👥 Trabajo en paralelo (nov 2026)
 
-Hay **dos sesiones de Claude Code** trabajando a la vez sobre `main`:
+Hay **tres sesiones de Claude Code** trabajando a la vez sobre `main`:
 
-- **Sesión general** (Anna): todo el Hub salvo CRM HubSpot.
-- **Sesión CRM HubSpot**: solo la sección CRM HubSpot (Facturación HubSpot + Weekly check).
+- **Sesión general** (Anna): todo el Hub salvo CRM HubSpot y Social Media.
+- **Sesión CRM HubSpot** (Tino, Valentino Redín): solo la sección CRM HubSpot (Facturación HubSpot + Weekly check + Global check).
+- **Sesión Social Media** (Delfi, Delfina Palmero; nov 2026): solo la sección Social Media (hoja de Posteos, Calendario, Herramientas, conteos del mes, avisos de Social Media y el link del cliente por cuenta `/?social=<token>`).
 
 Reglas para que no se pisen:
 
-1. **Zona de la sesión CRM HubSpot** (la general no los toca sin avisar): `src/components/hubspot/**`, `src/constants/hubspotBilling.js`, `src/constants/crmWeekly.js`, `src/utils/hubspotBilling*.js`, `src/utils/crmWeekly*.js`, `src/hooks/useHubspotBilling.js`, `src/hooks/useCrmWeekly.js`, `src/services/hubspotBillingService.js`, `src/services/crmWeeklyService.js`.
-2. **Archivos compartidos** (`src/App.jsx`, `src/utils/notifications.js` + su test, `src/constants/userNotifications.js`, `src/index.css`, `src/constants/sections.js`, `tailwind.config.js`, `package.json`, `CLAUDE.md`): cambios mínimos y puntuales; la sesión CRM HubSpot solo toca ahí lo de su sección (ej. la sección `crm_deadline` de notificaciones, las props de `HubspotBillingApp` en `App.jsx`). Nada de reformatear ni reordenar estos archivos.
-3. **Migraciones**: la sesión CRM HubSpot usa los números **0070–0079** (y seeds con el mismo número); la general sigue desde 0055. Así no chocan los nombres.
-4. **Antes de cada push**: `git pull --rebase origin main`, correr `npx vitest run` y `npm run build`, y recién ahí `git push origin main`. Si el rebase da conflicto en un archivo compartido, se resuelve conservando los cambios de las dos sesiones.
-5. **Commits** de la sesión CRM HubSpot empiezan con «CRM HubSpot: …».
-6. En `CLAUDE.md`, la sesión CRM HubSpot actualiza solo las filas de `src/constants/hubspotBilling.js` y `src/constants/crmWeekly.js` de la tabla de archivos clave (y la frase de sus migraciones en el punto 1 de TODOs).
+1. **Zonas de cada sesión** (las otras no las tocan sin avisar):
+   - CRM HubSpot: `src/components/hubspot/**`, `src/constants/hubspotBilling.js`, `src/constants/crmWeekly.js`, `src/utils/hubspotBilling*.js`, `src/utils/crmWeekly*.js`, `src/hooks/useHubspotBilling.js`, `src/hooks/useCrmWeekly.js`, `src/services/hubspotBillingService.js`, `src/services/crmWeeklyService.js`.
+   - Social Media: `src/components/social/**`, `src/constants/socialPosts.js`, `src/constants/socialClient.js`, `src/constants/worldDays.js`, `src/utils/socialPosts*.js`, `src/utils/socialClient*.js`, `src/utils/worldDays*.js`, `src/hooks/useSocialPosts.js`, `src/services/socialPostsService.js`.
+2. **Archivos compartidos** (`src/App.jsx`, `src/main.jsx`, `src/utils/notifications.js` + su test, `src/constants/userNotifications.js`, `src/index.css`, `src/constants/sections.js`, `src/constants/brands.js`, `src/components/shared/**`, `src/hooks/useNavState.js`, `src/services/navHistory.js`, `tailwind.config.js`, `package.json`, `CLAUDE.md`): cambios mínimos y puntuales; cada sesión solo toca ahí lo de su sección. CRM HubSpot: la sección `crm_deadline` de notificaciones y las props de `HubspotBillingApp` en `App.jsx`. Social Media: las secciones 13, 14 y 18 de notificaciones (`missing_post`, `month_close`, `competition_review`, `world_day`, `social_request`), las props de `SocialMediaApp` en `App.jsx` y la ruta `?social=` de `main.jsx`; un componente compartido (ej. `DateFieldEs`, `MarcommsUtmBuilder`, `brands.js`) no se cambia sin avisar, porque lo usan otras secciones. Nada de reformatear ni reordenar estos archivos.
+3. **Migraciones**: CRM HubSpot usa **0070–0079** (ya completó el rango con la 0079), Social Media **0080–0089** (y seeds con el mismo número); la general sigue desde 0056. Así no chocan los nombres. Las tablas de cada sección (`social_accounts`, `social_posts`, bucket `social-requests` para Social Media; `crm_*` y `hubspot_*` para CRM HubSpot) las cambia solo su sesión.
+4. **Antes de cada push**: `git pull --rebase origin main`, correr `npx vitest run` y `npm run build`, y recién ahí `git push origin main`. Si el rebase da conflicto en un archivo compartido, se resuelve conservando los cambios de todas las sesiones.
+5. **Commits**: los de la sesión CRM HubSpot empiezan con «CRM HubSpot: …» y los de la sesión Social Media con «Social Media: …».
+6. En `CLAUDE.md`, la sesión CRM HubSpot actualiza solo las filas de `src/constants/hubspotBilling.js` y `src/constants/crmWeekly.js` de la tabla de archivos clave (y la frase de sus migraciones en el punto 1 de TODOs); la sesión Social Media, solo las filas de `src/constants/socialPosts.js` y `src/constants/worldDays.js` (y la frase de sus migraciones en el punto 1 de TODOs).
 
 ---
 
