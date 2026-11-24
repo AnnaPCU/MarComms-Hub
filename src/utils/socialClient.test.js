@@ -70,7 +70,7 @@ describe('clientRequestPayload', () => {
 });
 
 describe('clientRequestsToNotice', () => {
-  it('solo pedidos recientes en proceso', () => {
+  it('uno por cada pedido reciente, en cualquier estado', () => {
     const now = new Date('2026-11-24T12:00:00Z');
     const posts = [
       { id: 1, source: 'cliente', status: 'en_proceso', requestedAt: '2026-11-23T10:00:00Z' },
@@ -78,6 +78,6 @@ describe('clientRequestsToNotice', () => {
       { id: 3, source: 'cliente', status: 'en_proceso', requestedAt: '2026-10-01T10:00:00Z' },
       { id: 4, source: null, status: 'en_proceso', requestedAt: null },
     ];
-    expect(clientRequestsToNotice(posts, now).map((p) => p.id)).toEqual([1]);
+    expect(clientRequestsToNotice(posts, now).map((p) => p.id)).toEqual([1, 2]);
   });
 });

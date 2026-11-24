@@ -13,7 +13,7 @@
 
 import {
   CLIENT_POST_TYPE_BY_ID, CLIENT_REQUEST_SOURCE, CLIENT_MEDIA_MAX_FILES, CLIENT_MEDIA_MAX_MB,
-  CLIENT_REQUEST_NOTICE_DAYS, DEFAULT_POST_STATUS,
+  CLIENT_REQUEST_NOTICE_DAYS,
 } from '@/constants/socialPosts';
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -88,10 +88,11 @@ export const isClientRequest = (post) => post?.source === CLIENT_REQUEST_SOURCE;
 // Link de la cuenta para el cliente: /?social=<token> (main.jsx → SocialPublicPage)
 export const socialClientUrl = (token, origin = '') => (token ? `${origin}/?social=${token}` : '');
 
-// Pedidos para avisarle a la responsable: de los últimos días y todavía «En proceso»
+// Pedidos para avisarle a la responsable: uno por cada pedido de los últimos
+// días, sin importar el estado (si alguien lo avanza antes de que ella lo vea,
+// el aviso sigue; deja de estar sin leer cuando lo abre o lo marca leído)
 export const clientRequestsToNotice = (posts = [], now = new Date()) => {
   const limit = now.getTime() - CLIENT_REQUEST_NOTICE_DAYS * 86400000;
   return posts.filter((p) => isClientRequest(p)
-    && p.status === DEFAULT_POST_STATUS
     && p.requestedAt && new Date(p.requestedAt).getTime() >= limit);
 };

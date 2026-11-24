@@ -360,8 +360,15 @@ describe('18. social_request — pedido de posteo desde el link de la cuenta', (
     expect(n.navTab).toBe('posteos');
   });
 
-  it('deja de avisar cuando el posteo avanza de estado, y solo a Delfi', () => {
-    expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [{ ...pedido, status: 'listo' }] }, opts).some(n => n.type === 'social_request')).toBe(false);
+  it('un aviso por cada pedido, aunque alguien ya lo haya avanzado de estado', () => {
+    const otro = { ...pedido, id: 'p2', status: 'listo', requestedBy: 'Juan Gómez' };
+    const ids = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [pedido, otro] }, opts).filter(n => n.type === 'social_request').map(n => n.id);
+    expect(ids.sort()).toEqual(['social-request-p1', 'social-request-p2']);
+  });
+
+  it('solo a Delfi, y no los pedidos viejos', () => {
+    const viejo = { ...pedido, requestedAt: '2026-04-01T10:00:00Z' };
+    expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [viejo] }, opts).some(n => n.type === 'social_request')).toBe(false);
     expect(buildNotifications(AGUS, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [pedido] }, opts).some(n => n.type === 'social_request')).toBe(false);
   });
 });

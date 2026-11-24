@@ -38,8 +38,8 @@
 //                                   en rojo (redSteps, nov 2026)
 //
 //   Social Media (nov 2026):
-//  18. social_request             — un cliente pidió un posteo desde el link de su cuenta
-//                                   (últimos días y todavía «En proceso»), a SOCIAL_MEDIA_OWNER
+//  18. social_request             — un cliente pidió un posteo desde el link de su cuenta:
+//                                   uno por pedido (últimos días, en cualquier estado), a SOCIAL_MEDIA_OWNER
 //
 //   Facturación:
 //  17. invoicing_mention          — te etiquetaron con @ en las notas del mes de una hoja o
