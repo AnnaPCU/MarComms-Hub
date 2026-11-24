@@ -40,6 +40,7 @@
 //   Social Media (nov 2026):
 //  18. social_request             — un cliente pidió un posteo desde el link de su cuenta:
 //                                   uno por pedido (últimos días, en cualquier estado), a SOCIAL_MEDIA_OWNER
+//                                   + uno por cada vez que el cliente edita su pedido desde el link
 //
 //   Facturación:
 //  17. invoicing_mention          — te etiquetaron con @ en las notas del mes de una hoja o
@@ -59,7 +60,7 @@ import { activeWorldDayNotices, accountsForWorldDay, isGlobalWorldDay, worldDayC
 import { SOCIAL_MEDIA_OWNER, COMPETITION_REVIEW } from '@/constants/socialPosts';
 import { missingPostAlerts, competitionReviewActive, isCompetitionReviewDay, mondayOf, monthCloseReminderActive, monthCloseSummary } from './socialPosts';
 import { formatDate, toIsoDate } from './date';
-import { clientRequestsToNotice } from './socialClient';
+import { clientRequestsToNotice, clientEditsToNotice } from './socialClient';
 import { CRM_WEEKLY_NOTIFY_USER } from '@/constants/crmWeekly';
 import { redDeadlines, redSteps } from './crmWeekly';
 import { SHEET_LABELS as INVOICING_SHEET_LABELS } from '@/constants/invoicing';
@@ -458,6 +459,18 @@ export const buildNotifications = (currentUser, data, options = {}) => {
         title: `${accName}: ${p.requestedBy || 'el cliente'} pidió un posteo${p.publishDate ? ` para el ${formatDate(p.publishDate)}` : ''} (${p.title})`,
         shortTitle: `📥 Pedido de posteo: ${accName}`,
         emoji: '📥', project: acc?.group || 'Social Media', source: 'Social Media', date: String(p.requestedAt).slice(0, 10),
+        navTo: 'content', navTab: 'posteos',
+      });
+    });
+    // 18b. El cliente editó su pedido (uno por edición: el id lleva la hora)
+    clientEditsToNotice(socialPosts, now).forEach((p) => {
+      const acc = socialAccounts.find((a) => a.id === p.accountId);
+      const accName = acc?.name || 'Una cuenta';
+      notifs.push({
+        id: `social-request-edit-${p.id}-${p.clientEditedAt}`, type: 'social_request', icon: Inbox, color: 'pink',
+        title: `${accName}: ${p.requestedBy || 'el cliente'} editó su pedido${p.publishDate ? ` para el ${formatDate(p.publishDate)}` : ''} (${p.title})`,
+        shortTitle: `✏️ Pedido editado: ${accName}`,
+        emoji: '✏️', project: acc?.group || 'Social Media', source: 'Social Media', date: String(p.clientEditedAt).slice(0, 10),
         navTo: 'content', navTab: 'posteos',
       });
     });

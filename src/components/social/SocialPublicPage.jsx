@@ -7,7 +7,9 @@
 //     sin el bloque de competencia ni el pie interno);
 //   - a la derecha, en lugar de «Próximas fechas», el formulario para pedir
 //     un posteo (ClientRequestForm). Cliquear un posteo muestra su detalle
-//     (ClientPostDetail); cliquear un día mundial prearma fecha y temática.
+//     (ClientPostDetail), y si es un pedido «En proceso» se puede editar
+//     ahí mismo (el mismo formulario en modo edición, migration 0080).
+//     Los días mundiales no se muestran (a pedido de Delfi, nov 2026).
 // No muestra la hoja de Posteos, los conteos del mes ni Herramientas.
 //
 // Lee con get_public_social_account (migration 0055): cuenta + posteos sin
@@ -49,7 +51,7 @@ export default function SocialPublicPage({ token }) {
   const validToken = TOKEN_RE.test(String(token || ''));
   const [state, setState] = useState({ status: validToken ? 'loading' : 'notfound', account: null });
   const [calendarTheme, setCalendarTheme] = useState('all');
-  const [prefill, setPrefill] = useState(null); // { publishDate, theme, label, nonce } desde un día mundial
+  const [editingId, setEditingId] = useState(null); // pedido que el cliente está editando
 
   const load = useCallback(async () => {
     if (!validToken) return;
@@ -102,9 +104,7 @@ export default function SocialPublicPage({ token }) {
   const todayIso = getTodayIso();
   const calendarAccount = { id: account.id, name: account.name, group: account.group, active: true };
 
-  const pickWorldDay = (d) => {
-    setPrefill({ publishDate: d.date >= todayIso ? d.date : '', theme: d.theme || '', label: d.name, nonce: Date.now() });
-  };
+  const editing = editingId ? account.posts.find((p) => p.id === editingId) || null : null;
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 sm:py-10 px-3 sm:px-6" style={{ fontFamily: 'Ubuntu, Calibri, "DM Sans", sans-serif', color: c.text }}>
@@ -138,10 +138,17 @@ export default function SocialPublicPage({ token }) {
             external
             lockAccountId={account.id}
             accent={accent}
-            onPickWorldDay={pickWorldDay}
-            renderSide={({ selectedPost, closePost }) => (selectedPost
-              ? <ClientPostDetail post={selectedPost} onClose={closePost} c={c} />
-              : <ClientRequestForm token={token} texts={texts} c={c} todayIso={todayIso} prefill={prefill} onSubmitted={load} />)}
+            renderSide={({ selectedPost, closePost }) => {
+              if (editing) {
+                const exit = () => { setEditingId(null); closePost(); };
+                return <ClientRequestForm key={`edit-${editing.id}`} token={token} texts={texts} c={c} todayIso={todayIso} onSubmitted={load} editing={editing} onCancel={() => setEditingId(null)} onDone={exit} />;
+              }
+              // El detalle sigue a la versión más nueva del posteo (estado, copy…)
+              const fresh = selectedPost ? account.posts.find((p) => p.id === selectedPost.id) || selectedPost : null;
+              return fresh
+                ? <ClientPostDetail key={fresh.id} post={fresh} onClose={closePost} c={c} texts={texts} onEdit={(p) => setEditingId(p.id)} />
+                : <ClientRequestForm key="new" token={token} texts={texts} c={c} todayIso={todayIso} onSubmitted={load} />;
+            }}
           />
           <div className="flex flex-wrap items-center gap-3 px-1 pt-3 text-[11px] font-bold" style={{ color: c.label }}>
             <span>Estado de cada posteo:</span>
@@ -149,7 +156,7 @@ export default function SocialPublicPage({ token }) {
               <span key={s.id} className="flex items-center gap-1.5"><span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />{s.label}</span>
             ))}
             <span className="opacity-60">·</span>
-            <span>Cliquear un posteo muestra su detalle; cliquear un día mundial toma su fecha para el pedido.</span>
+            <span>Cliquear un posteo muestra su detalle; los pedidos «En proceso» se pueden editar desde ahí.</span>
           </div>
         </section>
 

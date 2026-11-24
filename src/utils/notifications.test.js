@@ -371,6 +371,14 @@ describe('18. social_request — pedido de posteo desde el link de la cuenta', (
     expect(buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [viejo] }, opts).some(n => n.type === 'social_request')).toBe(false);
     expect(buildNotifications(AGUS, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [pedido] }, opts).some(n => n.type === 'social_request')).toBe(false);
   });
+
+  it('un aviso más cada vez que el cliente edita su pedido', () => {
+    const editado = { ...pedido, clientEditedAt: new Date(NOW.getTime() - 3600000).toISOString() };
+    const ids = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [editado] }, opts).filter(n => n.type === 'social_request').map(n => n.id);
+    expect(ids).toEqual(['social-request-p1', `social-request-edit-p1-${editado.clientEditedAt}`]);
+    const n = buildNotifications(DELFI, { ...EMPTY_DATA, socialAccounts: [PERU], socialPosts: [editado] }, opts).find(x => x.id.startsWith('social-request-edit'));
+    expect(n.title).toContain('Peru: Ana Pérez editó su pedido');
+  });
 });
 
 describe('13. missing_post — cuenta por debajo del plan', () => {

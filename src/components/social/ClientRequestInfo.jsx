@@ -7,6 +7,9 @@
 // Instagram / HubSpot), notas, link y archivos. Se usa en el editor
 // del posteo (PostEditor) y en el panel del calendario.
 //
+// Si el cliente lo editó desde el link (migration 0080), lo avisa arriba
+// con la fecha y la hora de la última edición.
+//
 // Props: post, compact (sin el copy completo, para el panel del calendario)
 // ════════════════════════════════════════════════════════════════════
 
@@ -48,6 +51,11 @@ export default function ClientRequestInfo({ post, compact = false }) {
         {post.requestedBy || 'Sin nombre'}{post.requestedAt ? ` · ${formatDate(String(post.requestedAt).slice(0, 10))}` : ''}
         {networks ? ` · ${networks}` : ''}{type ? ` · ${type}` : ''}
       </p>
+      {post.clientEditedAt && (
+        <p className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+          ✏️ El cliente editó el pedido el {formatDate(String(post.clientEditedAt).slice(0, 10))} a las {new Date(post.clientEditedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+        </p>
+      )}
       {post.copy && (
         <div>
           <p className={labelCls}>Copy</p>

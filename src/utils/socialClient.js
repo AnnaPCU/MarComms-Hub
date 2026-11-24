@@ -9,11 +9,16 @@
 //   clientRequestPayload(form, media) — lo que recibe la RPC
 //   isClientRequest / clientRequestsToNotice — pedidos para el aviso
 //   socialClientUrl(token, origin) — el link de la cuenta
+//   copyLength / copyTooLong   — largo del copy contra CLIENT_COPY_MAX
+//   canClientEdit(post)        — el cliente puede editar su pedido (solo «En proceso»)
+//   clientRequestForm(post)    — valores del formulario para editar un pedido
+//   clientEditTitle(post, form) — título después de editar (respeta uno cambiado en el Hub)
+//   clientEditsToNotice        — pedidos que el cliente editó, para el aviso
 // ════════════════════════════════════════════════════════════════════
 
 import {
   CLIENT_POST_TYPE_BY_ID, CLIENT_REQUEST_SOURCE, CLIENT_MEDIA_MAX_FILES, CLIENT_MEDIA_MAX_MB,
-  CLIENT_REQUEST_NOTICE_DAYS,
+  CLIENT_REQUEST_NOTICE_DAYS, CLIENT_COPY_MAX, CLIENT_EDITABLE_STATUS,
 } from '@/constants/socialPosts';
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -95,4 +100,35 @@ export const clientRequestsToNotice = (posts = [], now = new Date()) => {
   const limit = now.getTime() - CLIENT_REQUEST_NOTICE_DAYS * 86400000;
   return posts.filter((p) => isClientRequest(p)
     && p.requestedAt && new Date(p.requestedAt).getTime() >= limit);
+};
+
+// Largo del copy como lo cuenta la base (un emoji = 1), sin espacios de los bordes
+export const copyLength = (copy) => [...String(copy || '').trim()].length;
+export const copyTooLong = (copy) => copyLength(copy) > CLIENT_COPY_MAX;
+
+// Solo los pedidos del cliente y solo mientras están «En proceso»
+export const canClientEdit = (post) => isClientRequest(post) && post.status === CLIENT_EDITABLE_STATUS;
+
+// Lo que el formulario muestra al editar un pedido
+export const clientRequestForm = (post = {}) => ({
+  networks: [...(post.networks || [])],
+  postType: post.postType || '',
+  publishDate: post.publishDate || '',
+  theme: post.theme || '',
+  copy: post.copy || '',
+  link: post.link || '',
+  requestNotes: post.requestNotes || '',
+});
+
+// Si el título sigue siendo el automático, se rearma con lo nuevo; si en el
+// Hub le pusieron otro, queda ese
+export const clientEditTitle = (post = {}, form = {}) => (
+  post.title && post.title !== clientRequestTitle(post) ? post.title : clientRequestTitle(form)
+);
+
+// Pedidos que el cliente editó en los últimos días (un aviso por cada edición)
+export const clientEditsToNotice = (posts = [], now = new Date()) => {
+  const limit = now.getTime() - CLIENT_REQUEST_NOTICE_DAYS * 86400000;
+  return posts.filter((p) => isClientRequest(p)
+    && p.clientEditedAt && new Date(p.clientEditedAt).getTime() >= limit);
 };

@@ -129,8 +129,15 @@ export const CLIENT_POST_TYPES = [
   { id: 'webinar',     label: 'Webinar' },
   { id: 'evento',      label: 'Evento' },
   { id: 'informativo', label: 'Informativo' },
+  { id: 'articulo_linkedin', label: 'Artículo LinkedIn' }, // nov 2026, migration 0080
   { id: 'otros',       label: 'Otros' },
 ];
+// Máximo del copy (el de un posteo de LinkedIn). Se puede escribir más, pero
+// el link avisa en rojo y no deja enviar hasta recortarlo (migration 0080).
+export const CLIENT_COPY_MAX = 3000;
+// El cliente puede editar su pedido desde el link solo en este estado; en
+// cualquier otro le pide que le escriba a la responsable (SOCIAL_MEDIA_OWNER).
+export const CLIENT_EDITABLE_STATUS = 'en_proceso';
 export const CLIENT_POST_TYPE_BY_ID = CLIENT_POST_TYPES.reduce((acc, t) => { acc[t.id] = t; return acc; }, {});
 // Archivos del pedido: bucket público de Supabase Storage (carpeta = token de la cuenta)
 export const SOCIAL_MEDIA_BUCKET = 'social-requests';

@@ -6,20 +6,27 @@
 // sus notas, el link y los archivos. Nunca las notas internas del equipo
 // (get_public_social_account no las devuelve).
 //
-// Props: post, onClose(), c (colores de la marca)
+// Si es un pedido del cliente, abajo va «Editar pedido»: abre el formulario
+// en modo edición (onEdit) si sigue «En proceso»; si ya pasó a Listo,
+// Aprobado o Programado, muestra el aviso de escribirle a la responsable
+// (texts.locked) y no deja cambiar nada (migration 0080).
+//
+// Props: post, onClose(), c (colores de la marca), texts (socialClientTexts),
+//   onEdit(post)
 // ════════════════════════════════════════════════════════════════════
 
-import React from 'react';
-import { Film, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { Film, Lock, Pencil, X } from 'lucide-react';
 import { POST_STATUS_BY_ID, SOCIAL_NETWORK_BY_ID, CLIENT_POST_TYPE_BY_ID, SCHEDULE_PLATFORM_BY_ID } from '@/constants/socialPosts';
 import { WORLD_DAY_THEME_BY_ID } from '@/constants/worldDays';
-import { isClientRequest } from '@/utils/socialClient';
+import { isClientRequest, canClientEdit } from '@/utils/socialClient';
 import { mediaUrl } from '@/services/socialPostsService';
 import { formatDate } from '@/utils/date';
 
 const labelCls = 'text-[10px] font-bold uppercase tracking-widest';
 
-export default function ClientPostDetail({ post, onClose, c }) {
+export default function ClientPostDetail({ post, onClose, c, texts, onEdit }) {
+  const [showLocked, setShowLocked] = useState(false);
   const st = POST_STATUS_BY_ID[post.status];
   const theme = WORLD_DAY_THEME_BY_ID[post.theme];
   const networks = (post.networks || []).map((n) => SOCIAL_NETWORK_BY_ID[n]?.label).filter(Boolean);
@@ -69,6 +76,20 @@ export default function ClientPostDetail({ post, onClose, c }) {
               </a>
             ))}
           </div>
+        </div>
+      )}
+      {isClientRequest(post) && onEdit && texts && (
+        <div className="space-y-2">
+          <button
+            onClick={() => (canClientEdit(post) ? onEdit(post) : setShowLocked(true))}
+            className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-widest rounded-xl px-3 py-2 shadow-sm"
+            style={{ background: c.primary, color: c.onPrimary }}
+          >
+            {canClientEdit(post) ? <Pencil className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />} {texts.edit}
+          </button>
+          {showLocked && !canClientEdit(post) && (
+            <p role="alert" className="text-[11px] font-bold rounded-xl border border-amber-200 bg-amber-50 text-amber-800 px-3 py-2">{texts.locked(st?.label || '')}</p>
+          )}
         </div>
       )}
       <button onClick={onClose} className="w-full text-[11px] font-bold uppercase tracking-widest rounded-xl px-3 py-2 border border-slate-200 hover:bg-slate-50" style={{ color: c.dark }}>

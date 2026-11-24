@@ -26,8 +26,10 @@
 // cuenta (lockAccountId) y se ocultan el filtro de cuentas, el bloque de
 // competencia y el pie interno; `accent` ({ bg, fg }) pinta «hoy» y la
 // selección con el color de la marca, y `renderSide(ctx)` reemplaza el panel
-// lateral (ctx: selectedPost, selectedDay, closePost, closeDay). Al cliquear
-// un día mundial se llama a onPickWorldDay(día) (prearma el pedido).
+// lateral (ctx: selectedPost, selectedDay, closePost, closeDay). Desde nov
+// 2026 el modo `external` tampoco muestra los días mundiales ni su filtro
+// (solo los posteos de la cuenta). En el Hub, al cliquear un día mundial se
+// llama a onPickWorldDay(día) si se pasa.
 // ════════════════════════════════════════════════════════════════════
 
 import React, { useMemo, useState } from 'react';
@@ -87,7 +89,8 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
   };
 
   const weeks = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
-  const monthDays = useMemo(() => (theme === 'none' ? [] : worldDaysInMonth(cursor.year, cursor.month, today, { theme }).filter(dayMatchesAccount)), [cursor, today, theme, accountId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // En el link del cliente no se muestran los días mundiales (nov 2026)
+  const monthDays = useMemo(() => (external || theme === 'none' ? [] : worldDaysInMonth(cursor.year, cursor.month, today, { theme }).filter(dayMatchesAccount)), [cursor, today, theme, accountId]); // eslint-disable-line react-hooks/exhaustive-deps
   const byDate = useMemo(() => {
     const acc = {};
     monthDays.forEach(d => { (acc[d.date] = acc[d.date] || []).push(d); });
@@ -165,7 +168,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
             })}
           </select>}
           {!external && account && <AccountLinkButtons token={account.publicToken} withLabel />}
-          <select
+          {!external && <select
             value={theme}
             onChange={e => { onThemeChange && onThemeChange(e.target.value); setSelected(null); }}
             className="bg-white border border-slate-200 px-3 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest text-slate-700 outline-none focus:ring-2 focus:ring-pink-300"
@@ -174,7 +177,7 @@ export default function WorldDaysCalendar({ todayIso, theme = 'all', onThemeChan
             <option value="all">Días mundiales: todos</option>
             <option value="none">Días mundiales: ocultar</option>
             {WORLD_DAY_THEMES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
+          </select>}
         </div>
 
         {/* Cabecera de días */}

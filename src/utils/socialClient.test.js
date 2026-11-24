@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   socialAccountBrand, clientRequestTitle, clientRequestMissing, mediaProblems, safeFileName, mediaPath,
   clientRequestPayload, clientRequestsToNotice,
+  copyLength, copyTooLong, canClientEdit, clientRequestForm, clientEditTitle, clientEditsToNotice,
 } from './socialClient';
 
 const OK = { requestedBy: 'Ana Pérez', networks: ['linkedin'], postType: 'webinar', publishDate: '2026-12-03', copy: 'Hola' };
@@ -79,5 +80,49 @@ describe('clientRequestsToNotice', () => {
       { id: 4, source: null, status: 'en_proceso', requestedAt: null },
     ];
     expect(clientRequestsToNotice(posts, now).map((p) => p.id)).toEqual([1, 2]);
+  });
+});
+
+describe('copy de hasta 3.000 caracteres', () => {
+  it('cuenta los emojis como un carácter, como la base', () => {
+    expect(copyLength('Hola 👋')).toBe(6);
+    expect(copyLength('  hola  ')).toBe(4);
+  });
+  it('avisa recién al pasar de 3.000', () => {
+    expect(copyTooLong('a'.repeat(3000))).toBe(false);
+    expect(copyTooLong('a'.repeat(3001))).toBe(true);
+  });
+});
+
+describe('Artículo LinkedIn', () => {
+  it('es un tipo válido y titula el posteo', () => {
+    expect(clientRequestMissing({ ...OK, postType: 'articulo_linkedin' }, '2026-11-24')).toEqual([]);
+    expect(clientRequestTitle({ postType: 'articulo_linkedin', copy: 'Novedades EUDR' })).toBe('Artículo LinkedIn · Novedades EUDR');
+  });
+});
+
+describe('edición del pedido por el cliente', () => {
+  const pedido = { id: 'p1', source: 'cliente', status: 'en_proceso', postType: 'webinar', copy: 'Hola', networks: ['linkedin'], publishDate: '2026-12-03', theme: 'agua', link: '', requestNotes: 'n', media: [{ path: 't/a.png' }] };
+  it('solo pedidos del cliente en «En proceso»', () => {
+    expect(canClientEdit(pedido)).toBe(true);
+    ['listo', 'aprobado', 'programado'].forEach((status) => expect(canClientEdit({ ...pedido, status })).toBe(false));
+    expect(canClientEdit({ ...pedido, source: null })).toBe(false);
+  });
+  it('arma el formulario con los datos del pedido', () => {
+    expect(clientRequestForm(pedido)).toEqual({ networks: ['linkedin'], postType: 'webinar', publishDate: '2026-12-03', theme: 'agua', copy: 'Hola', link: '', requestNotes: 'n' });
+  });
+  it('rearma el título automático pero respeta uno puesto en el Hub', () => {
+    const nuevo = { postType: 'evento', copy: 'Chau' };
+    expect(clientEditTitle({ ...pedido, title: 'Webinar · Hola' }, nuevo)).toBe('Evento · Chau');
+    expect(clientEditTitle({ ...pedido, title: 'Webinar EUDR (Delfi)' }, nuevo)).toBe('Webinar EUDR (Delfi)');
+  });
+  it('avisa las ediciones de los últimos días', () => {
+    const now = new Date('2026-11-24T12:00:00Z');
+    const posts = [
+      { ...pedido, clientEditedAt: '2026-11-24T10:00:00Z' },
+      { ...pedido, id: 'p2', clientEditedAt: null },
+      { ...pedido, id: 'p3', clientEditedAt: '2026-10-01T10:00:00Z' },
+    ];
+    expect(clientEditsToNotice(posts, now).map((p) => p.id)).toEqual(['p1']);
   });
 });

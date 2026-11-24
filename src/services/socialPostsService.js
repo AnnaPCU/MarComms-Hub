@@ -65,6 +65,7 @@ export const postFromRow = (row) => (row ? {
   source:       row.source || null,
   requestedBy:  row.requested_by || '',
   requestedAt:  row.requested_at || null,
+  clientEditedAt: row.client_edited_at || null,
   networks:     row.networks || [],
   postType:     row.post_type || '',
   copy:         row.copy || '',
@@ -177,6 +178,13 @@ export const uploadClientMedia = async (path, file) => {
 
 export const submitClientRequest = async (token, payload) => {
   const { data, error } = await supabase.rpc('submit_public_social_post', { p_token: token, p_post: payload });
+  if (error) throw error;
+  return data;
+};
+
+// El cliente edita su pedido (solo «En proceso»; si no, error «pedido no editable»)
+export const updateClientRequest = async (token, id, payload) => {
+  const { data, error } = await supabase.rpc('update_public_social_post', { p_token: token, p_id: id, p_post: payload });
   if (error) throw error;
   return data;
 };
